@@ -13,6 +13,7 @@ import '../core/exercise_library.dart';
 import '../core/interval_timer.dart';
 import '../models/app_profile.dart';
 import '../models/exercise.dart';
+import '../core/session_glucose.dart';
 import '../models/glucose.dart';
 import '../models/glucose_entry.dart';
 import '../models/training_session.dart';
@@ -107,19 +108,41 @@ class StrengthSessionController extends ChangeNotifier
     GlucoseReading? initialReading,
     List<ExerciseEntry> planned = const [],
     List<Circuit> plannedCircuits = const [],
+    DateTime? startedAt,
+    Duration pausedAccum = Duration.zero,
+    DateTime? pauseStartedAt,
+    List<GlucosePoint> restoredSeries = const [],
+    List<NutritionEntry> restoredNutrition = const [],
   }) {
     reading = initialReading ?? GlucoseReading(6.8, Trend.flat, DateTime.now());
     series.add(GlucosePoint(reading.at, reading.mmol));
+    // Herstel na het sluiten van de app: curve, voeding, starttijd en
+    // pauze-stand terugzetten (de tijd loopt door, want je traint door).
+    if (restoredSeries.isNotEmpty) {
+      series
+        ..clear()
+        ..addAll(restoredSeries);
+      final last = restoredSeries.last;
+      reading = GlucoseReading(last.mmol, Trend.flat, last.at);
+    }
+    nutrition.addAll(restoredNutrition);
     appController.setSessionActive(true);
-    _startedAt = DateTime.now();
+    _startedAt = startedAt ?? DateTime.now();
+    _pausedAccum = pausedAccum;
+    if (pauseStartedAt != null) {
+      _pauseStartedAt = pauseStartedAt;
+      isPaused = true;
+    }
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       _checkStaleness();
       _checkSetTimers();
       _checkCircuitTimers();
       notifyListeners();
     });
+    // Elke minuut kijken: een sensor meet elke ~5 minuten, zo zie je een
+    // nieuwe waarde binnen een minuut (in plaats van tot 5 minuten later).
     _poller = Timer.periodic(
-      const Duration(minutes: 5),
+      const Duration(minutes: 1),
       (_) => refreshReading(),
     );
     refreshReading();
@@ -131,7 +154,11 @@ class StrengthSessionController extends ChangeNotifier
           LiveExercise(
             name: e.name,
             sets: e.sets
-                .map((s) => LiveSet(kg: s.kg, reps: s.reps, seconds: s.seconds))
+                .map(
+                  (s) =>
+                      LiveSet(kg: s.kg, reps: s.reps, seconds: s.seconds)
+                        ..done = s.done,
+                )
                 .toList(),
           ),
         );
@@ -206,8 +233,19 @@ class StrengthSessionController extends ChangeNotifier
 
   bool get showPauseButton => appController.profile?.showPauseButton ?? true;
 
+  bool _disposed = false;
+
+  /// Netwerkverzoeken (glucose, prestaties) kunnen binnenkomen nadat de
+  /// sessie al is opgeslagen of weggegooid — dan niets meer melden in
+  /// plaats van te crashen.
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     _tick?.cancel();
     _poller?.cancel();
     _restTimer?.cancel();
@@ -252,6 +290,8 @@ class StrengthSessionController extends ChangeNotifier
     _pauseStartedAt = null;
     isPaused = false;
     notifyListeners();
+    // Meteen een verse waarde: tijdens de pauze lag de app vaak stil.
+    refreshReading();
   }
 
   Future<void> _loadCustomExercises() async {
@@ -404,9 +444,29 @@ class StrengthSessionController extends ChangeNotifier
         profile.glucoseSource == GlucoseSource.finger) {
       return;
     }
-    final snapshot = await p.fetch(count: 12);
-    final next = snapshot.reading;
-    if (next != null) onReading(next);
+    final snapshot = await p.fetch(
+      count: countToFill(
+        series.isEmpty ? null : series.last.at,
+        DateTime.now(),
+      ),
+    );
+    final latest = snapshot.reading;
+    if (latest == null || _disposed) return;
+    // Alleen echt nieuwe metingen toevoegen — en metingen die gemist zijn
+    // terwijl de app stil lag (scherm uit, gepauzeerd) alsnog aanvullen.
+    final fresh = newSessionPoints(series, [
+      ...snapshot.history,
+      GlucosePoint(latest.at, latest.mmol),
+    ], sessionStart: _startedAt);
+    if (fresh.isEmpty) return;
+    series.addAll(fresh);
+    reading = latest;
+    notifyListeners();
+    appController.checkGlucoseReading(
+      contextOf,
+      latest,
+      onManualEntry: (ctx) => handleManualEntryFromAlarm(ctx, onReading),
+    );
   }
 
   /// Aanroepen bij elke nieuwe meting (sensor of handmatig) — ook als het
@@ -673,6 +733,68 @@ class StrengthSessionController extends ChangeNotifier
   }
 
   // ── opslaan ────────────────────────────────────────────────────────────────
+
+  /// Momentopname om lokaal te bewaren (zie LiveSessionStore), zodat de
+  /// training terugkomt als de app per ongeluk sluit.
+  Map<String, dynamic> _snapshotBase(String kind) => {
+    'kind': kind,
+    'title': title,
+    'startedAt': _startedAt.toUtc().toIso8601String(),
+    'pausedAccumMs': _pausedAccum.inMilliseconds,
+    'pauseStartedAt': _pauseStartedAt?.toUtc().toIso8601String(),
+    'series': series.map((p) => p.toJson()).toList(),
+    'nutrition': nutrition.map((n) => n.toJson()).toList(),
+  };
+
+  Map<String, dynamic> toSnapshot() => {
+    ..._snapshotBase('kracht'),
+    'exercises': [
+      for (final e in exercises)
+        ExerciseEntry(
+          name: e.name,
+          sets: [
+            for (final s in e.sets)
+              ExerciseSet(kg: s.kg, reps: s.reps, done: s.done, seconds: s.seconds),
+          ],
+        ).toJson(),
+    ],
+    'circuits': circuits.map((c) => c.circuit.toJson()).toList(),
+  };
+
+  /// Bouwt een sessie terug uit [toSnapshot]. Afgevinkte sets komen terug;
+  /// lopende set-/circuittimers beginnen opnieuw.
+  factory StrengthSessionController.restore(
+    Map<String, dynamic> json, {
+    required AppController appController,
+    required BuildContext Function() contextOf,
+    GlucoseProvider? provider,
+  }) => StrengthSessionController(
+    title: (json['title'] as String?) ?? 'Krachttraining',
+    appController: appController,
+    contextOf: contextOf,
+    provider: provider,
+    planned: [
+      for (final e in (json['exercises'] as List? ?? const []))
+        ExerciseEntry.fromJson(e as Map<String, dynamic>),
+    ],
+    plannedCircuits: [
+      for (final c in (json['circuits'] as List? ?? const []))
+        Circuit.fromJson(c as Map<String, dynamic>),
+    ],
+    startedAt: DateTime.parse(json['startedAt'] as String).toLocal(),
+    pausedAccum: Duration(milliseconds: (json['pausedAccumMs'] as num?)?.toInt() ?? 0),
+    pauseStartedAt: json['pauseStartedAt'] == null
+        ? null
+        : DateTime.parse(json['pauseStartedAt'] as String).toLocal(),
+    restoredSeries: [
+      for (final p in (json['series'] as List? ?? const []))
+        GlucosePoint.fromJson(p as Map<String, dynamic>),
+    ],
+    restoredNutrition: [
+      for (final n in (json['nutrition'] as List? ?? const []))
+        NutritionEntry.fromJson(n as Map<String, dynamic>),
+    ],
+  );
 
   Future<bool> saveSession() async {
     final userId = appController.user?.id;

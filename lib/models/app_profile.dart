@@ -1,3 +1,4 @@
+import 'meal_reminder.dart';
 import 'bolus_period.dart';
 import 'food_preset.dart';
 import 'prep_item.dart';
@@ -110,6 +111,15 @@ class AppProfile {
   /// (tijdens een live training gebeurt dat altijd).
   final bool hideSystemBars;
 
+  /// Vaste eetmomenten met een dagelijkse herinnering (apart aan/uit), en
+  /// hoeveel minuten vóór het eetmoment die melding komt.
+  final bool mealRemindersEnabled;
+  final List<MealReminder> mealReminders;
+  final int mealReminderOffset;
+
+  /// Knop "Herinner me om …" op de Eten-pagina (apart aan/uit).
+  final bool mealOneOffEnabled;
+
   /// Voedingspresets die je tijdens een training met één tik kunt loggen
   /// (bv. "AA", "Melk", "Ontbijtkoek"). Zelf samengesteld in de instellingen.
   final List<String> carbPresets;
@@ -174,6 +184,10 @@ class AppProfile {
     this.sex = '',
     this.weekStart = 1,
     this.hideSystemBars = false,
+    this.mealRemindersEnabled = false,
+    this.mealReminders = const [],
+    this.mealReminderOffset = 0,
+    this.mealOneOffEnabled = true,
     this.carbPresets = const [],
     this.prepItems = const [],
     this.showPauseButton = true,
@@ -237,6 +251,12 @@ class AppProfile {
       sex: (json['sex'] as String?) ?? '',
       weekStart: (json['week_start'] as num?)?.toInt() ?? 1,
       hideSystemBars: (json['hide_system_bars'] as bool?) ?? false,
+      mealRemindersEnabled: (json['meal_reminders_enabled'] as bool?) ?? false,
+      mealReminders: ((json['meal_reminders'] as List?) ?? [])
+          .map(MealReminder.fromJson)
+          .toList(),
+      mealReminderOffset: (json['meal_reminder_offset'] as num?)?.toInt() ?? 0,
+      mealOneOffEnabled: (json['meal_one_off_enabled'] as bool?) ?? true,
       carbPresets: ((json['carb_presets'] as List?) ?? [])
           .map((e) => e as String)
           .toList(),
@@ -292,6 +312,10 @@ class AppProfile {
     'sex': sex,
     'week_start': weekStart,
     'hide_system_bars': hideSystemBars,
+    'meal_reminders_enabled': mealRemindersEnabled,
+    'meal_reminders': mealReminders.map((m) => m.toJson()).toList(),
+    'meal_reminder_offset': mealReminderOffset,
+    'meal_one_off_enabled': mealOneOffEnabled,
     'carb_presets': carbPresets,
     'prep_items': prepItems.map((p) => p.toJson()).toList(),
     'show_pause_button': showPauseButton,
@@ -330,6 +354,10 @@ class AppProfile {
     String? sex,
     int? weekStart,
     bool? hideSystemBars,
+    bool? mealRemindersEnabled,
+    List<MealReminder>? mealReminders,
+    int? mealReminderOffset,
+    bool? mealOneOffEnabled,
     bool clearWeight = false,
     bool clearHeight = false,
     List<String>? carbPresets,
@@ -372,6 +400,10 @@ class AppProfile {
       sex: sex ?? this.sex,
       weekStart: weekStart ?? this.weekStart,
       hideSystemBars: hideSystemBars ?? this.hideSystemBars,
+      mealRemindersEnabled: mealRemindersEnabled ?? this.mealRemindersEnabled,
+      mealReminders: mealReminders ?? this.mealReminders,
+      mealReminderOffset: mealReminderOffset ?? this.mealReminderOffset,
+      mealOneOffEnabled: mealOneOffEnabled ?? this.mealOneOffEnabled,
       carbPresets: carbPresets ?? this.carbPresets,
       prepItems: prepItems ?? this.prepItems,
       showPauseButton: showPauseButton ?? this.showPauseButton,

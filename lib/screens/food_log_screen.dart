@@ -21,6 +21,7 @@ import '../models/glucose.dart';
 import '../repositories/food_log_repository.dart';
 import '../services/food_wait_reminder_service.dart';
 import '../services/glucose_provider.dart';
+import '../services/meal_reminder_service.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/food_preset_picker.dart';
@@ -233,6 +234,10 @@ class FoodLogScreenState extends State<FoodLogScreen> {
             _WaitTimerCard(entry: waiting.$1, eatAt: waiting.$2),
             const SizedBox(height: AppSpace.md),
           ],
+          if (profile != null && profile.mealOneOffEnabled) ...[
+            const _OneOffMealReminder(),
+            const SizedBox(height: AppSpace.md),
+          ],
           if (profile != null)
             _BolusHeroCard(
               profile: profile,
@@ -277,6 +282,16 @@ class FoodLogScreenState extends State<FoodLogScreen> {
                   color: AppColor.inkMuted,
                 ),
               ),
+              if (!_searching)
+                PopupMenuButton<bool>(
+                  tooltip: 'Exporteren',
+                  icon: const Icon(Icons.ios_share, color: AppColor.inkMuted),
+                  onSelected: exportLog,
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: true, child: Text('Exporteer als PDF')),
+                    PopupMenuItem(value: false, child: Text('Exporteer als CSV')),
+                  ],
+                ),
               if (!_searching)
                 KLabel(
                   '${today.length} vandaag',
@@ -338,6 +353,84 @@ class FoodLogScreenState extends State<FoodLogScreen> {
 }
 
 // ───────────────────── kaarten bovenaan ─────────────────────────────────────
+
+/// "Herinner me om …": één melding op een zelfgekozen tijd. Toont de
+/// ingestelde herinnering met een knop om hem te annuleren.
+class _OneOffMealReminder extends StatefulWidget {
+  const _OneOffMealReminder();
+
+  @override
+  State<_OneOffMealReminder> createState() => _OneOffMealReminderState();
+}
+
+class _OneOffMealReminderState extends State<_OneOffMealReminder> {
+  DateTime? _at;
+
+  @override
+  void initState() {
+    super.initState();
+    MealReminderService.instance.pendingOneOff().then((at) {
+      if (mounted) setState(() => _at = at);
+    });
+  }
+
+  Future<void> _pick() async {
+    final now = DateTime.now();
+    final suggestion = now.add(const Duration(hours: 1));
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: suggestion.hour, minute: 0),
+      helpText: 'Herinner me om',
+    );
+    if (time == null || !mounted) return;
+    var at = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    // Tijd al voorbij vandaag? Dan morgen.
+    if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
+    await MealReminderService.instance.scheduleOneOff(at);
+    if (mounted) setState(() => _at = at);
+  }
+
+  Future<void> _cancel() async {
+    await MealReminderService.instance.cancelOneOff();
+    if (mounted) setState(() => _at = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final at = _at;
+    if (at == null) {
+      return OutlinedButton.icon(
+        onPressed: _pick,
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        icon: const Icon(Icons.alarm_add_outlined, size: 20),
+        label: const Text('Herinner me om …'),
+      );
+    }
+    final tomorrow = at.day != DateTime.now().day;
+    return KCard(
+      padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
+      child: Row(
+        children: [
+          const Icon(Icons.alarm_on, color: AppColor.ice),
+          const SizedBox(width: AppSpace.md),
+          Expanded(
+            child: Text(
+              'Eet-herinnering ${tomorrow ? 'morgen ' : ''}om '
+              '${DateFormat('HH:mm').format(at)}',
+              style: AppText.bodyStrong,
+            ),
+          ),
+          TextButton(onPressed: _pick, child: const Text('Wijzig')),
+          IconButton(
+            tooltip: 'Annuleren',
+            onPressed: _cancel,
+            icon: const Icon(Icons.close, color: AppColor.inkFaint),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Bolus-adviseur: actief tijdvak (KH-ratio), correctie-instellingen en het
 /// dagtotaal, met de grote knop om een maaltijd te loggen.

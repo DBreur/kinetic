@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/formatters.dart';
@@ -15,6 +17,8 @@ import '../services/background_glucose_service.dart';
 import '../services/finger_reminder_service.dart';
 import '../models/agenda.dart';
 import '../services/glucose_provider.dart';
+import '../services/live_session_store.dart';
+import '../services/meal_reminder_service.dart';
 import '../services/notification_router.dart';
 import '../services/system_bars.dart';
 import '../state/app_controller.dart';
@@ -55,7 +59,6 @@ class _ShellScreenState extends State<ShellScreen>
     with WidgetsBindingObserver {
   int _tab = 0;
   int _trainSegment = 0;
-  final _foodKey = GlobalKey<FoodLogScreenState>();
 
   /// De actieve sambo-sessie, ook als MatModeScreen zelf niet in beeld is —
   /// zie mat_session_controller.dart. Null zolang er geen sessie loopt.
@@ -72,8 +75,14 @@ class _ShellScreenState extends State<ShellScreen>
     widget.controller.addListener(_syncBackgroundWatcher);
     _syncBackgroundWatcher();
     NotificationRouter.pendingStart.addListener(_onStartRequest);
-    // Geopend via een melding terwijl de app dicht was?
+    _persistTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _persistLive(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Eerst een training herstellen die nog liep toen de app sloot...
+      await _restoreLiveSession();
+      // ...dan pas kijken of de app via een melding is geopend.
       await NotificationRouter.checkLaunchDetails();
       _onStartRequest();
     });
@@ -112,15 +121,77 @@ class _ShellScreenState extends State<ShellScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Android kan de balken terugzetten terwijl de app op de achtergrond
-    // stond — bij terugkomst de gekozen stand opnieuw toepassen.
-    if (state == AppLifecycleState.resumed) SystemBars.reapply();
+    if (state == AppLifecycleState.resumed) {
+      // Android kan de balken terugzetten terwijl de app op de achtergrond
+      // stond — bij terugkomst de gekozen stand opnieuw toepassen.
+      SystemBars.reapply();
+      // De app lag mogelijk stil: meteen een verse glucosewaarde (en
+      // gemiste metingen aanvullen) in een lopende training.
+      _liveMat?.refreshReading();
+      _liveStrength?.refreshReading();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      // Naar de achtergrond: nu bewaren, want de app kan zo worden gesloten.
+      _persistLive();
+    }
+  }
+
+  /// Bewaart een lopende training lokaal (zie LiveSessionStore).
+  void _persistLive() {
+    final snapshot = _liveMat?.toSnapshot() ?? _liveStrength?.toSnapshot();
+    if (snapshot != null) LiveSessionStore.save(snapshot);
+  }
+
+  Timer? _persistTimer;
+
+  /// Training van vóór het sluiten van de app terugzetten en openen.
+  Future<void> _restoreLiveSession() async {
+    if (_liveMat != null || _liveStrength != null) return;
+    final json = await LiveSessionStore.load();
+    if (json == null || !mounted) return;
+    final profile = widget.controller.profile;
+    final provider = profile == null
+        ? null
+        : await resolveGlucoseProvider(profile);
+    if (!mounted) return;
+    try {
+      if (json['kind'] == 'kracht') {
+        final ctrl = StrengthSessionController.restore(
+          json,
+          appController: widget.controller,
+          contextOf: () => context,
+          provider: provider,
+        );
+        _showRestored(ctrl.title);
+        await _openStrength(ctrl);
+      } else {
+        final ctrl = MatSessionController.restore(
+          json,
+          appController: widget.controller,
+          contextOf: () => context,
+          provider: provider,
+        );
+        _showRestored(ctrl.title);
+        await _openMat(ctrl);
+      }
+    } catch (_) {
+      // Onleesbare momentopname: weggooien in plaats van elke start falen.
+      await LiveSessionStore.clear();
+    }
+  }
+
+  void _showRestored(String title) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('"$title" loopt nog — je training is hersteld.')),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     NotificationRouter.pendingStart.removeListener(_onStartRequest);
+    _persistTimer?.cancel();
     widget.controller.removeListener(_syncBackgroundWatcher);
     super.dispose();
   }
@@ -132,6 +203,10 @@ class _ShellScreenState extends State<ShellScreen>
   void _syncBackgroundWatcher() {
     BackgroundGlucoseWatcher.instance.sync(widget.controller);
     FingerReminderService.instance.sync(widget.controller.profile);
+    MealReminderService.instance.syncDaily(widget.controller.profile);
+    MealReminderService.instance.syncOneOff(
+      widget.controller.profile?.mealOneOffEnabled ?? true,
+    );
     SystemBars.setAlwaysHidden(
       widget.controller.profile?.hideSystemBars ?? false,
     );
@@ -170,6 +245,7 @@ class _ShellScreenState extends State<ShellScreen>
     if (result != null && mounted) {
       setState(() => _liveMat = null);
       ctrl.dispose();
+      await LiveSessionStore.clear();
     }
     return result;
   }
@@ -211,6 +287,7 @@ class _ShellScreenState extends State<ShellScreen>
     if (result != null && mounted) {
       setState(() => _liveStrength = null);
       ctrl.dispose();
+      await LiveSessionStore.clear();
     }
     return result;
   }
@@ -264,7 +341,7 @@ class _ShellScreenState extends State<ShellScreen>
         segment: _trainSegment,
         onSegment: (v) => setState(() => _trainSegment = v),
       ),
-      KineticTab.food => FoodLogScreen(key: _foodKey, controller: widget.controller),
+      KineticTab.food => FoodLogScreen(controller: widget.controller),
       KineticTab.biometrics => InsightsScreen(controller: widget.controller),
       KineticTab.agenda => AgendaScreen(controller: widget.controller),
     };
@@ -282,29 +359,6 @@ class _ShellScreenState extends State<ShellScreen>
                 initials: widget.controller.initials,
                 onProfile: _openProfile,
                 onSettings: _openSettings,
-                trailing: KineticTab.values[_tab] == KineticTab.food
-                    ? PopupMenuButton<bool>(
-                        tooltip: 'Exporteren',
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(
-                          Icons.ios_share,
-                          color: AppColor.inkMuted,
-                          size: 22,
-                        ),
-                        onSelected: (pdf) =>
-                            _foodKey.currentState?.exportLog(pdf),
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(
-                            value: true,
-                            child: Text('Exporteer als PDF'),
-                          ),
-                          PopupMenuItem(
-                            value: false,
-                            child: Text('Exporteer als CSV'),
-                          ),
-                        ],
-                      )
-                    : null,
               ),
             ),
             if (_liveMat != null)

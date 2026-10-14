@@ -82,7 +82,7 @@ class NightscoutService implements GlucoseProvider {
       // Oudste eerst, nieuwste laatst — zodat de curve links-oud/rechts-nu
       // klopt met de tijdlabels eronder.
       final history = readings
-          .take(10)
+          .take(count)
           .toList()
           .reversed
           .map((r) => GlucosePoint(r.at, r.mmol))

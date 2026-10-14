@@ -225,7 +225,7 @@ class DexcomShareService implements GlucoseProvider {
       readings.sort((a, b) => b.at.compareTo(a.at));
       final latest = readings.first;
       final history = readings
-          .take(10)
+          .take(count)
           .toList()
           .reversed
           .map((r) => GlucosePoint(r.at, r.mmol))

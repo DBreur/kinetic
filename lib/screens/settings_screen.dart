@@ -6,6 +6,7 @@ import '../core/formatters.dart';
 import '../models/app_profile.dart';
 import '../models/bolus_period.dart';
 import '../models/food_preset.dart';
+import '../models/meal_reminder.dart';
 import '../services/alarm_notification_service.dart';
 import '../services/dexcom_credentials.dart';
 import '../services/dexcom_share_service.dart';
@@ -49,6 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _weekStart;
   late bool _hideSystemBars;
   late bool _foodWaitReminderSound;
+  late bool _mealRemindersEnabled;
+  late List<MealReminder> _mealReminders;
+  late int _mealReminderOffset;
+  late bool _mealOneOffEnabled;
   late bool _bolusCalculatorEnabled;
   late List<BolusPeriod> _bolusPeriods;
   late double _correctionFactor;
@@ -89,6 +94,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _weekStart = profile.weekStart;
     _hideSystemBars = profile.hideSystemBars;
     _foodWaitReminderSound = profile.foodWaitReminderSound;
+    _mealRemindersEnabled = profile.mealRemindersEnabled;
+    _mealReminders = List.of(profile.mealReminders);
+    _mealReminderOffset = profile.mealReminderOffset;
+    _mealOneOffEnabled = profile.mealOneOffEnabled;
     _bolusCalculatorEnabled = profile.bolusCalculatorEnabled;
     _bolusPeriods = List.of(profile.bolusPeriods);
     _correctionFactor = profile.correctionFactor;
@@ -256,6 +265,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _bolusPeriods[i] = result);
   }
 
+  Future<void> _editMeal(int? index) async {
+    final existing = index == null ? null : _mealReminders[index];
+    final label = TextEditingController(text: existing?.label ?? '');
+    var time = TimeOfDay(
+      hour: (existing?.minutesOfDay ?? 12 * 60) ~/ 60,
+      minute: (existing?.minutesOfDay ?? 0) % 60,
+    );
+    final result = await showDialog<MealReminder>(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setDialog) => AlertDialog(
+          title: Text(
+            existing == null ? 'Eetmoment toevoegen' : 'Eetmoment',
+            style: AppText.cardTitle,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: label,
+                autofocus: existing == null,
+                style: AppText.body,
+                decoration: const InputDecoration(
+                  labelText: 'Naam',
+                  hintText: 'Bv. Ontbijt',
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await showTimePicker(
+                    context: c,
+                    initialTime: time,
+                  );
+                  if (picked != null) setDialog(() => time = picked);
+                },
+                icon: const Icon(Icons.schedule, size: 18),
+                label: Text(
+                  '${time.hour.toString().padLeft(2, '0')}:'
+                  '${time.minute.toString().padLeft(2, '0')}',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: const Text('Annuleer'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                c,
+                MealReminder(
+                  label: label.text.trim().isEmpty
+                      ? 'Eten'
+                      : label.text.trim(),
+                  time:
+                      '${time.hour.toString().padLeft(2, '0')}:'
+                      '${time.minute.toString().padLeft(2, '0')}',
+                ),
+              ),
+              child: const Text('Opslaan'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      if (index == null) {
+        _mealReminders.add(result);
+      } else {
+        _mealReminders[index] = result;
+      }
+      _mealReminders.sort((a, b) => a.minutesOfDay.compareTo(b.minutesOfDay));
+    });
+  }
+
   Future<void> _save() async {
     if (!isValidAlarmLimits(
       trainingLimit: _trainingLimit,
@@ -316,6 +404,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         weekStart: _weekStart,
         hideSystemBars: _hideSystemBars,
         foodWaitReminderSound: _foodWaitReminderSound,
+        mealRemindersEnabled: _mealRemindersEnabled,
+        mealReminders: _mealReminders,
+        mealReminderOffset: _mealReminderOffset,
+        mealOneOffEnabled: _mealOneOffEnabled,
         bolusCalculatorEnabled: _bolusCalculatorEnabled,
         bolusPeriods: _bolusPeriods,
         correctionFactor: _correctionFactor,
@@ -840,6 +932,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ],
                   ),
+                  const Divider(height: 28),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _mealRemindersEnabled,
+                    onChanged: (v) => setState(() {
+                      _mealRemindersEnabled = v;
+                      if (v && _mealReminders.isEmpty) {
+                        _mealReminders = List.of(kDefaultMealReminders);
+                      }
+                    }),
+                    title: Text('Vaste eetmomenten', style: AppText.bodyStrong),
+                    subtitle: Text(
+                      'Elke dag een melding op je eettijden.',
+                      style: AppText.caption,
+                    ),
+                  ),
+                  if (_mealRemindersEnabled) ...[
+                    for (var i = 0; i < _mealReminders.length; i++)
+                      _MealReminderRow(
+                        meal: _mealReminders[i],
+                        onTap: () => _editMeal(i),
+                        onDelete: () =>
+                            setState(() => _mealReminders.removeAt(i)),
+                      ),
+                    TextButton.icon(
+                      onPressed: () => _editMeal(null),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Eetmoment'),
+                    ),
+                    const SizedBox(height: 6),
+                    Text('Melding', style: AppText.caption),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final (m, label) in const [
+                          (0, 'Op tijd'),
+                          (10, '10 min vooraf'),
+                          (15, '15 min vooraf'),
+                          (20, '20 min vooraf'),
+                          (30, '30 min vooraf'),
+                        ])
+                          ChoiceChip(
+                            label: Text(label),
+                            selected: _mealReminderOffset == m,
+                            showCheckmark: false,
+                            onSelected: (_) =>
+                                setState(() => _mealReminderOffset = m),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const Divider(height: 28),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _mealOneOffEnabled,
+                    onChanged: (v) => setState(() => _mealOneOffEnabled = v),
+                    title: Text(
+                      'Eenmalige herinnering',
+                      style: AppText.bodyStrong,
+                    ),
+                    subtitle: Text(
+                      'Knop "Herinner me om …" op de Eten-pagina.',
+                      style: AppText.caption,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1122,14 +1281,15 @@ class _Section extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColor.surface,
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+        // Material (geen gekleurde Container): dan zijn tik-effecten van
+        // schakelaars en lijstregels in de sectie gewoon zichtbaar.
+        Material(
+          color: AppColor.surface,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(width: double.infinity, child: child),
           ),
-          child: child,
         ),
       ],
     );
@@ -1188,6 +1348,44 @@ class _AccountHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MealReminderRow extends StatelessWidget {
+  const _MealReminderRow({
+    required this.meal,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final MealReminder meal;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(AppRadius.md),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 56,
+            child: Text(
+              meal.time,
+              style: AppText.bodyStrong.copyWith(color: AppColor.ice),
+            ),
+          ),
+          Expanded(child: Text(meal.label, style: AppText.body)),
+          IconButton(
+            tooltip: 'Verwijderen',
+            onPressed: onDelete,
+            icon: const Icon(Icons.close, size: 18, color: AppColor.inkFaint),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _InfoRow extends StatelessWidget {
