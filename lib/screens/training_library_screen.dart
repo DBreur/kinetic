@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../core/exercise_library.dart';
 import '../models/agenda.dart' show normalizeUrl;
 import '../models/exercise.dart';
 import '../models/workout_template.dart';
@@ -12,6 +13,7 @@ import '../repositories/exercise_repository.dart';
 import '../repositories/workout_template_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/exercise_picker.dart';
 import '../widgets/kinetic.dart';
 import '../widgets/video_link_row.dart';
 import 'circuit_edit_screen.dart';
@@ -191,8 +193,9 @@ class _TrainingLibraryScreenState extends State<TrainingLibraryScreen> {
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
     children: [
       Text(
-        'Oefeningen die je in rondes doorloopt met vaste werk- en rusttijd '
-        '(bv. 3 rondes van 40s/20s). Ook een warming-up is een circuit.',
+        'Oefeningen die je in rondes doorloopt — op tijd, herhalingen of tot '
+        'verzuring, met rust na elke oefening (of juist niet). Ook een '
+        'warming-up is een circuit.',
         style: AppText.caption,
       ),
       const SizedBox(height: 12),
@@ -290,8 +293,8 @@ class _ExercisesTab extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
     children: [
       Text(
-        'Eigen oefeningen die je tijdens krachttraining kunt kiezen — met '
-        'optioneel een beschrijving.',
+        'Alle oefeningen die je tijdens krachttraining kunt kiezen. Tik op '
+        "een oefening voor spiergroepen, een beschrijving of video's.",
         style: AppText.caption,
       ),
       const SizedBox(height: 12),
@@ -337,11 +340,20 @@ class _ExercisesSheet extends StatefulWidget {
 class _ExercisesSheetState extends State<_ExercisesSheet> {
   late List<Exercise> _exercises;
   bool _busy = false;
+  final _query = TextEditingController();
+  final Set<String> _groups = {};
+  bool _ascending = true;
 
   @override
   void initState() {
     super.initState();
     _exercises = List.of(widget.exercises);
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
   }
 
   void _emit() => widget.onChanged(_exercises);
@@ -361,35 +373,47 @@ class _ExercisesSheetState extends State<_ExercisesSheet> {
   Future<void> _add() async {
     final result = await showExerciseDialog(context);
     if (result == null) return;
+    await _create(result);
+  }
+
+  Future<void> _create(Exercise exercise) async {
     setState(() => _busy = true);
     try {
-      final created = await widget.repository.create(result, widget.userId);
+      final created = await widget.repository.create(exercise, widget.userId);
       setState(() {
         _exercises = [..._exercises, created];
         _busy = false;
       });
       _emit();
     } catch (_) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opslaan is niet gelukt. Probeer opnieuw.'),
-          ),
-        );
-      }
+      _failed('Opslaan is niet gelukt. Probeer opnieuw.');
     }
   }
 
-  Future<void> _edit(int i) async {
-    final result = await showExerciseDialog(context, existing: _exercises[i]);
+  void _failed(String message) {
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Aanpassen — een oefening uit de vaste lijst wordt daarbij een eigen
+  /// oefening (met jouw spiergroepen, beschrijving en video's).
+  Future<void> _edit(Exercise exercise) async {
+    final result = await showExerciseDialog(context, existing: exercise);
     if (result == null) return;
+    if (!exercise.isSaved) return _create(result);
+    final i = _exercises.indexWhere((e) => e.id == exercise.id);
+    if (i < 0) return;
     setState(() => _busy = true);
     try {
       final updated = await widget.repository.updateContent(
         _exercises[i].copyWith(
           name: result.name,
           description: result.description,
+          videoUrls: result.videoUrls,
+          muscleGroups: result.muscleGroups,
         ),
       );
       setState(() {
@@ -398,18 +422,13 @@ class _ExercisesSheetState extends State<_ExercisesSheet> {
       });
       _emit();
     } catch (_) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opslaan is niet gelukt. Probeer opnieuw.'),
-          ),
-        );
-      }
+      _failed('Opslaan is niet gelukt. Probeer opnieuw.');
     }
   }
 
-  Future<void> _delete(int i) async {
+  Future<void> _delete(Exercise exercise) async {
+    final i = _exercises.indexWhere((e) => e.id == exercise.id);
+    if (i < 0) return;
     final removed = _exercises[i];
     setState(() => _exercises.removeAt(i));
     _emit();
@@ -419,128 +438,104 @@ class _ExercisesSheetState extends State<_ExercisesSheet> {
       if (mounted) {
         setState(() => _exercises.insert(i, removed));
         _emit();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verwijderen is niet gelukt. Probeer opnieuw.'),
-          ),
-        );
+        _failed('Verwijderen is niet gelukt. Probeer opnieuw.');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final visible = filterExercises(
+      allExercises(_exercises),
+      query: _query.text,
+      groups: _groups,
+      ascending: _ascending,
+    );
     return AbsorbPointer(
       absorbing: _busy,
       child: Opacity(
         opacity: _busy ? .6 : 1,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColor.line,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Text(
-                'Oefeningen',
-                style: AppText.cardTitle.copyWith(fontSize: 18),
-              ),
-              const SizedBox(height: 16),
-              if (_exercises.isEmpty)
-                Text('Nog geen eigen oefeningen.', style: AppText.caption)
-              else
-                for (var i = 0; i < _exercises.length; i++)
-                  _ExerciseRow(
-                    exercise: _exercises[i],
-                    onTap: () => _edit(i),
-                    onHistory: () => _openHistory(_exercises[i].name),
-                    onDelete: () => _delete(i),
-                  ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _add,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Oefening toevoegen'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ExerciseRow extends StatelessWidget {
-  const _ExerciseRow({
-    required this.exercise,
-    required this.onTap,
-    required this.onHistory,
-    required this.onDelete,
-  });
-
-  final Exercise exercise;
-  final VoidCallback onTap;
-  final VoidCallback onHistory;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColor.surfaceRaised,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    exercise.name,
-                    style: AppText.bodyStrong.copyWith(fontSize: 13),
-                  ),
-                  if (exercise.description.isNotEmpty)
-                    Text(
-                      exercise.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption.copyWith(fontSize: 11),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _query,
+                    style: AppText.body,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      prefixIcon: Icon(Icons.search, size: 18),
+                      hintText: 'Zoek een oefening',
                     ),
-                ],
-              ),
-            ),
-            InkWell(
-              onTap: onHistory,
-              borderRadius: BorderRadius.circular(8),
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(
-                  Icons.show_chart,
-                  size: 16,
-                  color: AppColor.inkFaint,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 6),
+                SortToggle(
+                  ascending: _ascending,
+                  onChanged: (v) => setState(() => _ascending = v),
+                ),
+              ],
             ),
-            InkWell(
-              onTap: onDelete,
-              borderRadius: BorderRadius.circular(8),
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.close, size: 16, color: AppColor.inkFaint),
-              ),
+            const SizedBox(height: 8),
+            MuscleGroupFilter(
+              selected: _groups,
+              onToggle: (g) => setState(() {
+                if (!_groups.remove(g)) _groups.add(g);
+              }),
+            ),
+            const SizedBox(height: 12),
+            if (visible.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Geen oefeningen gevonden.',
+                  style: AppText.caption,
+                ),
+              )
+            else
+              for (final e in visible)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ExerciseListTile(
+                    exercise: e,
+                    onTap: () => _edit(e),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Voortgang',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _openHistory(e.name),
+                          icon: const Icon(
+                            Icons.show_chart,
+                            size: 16,
+                            color: AppColor.inkFaint,
+                          ),
+                        ),
+                        if (e.isSaved)
+                          IconButton(
+                            tooltip: 'Verwijderen',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => _delete(e),
+                            icon: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: AppColor.inkFaint,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _add,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Oefening toevoegen'),
             ),
           ],
         ),
@@ -557,6 +552,7 @@ Future<Exercise?> showExerciseDialog(
   final description = TextEditingController(text: existing?.description ?? '');
   final newVideo = TextEditingController();
   final videoUrls = List<String>.of(existing?.videoUrls ?? const []);
+  final muscleGroups = <String>{...?existing?.muscleGroups};
   return showDialog<Exercise>(
     context: context,
     builder: (c) => StatefulBuilder(
@@ -599,6 +595,25 @@ Future<Exercise?> showExerciseDialog(
                     labelText: 'Beschrijving (optioneel)',
                     hintText: 'Hoe voer je hem uit, waar let je op?',
                   ),
+                ),
+                const SizedBox(height: 14),
+                Text('Spiergroepen (optioneel)', style: AppText.caption),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final g in kMuscleGroups)
+                      FilterChip(
+                        label: Text(g),
+                        selected: muscleGroups.contains(g),
+                        showCheckmark: false,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (_) => setState(() {
+                          if (!muscleGroups.remove(g)) muscleGroups.add(g);
+                        }),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 Text("Video's (optioneel)", style: AppText.caption),
@@ -650,6 +665,11 @@ Future<Exercise?> showExerciseDialog(
                     name: n,
                     description: description.text.trim(),
                     videoUrls: videoUrls,
+                    // In de volgorde van kMuscleGroups, voor een vast beeld.
+                    muscleGroups: [
+                      for (final g in kMuscleGroups)
+                        if (muscleGroups.contains(g)) g,
+                    ],
                   ),
                 );
               },

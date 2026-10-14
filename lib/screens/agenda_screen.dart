@@ -14,10 +14,14 @@ import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/kinetic.dart';
 
+/// Wat de agenda meteen opent (vanuit een snelle actie op het dashboard).
+enum AgendaStartAction { planTraining, addCompetition }
+
 class AgendaScreen extends StatefulWidget {
-  const AgendaScreen({super.key, required this.controller});
+  const AgendaScreen({super.key, required this.controller, this.startAction});
 
   final AppController controller;
+  final AgendaStartAction? startAction;
 
   @override
   State<AgendaScreen> createState() => _AgendaScreenState();
@@ -35,6 +39,18 @@ class _AgendaScreenState extends State<AgendaScreen> {
     super.initState();
     _repo = AgendaRepository(widget.controller.client!);
     _load();
+    final action = widget.startAction;
+    if (action != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        switch (action) {
+          case AgendaStartAction.planTraining:
+            _editTraining();
+          case AgendaStartAction.addCompetition:
+            _editCompetition();
+        }
+      });
+    }
   }
 
   Future<void> _load() async {

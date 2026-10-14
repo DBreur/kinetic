@@ -10,6 +10,7 @@ import '../models/glucose_entry.dart';
 import '../repositories/profile_repository.dart';
 import '../services/video_labels.dart';
 import '../widgets/glucose_alarm.dart';
+import '../widgets/muscle_figure.dart';
 
 enum AppBootState { loading, needsConfig, signedOut, needsOnboarding, ready }
 
@@ -78,6 +79,7 @@ class AppController extends ChangeNotifier {
   AppProfile? get profile => _profile;
   set profile(AppProfile? next) {
     _profile = next;
+    MuscleFigure.female.value = next?.sex == 'female';
     VideoLabels.attach(
       next?.videoLabels ?? const {},
       next == null ? null : _saveVideoLabels,

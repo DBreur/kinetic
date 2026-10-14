@@ -8,7 +8,6 @@
 
 import 'package:flutter/material.dart';
 
-import '../core/exercise_library.dart';
 import '../models/agenda.dart' show normalizeUrl;
 import '../models/circuit.dart';
 import '../models/exercise.dart';
@@ -17,6 +16,7 @@ import '../repositories/exercise_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/block_widgets.dart' show AddBlockButton, NumberStepper;
+import '../widgets/exercise_picker.dart';
 import '../widgets/kinetic.dart';
 import '../widgets/video_link_row.dart';
 
@@ -114,14 +114,21 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
   }
 
   /// Nieuwe stap: zelfde soort doel als de vorige stap (handig bij
-  /// "1 min ..., 1 min ..."), anders 40 seconden.
+  /// "1 min ..., 1 min ..."), anders 40 seconden. De rust erna begint op
+  /// de standaard.
   void _addStep(String name) {
     final last = _steps.isEmpty ? null : _steps.last;
     setState(() {
       _steps.add(
-        last == null || last.isTimed
-            ? CircuitStep(name: name, seconds: last?.seconds ?? 40)
-            : CircuitStep(name: name, reps: last.reps),
+        last == null
+            ? CircuitStep(name: name, seconds: 40)
+            : CircuitStep(
+                name: name,
+                seconds: last.seconds,
+                reps: last.reps,
+                toBurn: last.toBurn,
+                extraTarget: last.extraTarget,
+              ),
       );
       _adding = false;
       _query.clear();
@@ -131,7 +138,9 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
   Future<void> _editTarget(int i) async {
     final result = await showModalBottomSheet<CircuitStep>(
       context: context,
-      builder: (_) => _StepTargetSheet(step: _steps[i]),
+      isScrollControlled: true,
+      builder: (_) =>
+          _StepTargetSheet(step: _steps[i], defaultRest: _restSeconds),
     );
     if (result != null) setState(() => _steps[i] = result);
   }
@@ -303,7 +312,7 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                     ),
                     const Divider(height: 24, color: AppColor.line),
                     NumberStepper(
-                      label: 'RUST TUSSEN STAPPEN',
+                      label: 'STANDAARD RUST NA ELKE OEFENING',
                       value: _restSeconds,
                       suffix: 's',
                       onDown: () => setState(
@@ -320,8 +329,8 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
               const KLabel('Stappen'),
               const SizedBox(height: 4),
               Text(
-                'Tik op de tijd of het aantal om te kiezen tussen tijd en '
-                'herhalingen.',
+                'Tik op een oefening om te kiezen tussen tijd, herhalingen of '
+                'tot verzuring, en hoeveel rust erna (of geen).',
                 style: AppText.caption,
               ),
               const SizedBox(height: 10),
@@ -339,6 +348,7 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                         child: _CircuitStepRow(
                           index: i,
                           step: _steps[i],
+                          defaultRest: _restSeconds,
                           onTarget: () => _editTarget(i),
                           onRemove: () => setState(() => _steps.removeAt(i)),
                           dragHandle: ReorderableDragStartListener(
@@ -427,6 +437,7 @@ class _CircuitStepRow extends StatelessWidget {
   const _CircuitStepRow({
     required this.index,
     required this.step,
+    required this.defaultRest,
     required this.onTarget,
     required this.onRemove,
     this.dragHandle,
@@ -434,78 +445,148 @@ class _CircuitStepRow extends StatelessWidget {
 
   final int index;
   final CircuitStep step;
+  final int defaultRest;
   final VoidCallback onTarget;
   final VoidCallback onRemove;
   final Widget? dragHandle;
 
+  String get _restLabel {
+    final rest = step.restSeconds ?? defaultRest;
+    final text = rest > 0 ? '${rest}s rust erna' : 'geen rust erna';
+    return step.restSeconds == null ? '$text (standaard)' : text;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
-      decoration: BoxDecoration(
-        color: AppColor.surfaceRaised,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Row(
-        children: [
-          ?dragHandle,
-          SizedBox(
-            width: 20,
-            child: Text(
-              '${index + 1}',
-              textAlign: TextAlign.center,
-              style: AppText.caption,
+    return InkWell(
+      onTap: onTarget,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+        decoration: BoxDecoration(
+          color: AppColor.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Row(
+          children: [
+            ?dragHandle,
+            SizedBox(
+              width: 20,
+              child: Text(
+                '${index + 1}',
+                textAlign: TextAlign.center,
+                style: AppText.caption,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: Text(step.name, style: AppText.bodyStrong)),
-          ActionChip(
-            avatar: Icon(
-              step.isTimed ? Icons.timer_outlined : Icons.repeat,
-              size: 16,
-              color: AppColor.ice,
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(step.name, style: AppText.bodyStrong),
+                  Text(
+                    _restLabel,
+                    style: AppText.caption.copyWith(
+                      fontSize: 11,
+                      color: step.restSeconds == null
+                          ? AppColor.inkFaint
+                          : AppColor.inkMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            label: Text(
-              step.targetLabel,
-              style: AppText.bodyStrong.copyWith(color: AppColor.ice),
+            ActionChip(
+              avatar: Icon(
+                switch (step.kind) {
+                  StepKind.time => Icons.timer_outlined,
+                  StepKind.reps => Icons.repeat,
+                  StepKind.burn => Icons.local_fire_department_outlined,
+                },
+                size: 16,
+                color: step.toBurn ? AppColor.amber : AppColor.ice,
+              ),
+              label: Text(
+                step.targetLabel,
+                style: AppText.bodyStrong.copyWith(
+                  color: step.toBurn ? AppColor.amber : AppColor.ice,
+                ),
+              ),
+              onPressed: onTarget,
             ),
-            onPressed: onTarget,
-          ),
-          IconButton(
-            tooltip: 'Verwijderen',
-            onPressed: onRemove,
-            icon: const Icon(Icons.close, size: 16, color: AppColor.inkFaint),
-          ),
-        ],
+            IconButton(
+              tooltip: 'Verwijderen',
+              onPressed: onRemove,
+              icon: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppColor.inkFaint,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Kiest het doel van een stap: een tijd (in stappen van 5 s) of een aantal
-/// herhalingen.
+/// Kiest het doel van een stap — een tijd (in stappen van 5 s), een aantal
+/// herhalingen of tot verzuring (met eventueel nog herhalingen erna) — en
+/// hoeveel rust er na deze stap komt.
 class _StepTargetSheet extends StatefulWidget {
-  const _StepTargetSheet({required this.step});
+  const _StepTargetSheet({required this.step, required this.defaultRest});
 
   final CircuitStep step;
+  final int defaultRest;
 
   @override
   State<_StepTargetSheet> createState() => _StepTargetSheetState();
 }
 
 class _StepTargetSheetState extends State<_StepTargetSheet> {
-  late bool _timed = widget.step.isTimed;
+  late StepKind _kind = widget.step.kind;
   late int _seconds = widget.step.seconds ?? 60;
   late int _reps = widget.step.reps ?? 10;
+  late final _extra = TextEditingController(
+    text: widget.step.toBurn ? widget.step.extraTarget : '',
+  );
+  late bool _defaultRest = widget.step.restSeconds == null;
+  late int _rest = widget.step.restSeconds ?? widget.defaultRest;
+
+  @override
+  void dispose() {
+    _extra.dispose();
+    super.dispose();
+  }
+
+  CircuitStep _result() {
+    final name = widget.step.name;
+    final rest = _defaultRest ? null : _rest;
+    return switch (_kind) {
+      StepKind.time => CircuitStep(
+        name: name,
+        seconds: _seconds,
+        restSeconds: rest,
+      ),
+      StepKind.reps => CircuitStep(name: name, reps: _reps, restSeconds: rest),
+      StepKind.burn => CircuitStep(
+        name: name,
+        toBurn: true,
+        extraTarget: _extra.text.trim(),
+        restSeconds: rest,
+      ),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final insets = MediaQuery.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         20,
         20,
         20,
-        20 + MediaQuery.of(context).padding.bottom,
+        20 + insets.viewInsets.bottom + insets.padding.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -513,17 +594,18 @@ class _StepTargetSheetState extends State<_StepTargetSheet> {
         children: [
           Text(widget.step.name, style: AppText.title),
           const SizedBox(height: 14),
-          KSegmented<bool>(
+          KSegmented<StepKind>(
             options: const [
-              (true, 'Tijd', Icons.timer_outlined),
-              (false, 'Herhalingen', Icons.repeat),
+              (StepKind.time, 'Tijd', Icons.timer_outlined),
+              (StepKind.reps, 'Reps', Icons.repeat),
+              (StepKind.burn, 'Verzuring', Icons.local_fire_department_outlined),
             ],
-            selected: _timed,
-            onChanged: (v) => setState(() => _timed = v),
+            selected: _kind,
+            onChanged: (v) => setState(() => _kind = v),
           ),
           const SizedBox(height: 16),
-          if (_timed)
-            NumberStepper(
+          switch (_kind) {
+            StepKind.time => NumberStepper(
               label: 'TIJD',
               value: _seconds,
               suffix: 's',
@@ -531,23 +613,47 @@ class _StepTargetSheetState extends State<_StepTargetSheet> {
                   setState(() => _seconds = (_seconds - 5).clamp(5, 900)),
               onUp: () =>
                   setState(() => _seconds = (_seconds + 5).clamp(5, 900)),
-            )
-          else
-            NumberStepper(
+            ),
+            StepKind.reps => NumberStepper(
               label: 'HERHALINGEN',
               value: _reps,
               suffix: '×',
               onDown: () => setState(() => _reps = (_reps - 1).clamp(1, 200)),
               onUp: () => setState(() => _reps = (_reps + 1).clamp(1, 200)),
             ),
+            StepKind.burn => TextField(
+              controller: _extra,
+              style: AppText.body,
+              decoration: const InputDecoration(
+                labelText: 'Herhalingen na de verzuring (optioneel)',
+                hintText: 'Bv. 5–10',
+              ),
+            ),
+          },
+          const SizedBox(height: 16),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _defaultRest,
+            onChanged: (v) => setState(() => _defaultRest = v),
+            title: Text('Standaard rust erna', style: AppText.bodyStrong),
+            subtitle: Text(
+              widget.defaultRest > 0
+                  ? '${widget.defaultRest}s, zoals ingesteld bij het circuit'
+                  : 'Geen rust, zoals ingesteld bij het circuit',
+              style: AppText.caption,
+            ),
+          ),
+          if (!_defaultRest)
+            NumberStepper(
+              label: 'RUST NA DEZE OEFENING',
+              value: _rest,
+              suffix: 's',
+              onDown: () => setState(() => _rest = (_rest - 5).clamp(0, 300)),
+              onUp: () => setState(() => _rest = (_rest + 5).clamp(0, 300)),
+            ),
           const SizedBox(height: 20),
           FilledButton(
-            onPressed: () => Navigator.pop(
-              context,
-              _timed
-                  ? CircuitStep(name: widget.step.name, seconds: _seconds)
-                  : CircuitStep(name: widget.step.name, reps: _reps),
-            ),
+            onPressed: () => Navigator.pop(context, _result()),
             child: const Text('Klaar'),
           ),
         ],
@@ -570,97 +676,10 @@ class _AddCircuitExerciseInline extends StatelessWidget {
   final VoidCallback onCancel;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColor.surface,
-        border: Border.all(color: AppColor.teal.withValues(alpha: .3)),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: query,
-            style: AppText.body,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: AppColor.surfaceRaised,
-              hintText: 'Zoek of typ een oefening',
-              hintStyle: AppText.body.copyWith(color: AppColor.inkGhost),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: query,
-            builder: (context, value, _) {
-              final q = value.text.trim().toLowerCase();
-              final allNames = <String>{
-                ...kExerciseLibrary,
-                ...customExercises.map((e) => e.name),
-              };
-              final options = allNames
-                  .where((n) => q.isEmpty || n.toLowerCase().contains(q))
-                  .take(6)
-                  .toList();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final name in options)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: InkWell(
-                        onTap: () => onPick(name),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColor.surfaceRaised,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(name, style: AppText.bodyStrong),
-                        ),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onCancel,
-                          child: const Text('Annuleer'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: value.text.trim().isEmpty
-                              ? null
-                              : () => onPick(value.text.trim()),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColor.teal,
-                            foregroundColor: AppColor.greenInk,
-                          ),
-                          child: const Text('Eigen oefening'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ExercisePicker(
+    query: query,
+    customExercises: customExercises,
+    onPick: onPick,
+    onCancel: onCancel,
+  );
 }

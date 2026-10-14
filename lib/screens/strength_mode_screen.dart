@@ -8,7 +8,6 @@
 // sessie laat zien en heropent.
 
 import 'package:flutter/material.dart';
-import '../core/exercise_library.dart';
 import '../models/exercise.dart';
 import '../models/training_session.dart';
 import '../repositories/circuit_repository.dart';
@@ -16,6 +15,7 @@ import '../state/strength_session_controller.dart';
 import '../services/system_bars.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/info_sheet.dart';
+import '../widgets/exercise_picker.dart';
 import '../widgets/kinetic.dart';
 import '../widgets/block_widgets.dart' show AddBlockButton;
 import '../widgets/manual_glucose.dart' show FingerHistoryStrip;
@@ -941,119 +941,12 @@ class _AddExerciseCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColor.bgDeep,
-        border: Border.all(color: AppColor.teal.withValues(alpha: .3)),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: query,
-            style: AppText.body,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: .06),
-              hintText: 'Zoek of typ een oefening',
-              hintStyle: AppText.body.copyWith(color: AppColor.inkGhost),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: query,
-            builder: (context, value, _) {
-              final q = value.text.trim().toLowerCase();
-              final descriptions = {
-                for (final e in customExercises) e.name: e.description,
-              };
-              final allNames = <String>{
-                ...kExerciseLibrary,
-                ...customExercises.map((e) => e.name),
-              };
-              final options = allNames
-                  .where((n) => q.isEmpty || n.toLowerCase().contains(q))
-                  .take(6)
-                  .toList();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final name in options)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: InkWell(
-                        onTap: () => onPick(name),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: .04),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(name, style: AppText.bodyStrong),
-                              if ((descriptions[name] ?? '').isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 2),
-                                  child: Text(
-                                    descriptions[name]!,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppText.caption.copyWith(
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onCancel,
-                          child: const Text('Annuleer'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: value.text.trim().isEmpty
-                              ? null
-                              : () => onPick(value.text.trim()),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColor.teal,
-                            foregroundColor: AppColor.greenInk,
-                          ),
-                          child: const Text('Eigen oefening'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ExercisePicker(
+    query: query,
+    customExercises: customExercises,
+    onPick: onPick,
+    onCancel: onCancel,
+  );
 }
 
 /// Rustteller die verschijnt zodra je een set afvinkt — net als in Lyfta.
@@ -1144,7 +1037,7 @@ class _CircuitCard extends StatelessWidget {
     final ss = (secondsLeft % 60).toString().padLeft(2, '0');
     final isResting = liveCircuit.phase == CircuitPhase.rest;
     final total = isResting
-        ? c.restSeconds
+        ? liveCircuit.restTotal
         : (liveCircuit.currentStep?.seconds ?? c.workSeconds);
 
     return Container(
@@ -1235,6 +1128,7 @@ class _CircuitCard extends StatelessWidget {
                 if (liveCircuit.waitingForTap)
                   _RepStepBox(
                     target: liveCircuit.currentStep!.targetLabel,
+                    burn: liveCircuit.currentStep!.toBurn,
                     onDone: onSkip,
                   )
                 else
@@ -1328,9 +1222,14 @@ class _CircuitCard extends StatelessWidget {
 /// Een herhalingen-stap in een lopend circuit: geen klok, je tikt "Klaar"
 /// als je ze gedaan hebt.
 class _RepStepBox extends StatelessWidget {
-  const _RepStepBox({required this.target, required this.onDone});
+  const _RepStepBox({
+    required this.target,
+    required this.onDone,
+    this.burn = false,
+  });
 
   final String target;
+  final bool burn;
   final VoidCallback onDone;
 
   @override
@@ -1344,7 +1243,11 @@ class _RepStepBox extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.repeat, size: 16, color: AppColor.greenBright),
+          Icon(
+            burn ? Icons.local_fire_department_outlined : Icons.repeat,
+            size: 16,
+            color: burn ? AppColor.amber : AppColor.greenBright,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

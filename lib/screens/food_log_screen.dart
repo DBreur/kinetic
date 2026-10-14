@@ -29,9 +29,17 @@ import 'food_presets_screen.dart';
 import '../widgets/kinetic.dart';
 
 class FoodLogScreen extends StatefulWidget {
-  const FoodLogScreen({super.key, required this.controller});
+  const FoodLogScreen({
+    super.key,
+    required this.controller,
+    this.openNewMeal = false,
+  });
 
   final AppController controller;
+
+  /// Meteen het blad "maaltijd loggen" openen (snelle actie op het
+  /// dashboard).
+  final bool openNewMeal;
 
   @override
   State<FoodLogScreen> createState() => FoodLogScreenState();
@@ -54,6 +62,11 @@ class FoodLogScreenState extends State<FoodLogScreen> {
     super.initState();
     _repo = FoodLogRepository(widget.controller.client!);
     _load();
+    if (widget.openNewMeal) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _addOrEdit();
+      });
+    }
   }
 
   @override

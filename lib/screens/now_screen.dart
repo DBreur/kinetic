@@ -12,6 +12,7 @@ import 'dart:async';
 
 import '../core/formatters.dart';
 import '../core/training_streak.dart';
+import '../models/dashboard_config.dart';
 import '../models/app_profile.dart';
 import '../models/glucose.dart';
 import '../models/glucose_entry.dart';
@@ -45,6 +46,7 @@ class NowScreen extends StatefulWidget {
     required this.openMatSession,
     required this.openStrengthSession,
     this.onNavigate,
+    this.onQuickAction,
     this.onOpenSettings,
     this.onStartPlanned,
     this.alreadyStartedPlanned = const {},
@@ -64,6 +66,10 @@ class NowScreen extends StatefulWidget {
 
   /// Wisselt naar een ander tabblad (snelle acties).
   final ValueChanged<KineticTab>? onNavigate;
+
+  /// Snelle acties die buiten dit scherm iets openen (maaltijd loggen,
+  /// training plannen, …) — zie ShellScreen.
+  final ValueChanged<QuickAction>? onQuickAction;
 
   /// Opent de instellingen (bv. als er nog geen glucosebron is).
   final VoidCallback? onOpenSettings;
@@ -690,18 +696,58 @@ class _NowScreenState extends State<NowScreen> {
               const SizedBox(height: AppSpace.lg),
             ],
 
-          // ── wedstrijd-aftelling ──
-          if (_nextCompetition != null) ...[
-            CompetitionCountdownCard(
-              competition: _nextCompetition!,
-              compact: true,
-              currentWeightKg: widget.controller.profile?.weightKg,
-              onTap: () => widget.onNavigate?.call(KineticTab.agenda),
-            ),
-            const SizedBox(height: AppSpace.lg),
-          ],
+          for (final section
+              in widget.controller.profile?.dashboard.visibleSections ??
+                  DashboardConfig.standard.visibleSections)
+            ..._section(section, reading, verdict),
+        ],
+      ),
+    );
+  }
 
-          // ── glucose & matklaar ──
+  /// Snelle acties die dit scherm zelf afhandelt; de rest gaat naar de shell.
+  void _quickAction(QuickAction action) {
+    switch (action) {
+      case QuickAction.finger:
+        _recordManualReading();
+      case QuickAction.startMat:
+        _startMat();
+      case QuickAction.startStrength:
+        _startStrength();
+      default:
+        widget.onQuickAction?.call(action);
+    }
+  }
+
+  Future<void> _startMat() async {
+    final saved = await widget.openMatSession(
+      initialReading: _glucose.reading,
+    );
+    if (saved == true) _loadRecentSessions();
+  }
+
+  /// Eén blok van het dashboard, met ruimte eronder — leeg als er niets te
+  /// tonen is (bv. geen wedstrijd gepland).
+  List<Widget> _section(
+    DashSection section,
+    GlucoseReading? reading,
+    _Verdict verdict,
+  ) {
+    const gap = SizedBox(height: AppSpace.lg);
+    switch (section) {
+      case DashSection.competition:
+        if (_nextCompetition == null) return const [];
+        return [
+          CompetitionCountdownCard(
+            competition: _nextCompetition!,
+            compact: true,
+            currentWeightKg: widget.controller.profile?.weightKg,
+            onTap: () => widget.onNavigate?.call(KineticTab.agenda),
+          ),
+          gap,
+        ];
+      case DashSection.glucose:
+        return [
           _ReadinessCard(
             snapshot: _glucose,
             verdict: verdict,
@@ -713,9 +759,10 @@ class _NowScreenState extends State<NowScreen> {
             onOpenSettings: widget.onOpenSettings,
             alarmLine: _AlarmStatusLine(controller: widget.controller),
           ),
-          const SizedBox(height: AppSpace.lg),
-
-          // ── trainingsdag ──
+          gap,
+        ];
+      case DashSection.trainingDay:
+        return [
           _TrainingDayCard(
             prep: _prep,
             plannedToday: _plannedToday,
@@ -726,43 +773,41 @@ class _NowScreenState extends State<NowScreen> {
             onToggle: _togglePrep,
             onEdit: (i) => _openPrepSheet(index: i),
             onAddPrep: () => _openPrepSheet(),
-            onStart: () async {
-              final saved = await widget.openMatSession(initialReading: reading);
-              if (saved == true) _loadRecentSessions();
-            },
+            onStart: _startMat,
             onStartStrength: _startStrength,
           ),
-          const SizedBox(height: AppSpace.lg),
-
-          // ── snelle acties ──
+          gap,
+        ];
+      case DashSection.quickActions:
+        final actions = [
+          for (final a
+              in widget.controller.profile?.dashboard.visibleActions ??
+                  DashboardConfig.standard.visibleActions)
+            // Vingerprik alleen als je met vingerprikken meet.
+            if (a != QuickAction.finger || _isFinger) a,
+        ];
+        if (actions.isEmpty) return const [];
+        return [
           const KSectionTitle('Snelle acties', trailing: 'Bio-adjust'),
-          if (_isFinger) ...[
+          for (final a in actions) ...[
             KActionRow(
-              icon: Icons.water_drop_outlined,
-              iconColor: AppColor.ice,
-              title: 'Vingerprik invoeren',
-              subtitle: 'Handmatige meting vastleggen',
-              trailingIcon: Icons.add,
-              onTap: _recordManualReading,
+              icon: a.icon,
+              iconColor: a == QuickAction.finger
+                  ? AppColor.ice
+                  : AppColor.coral,
+              title: a.label,
+              subtitle: a.subtitle,
+              trailingIcon: a == QuickAction.finger
+                  ? Icons.add
+                  : Icons.arrow_forward,
+              onTap: () => _quickAction(a),
             ),
             const SizedBox(height: AppSpace.md),
           ],
-          KActionRow(
-            icon: Icons.restaurant_outlined,
-            title: 'Maaltijd & insuline',
-            subtitle: 'Koolhydraten tellen, bolus berekenen',
-            onTap: () => widget.onNavigate?.call(KineticTab.food),
-          ),
-          const SizedBox(height: AppSpace.md),
-          KActionRow(
-            icon: Icons.sports_martial_arts_outlined,
-            title: 'Technieken',
-            subtitle: 'Worpen, klemmen & leerdoelen',
-            onTap: () => widget.onNavigate?.call(KineticTab.train),
-          ),
-          const SizedBox(height: AppSpace.lg),
-
-          // ── laatste sessies ──
+          const SizedBox(height: AppSpace.lg - AppSpace.md),
+        ];
+      case DashSection.recent:
+        return [
           const KSectionTitle('Laatste sessies'),
           if (_recent.isEmpty)
             Padding(
@@ -791,9 +836,9 @@ class _NowScreenState extends State<NowScreen> {
             ),
             const SizedBox(height: AppSpace.sm),
           ],
-        ],
-      ),
-    );
+          gap,
+        ];
+    }
   }
 }
 

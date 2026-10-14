@@ -301,8 +301,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   for (final (value, label) in const [
                     ('male', 'Man'),
                     ('female', 'Vrouw'),
-                    ('other', 'Anders'),
-                    ('', 'Zeg ik liever niet'),
                   ])
                     ChoiceChip(
                       label: Text(label),

@@ -6,6 +6,7 @@ import '../core/formatters.dart';
 import '../core/positions.dart';
 import '../core/combination_sort.dart';
 import '../core/technique_sort.dart';
+import '../models/dashboard_config.dart';
 import '../models/combination.dart';
 import '../models/glucose.dart';
 import '../models/technique.dart';
@@ -294,6 +295,41 @@ class _ShellScreenState extends State<ShellScreen>
 
   void _go(KineticTab tab) => setState(() => _tab = tab.index);
 
+  /// Eenmalig: het volgende scherm opent meteen iets (maaltijd loggen,
+  /// training plannen, …) — gezet door een snelle actie op het dashboard.
+  bool _openNewMeal = false;
+  AgendaStartAction? _agendaStart;
+
+  void _quickAction(QuickAction action) {
+    switch (action) {
+      case QuickAction.meal:
+        _openNewMeal = true;
+        _go(KineticTab.food);
+      case QuickAction.planTraining:
+        _agendaStart = AgendaStartAction.planTraining;
+        _go(KineticTab.agenda);
+      case QuickAction.addCompetition:
+        _agendaStart = AgendaStartAction.addCompetition;
+        _go(KineticTab.agenda);
+      case QuickAction.techniques:
+        _trainSegment = 1;
+        _go(KineticTab.train);
+      case QuickAction.biometrics:
+        _go(KineticTab.biometrics);
+      case QuickAction.library:
+        Navigator.push<void>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TrainingLibraryScreen(controller: widget.controller),
+          ),
+        );
+      case QuickAction.finger ||
+          QuickAction.startMat ||
+          QuickAction.startStrength:
+        break; // handelt het dashboard zelf af
+    }
+  }
+
   Future<void> _openProfile() async {
     await Navigator.push<void>(
       context,
@@ -319,6 +355,18 @@ class _ShellScreenState extends State<ShellScreen>
 
   static const _sections = ['Vandaag', 'Train', 'Eten', 'Biometrie', 'Agenda'];
 
+  bool _takeOpenNewMeal() {
+    final v = _openNewMeal;
+    _openNewMeal = false;
+    return v;
+  }
+
+  AgendaStartAction? _takeAgendaStart() {
+    final v = _agendaStart;
+    _agendaStart = null;
+    return v;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Geen IndexedStack: elke keer dat je een tab opent bouwt hij opnieuw
@@ -334,6 +382,7 @@ class _ShellScreenState extends State<ShellScreen>
         openMatSession: _startOrResumeMat,
         openStrengthSession: _startOrResumeStrength,
         onNavigate: _go,
+        onQuickAction: _quickAction,
         onOpenSettings: _openSettings,
       ),
       KineticTab.train => _TrainHub(
@@ -341,9 +390,15 @@ class _ShellScreenState extends State<ShellScreen>
         segment: _trainSegment,
         onSegment: (v) => setState(() => _trainSegment = v),
       ),
-      KineticTab.food => FoodLogScreen(controller: widget.controller),
+      KineticTab.food => FoodLogScreen(
+        controller: widget.controller,
+        openNewMeal: _takeOpenNewMeal(),
+      ),
       KineticTab.biometrics => InsightsScreen(controller: widget.controller),
-      KineticTab.agenda => AgendaScreen(controller: widget.controller),
+      KineticTab.agenda => AgendaScreen(
+        controller: widget.controller,
+        startAction: _takeAgendaStart(),
+      ),
     };
     return Scaffold(
       body: SafeArea(

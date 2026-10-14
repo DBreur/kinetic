@@ -152,6 +152,9 @@ class LiveCircuit {
   bool isDone = false;
   final IntervalTimer timer = IntervalTimer();
 
+  /// Lengte van de lopende rust (verschilt per stap) — voor de voortgangsbalk.
+  int restTotal = 0;
+
   LiveCircuit(this.circuit);
 
   late final List<CircuitStep> steps = circuit.effectiveSteps;
@@ -189,9 +192,11 @@ class LiveCircuit {
         timer.cancel();
         return true;
       }
-      if (c.restSeconds > 0) {
+      final rest = c.restAfter(exerciseIndex);
+      if (rest > 0) {
         phase = CircuitPhase.rest;
-        timer.start(Duration(seconds: c.restSeconds));
+        restTotal = rest;
+        timer.start(Duration(seconds: rest));
         return false;
       }
     }

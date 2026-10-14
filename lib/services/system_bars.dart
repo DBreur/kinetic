@@ -63,6 +63,17 @@ class SystemBars {
     }
   }
 
+  /// Geen eigen achtergrond achter de navigatieknoppen (Android legt daar
+  /// anders een halfdoorzichtige balk onder). Die balk verdween bij het
+  /// verbergen eerder dan de knoppen zelf; zonder balk gaat alles in één
+  /// beweging weg.
+  static const overlayStyle = SystemUiOverlayStyle(
+    systemNavigationBarColor: Color(0x00000000),
+    systemNavigationBarDividerColor: Color(0x00000000),
+    systemNavigationBarContrastEnforced: false,
+    systemStatusBarContrastEnforced: false,
+  );
+
   static bool _callbackRegistered = false;
   static Timer? _rehide;
 
@@ -78,6 +89,7 @@ class SystemBars {
       // systeem, niet naar de app — dus je scrollt niet mee als je de
       // knoppen terughaalt. Ze blijven dan staan tot de app ze opnieuw
       // verbergt; dat doet [_registerCallback] na [rehideAfter].
+      SystemChrome.setSystemUIOverlayStyle(overlayStyle);
       await SystemChrome.setEnabledSystemUIMode(
         hidden ? SystemUiMode.immersive : SystemUiMode.edgeToEdge,
       );

@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
-import '../core/exercise_library.dart';
 import '../models/combination.dart';
 import '../models/exercise.dart';
 import '../models/technique.dart';
@@ -18,6 +17,7 @@ import '../repositories/session_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/exercise_picker.dart';
 import '../widgets/block_widgets.dart';
 import '../widgets/nutrition_log.dart';
 
@@ -999,97 +999,10 @@ class _AddExerciseInline extends StatelessWidget {
   final VoidCallback onCancel;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColor.surface,
-        border: Border.all(color: AppColor.teal.withValues(alpha: .3)),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: query,
-            style: AppText.body,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: AppColor.surfaceRaised,
-              hintText: 'Zoek of typ een oefening',
-              hintStyle: AppText.body.copyWith(color: AppColor.inkGhost),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: query,
-            builder: (context, value, _) {
-              final q = value.text.trim().toLowerCase();
-              final allNames = <String>{
-                ...kExerciseLibrary,
-                ...customExercises.map((e) => e.name),
-              };
-              final options = allNames
-                  .where((n) => q.isEmpty || n.toLowerCase().contains(q))
-                  .take(6)
-                  .toList();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final name in options)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: InkWell(
-                        onTap: () => onPick(name),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColor.surfaceRaised,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(name, style: AppText.bodyStrong),
-                        ),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onCancel,
-                          child: const Text('Annuleer'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: value.text.trim().isEmpty
-                              ? null
-                              : () => onPick(value.text.trim()),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColor.teal,
-                            foregroundColor: AppColor.greenInk,
-                          ),
-                          child: const Text('Eigen oefening'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ExercisePicker(
+    query: query,
+    customExercises: customExercises,
+    onPick: onPick,
+    onCancel: onCancel,
+  );
 }

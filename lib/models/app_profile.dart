@@ -1,3 +1,4 @@
+import 'dashboard_config.dart';
 import 'meal_reminder.dart';
 import 'bolus_period.dart';
 import 'food_preset.dart';
@@ -114,6 +115,9 @@ class AppProfile {
   /// Eigen namen voor video's: videolink → naam (zie VideoLabels).
   final Map<String, String> videoLabels;
 
+  /// Indeling van het dashboard (zie DashboardConfig).
+  final DashboardConfig dashboard;
+
   /// Vaste eetmomenten met een dagelijkse herinnering (apart aan/uit), en
   /// hoeveel minuten vóór het eetmoment die melding komt.
   final bool mealRemindersEnabled;
@@ -188,6 +192,7 @@ class AppProfile {
     this.weekStart = 1,
     this.hideSystemBars = false,
     this.videoLabels = const {},
+    this.dashboard = DashboardConfig.standard,
     this.mealRemindersEnabled = false,
     this.mealReminders = const [],
     this.mealReminderOffset = 0,
@@ -260,6 +265,9 @@ class AppProfile {
             in ((json['video_labels'] as Map?) ?? const {}).entries)
           if (e.value is String) '${e.key}': e.value as String,
       },
+      dashboard: DashboardConfig.fromJson(
+        (json['dashboard'] as Map?)?.cast<String, dynamic>(),
+      ),
       mealRemindersEnabled: (json['meal_reminders_enabled'] as bool?) ?? false,
       mealReminders: ((json['meal_reminders'] as List?) ?? [])
           .map(MealReminder.fromJson)
@@ -322,6 +330,7 @@ class AppProfile {
     'week_start': weekStart,
     'hide_system_bars': hideSystemBars,
     'video_labels': videoLabels,
+    'dashboard': dashboard.toJson(),
     'meal_reminders_enabled': mealRemindersEnabled,
     'meal_reminders': mealReminders.map((m) => m.toJson()).toList(),
     'meal_reminder_offset': mealReminderOffset,
@@ -365,6 +374,7 @@ class AppProfile {
     int? weekStart,
     bool? hideSystemBars,
     Map<String, String>? videoLabels,
+    DashboardConfig? dashboard,
     bool? mealRemindersEnabled,
     List<MealReminder>? mealReminders,
     int? mealReminderOffset,
@@ -412,6 +422,7 @@ class AppProfile {
       weekStart: weekStart ?? this.weekStart,
       hideSystemBars: hideSystemBars ?? this.hideSystemBars,
       videoLabels: videoLabels ?? this.videoLabels,
+      dashboard: dashboard ?? this.dashboard,
       mealRemindersEnabled: mealRemindersEnabled ?? this.mealRemindersEnabled,
       mealReminders: mealReminders ?? this.mealReminders,
       mealReminderOffset: mealReminderOffset ?? this.mealReminderOffset,

@@ -30,11 +30,7 @@ class ExerciseRepository {
   Future<Exercise> updateContent(Exercise exercise) async {
     final row = await _client
         .from('exercises')
-        .update({
-          'name': exercise.name,
-          'description': exercise.description,
-          'video_urls': exercise.videoUrls,
-        })
+        .update(exercise.toUpdateJson())
         .eq('id', exercise.id)
         .select()
         .single();
