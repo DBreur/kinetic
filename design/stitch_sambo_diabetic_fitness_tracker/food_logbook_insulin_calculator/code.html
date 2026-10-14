@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;1,600&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-primary-container": "#eeefff", "on-surface-variant": "#c3c6d7", "on-error-container": "#ffdad6", "primary": "#b4c5ff", "error-container": "#93000a", "on-tertiary-fixed-variant": "#004e5c", "secondary-container": "#ad0224", "background": "#0f131c", "surface-container-highest": "#31353e", "on-primary": "#002a78", "surface-bright": "#353942", "on-secondary-fixed": "#410007", "surface-container-low": "#181c24", "secondary": "#ffb3b1", "surface": "#0f131c", "on-tertiary": "#003640", "on-primary-fixed": "#00174b", "on-primary-fixed-variant": "#003ea8", "inverse-primary": "#0053db", "surface-container-high": "#262a33", "outline": "#8d90a0", "tertiary-container": "#00788c", "primary-fixed-dim": "#b4c5ff", "tertiary-fixed": "#acedff", "on-background": "#dfe2ee", "surface-container-lowest": "#0a0e16", "on-error": "#690005", "inverse-on-surface": "#2c3039", "secondary-fixed-dim": "#ffb3b1", "outline-variant": "#434655", "primary-fixed": "#dbe1ff", "on-tertiary-fixed": "#001f26", "primary-container": "#2563eb", "surface-dim": "#0f131c", "surface-container": "#1c2028", "surface-tint": "#b4c5ff", "tertiary-fixed-dim": "#4cd7f6", "on-surface": "#dfe2ee", "on-secondary": "#680011", "tertiary": "#4cd7f6", "secondary-fixed": "#ffdad8", "error": "#ffb4ab", "on-secondary-container": "#ffb8b5", "surface-variant": "#31353e", "on-tertiary-container": "#d7f6ff", "inverse-surface": "#dfe2ee", "on-secondary-fixed-variant": "#92001c" }, borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, spacing: { "space-sm": "0.5rem", "gutter-mobile": "0.75rem", "gutter-desktop": "1.5rem", "margin": "1rem", "gutter": "1rem", "space-lg": "1.5rem", "margin-mobile": "0.75rem", "margin-desktop": "2rem", "space-xs": "0.25rem", "space-xl": "2rem", "space-md": "1rem" }, fontFamily: { "headline-sm": ["Barlow Condensed"], "display-xl-mobile": ["Barlow Condensed"], "telemetry-unit": ["Manrope"], "telemetry-value": ["Barlow Condensed"], "body-md": ["Manrope"], "display-lg-mobile": ["Barlow Condensed"], "headline-md": ["Barlow Condensed"], "display-lg": ["Barlow Condensed"], "body-sm": ["Manrope"], "headline-lg": ["Barlow Condensed"], "badge-label": ["Barlow Condensed"], "display-xl": ["Barlow Condensed"], "body-lg": ["Manrope"] }, fontSize: { "headline-sm": ["20px", { lineHeight: "24px", letterSpacing: "0.02em", fontWeight: "600" }], "display-xl-mobile": ["42px", { lineHeight: "44px", letterSpacing: "0.02em", fontWeight: "800" }], "telemetry-unit": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "600" }], "telemetry-value": ["36px", { lineHeight: "36px", letterSpacing: "0.02em", fontWeight: "700" }], "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0em", fontWeight: "400" }], "display-lg-mobile": ["34px", { lineHeight: "36px", letterSpacing: "0.02em", fontWeight: "700" }], "headline-md": ["24px", { lineHeight: "28px", letterSpacing: "0.02em", fontWeight: "600" }], "display-lg": ["44px", { lineHeight: "46px", letterSpacing: "0.02em", fontWeight: "700" }], "body-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "400" }], "headline-lg": ["30px", { lineHeight: "34px", letterSpacing: "0.03em", fontWeight: "700" }], "badge-label": ["13px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "700" }], "display-xl": ["56px", { lineHeight: "56px", letterSpacing: "0.02em", fontWeight: "800" }], "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0.01em", fontWeight: "500" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>body { min-height: max(884px, 100dvh); }</style></head><body class="bg-background font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-primary selection:text-on-primary"><header class="fixed top-0 inset-x-0 z-50 bg-background/90 backdrop-blur-xl pt-safe"><div class="h-16 px-gutter flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center flex-shrink-0 text-on-primary-container font-headline-sm text-headline-sm font-bold">K</div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm uppercase tracking-wider text-on-surface leading-none">SAMBO HUD</span><span class="font-telemetry-unit text-telemetry-unit uppercase text-tertiary tracking-widest mt-0.5">COMBAT BIO</span></div></div><div class="flex items-center gap-1.5 sm:gap-space-sm"><div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high/90 border border-outline-variant/30 text-on-surface"><span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span><span class="font-headline-sm text-[16px] text-tertiary leading-none">6.6</span><span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">mmol/L</span><span class="material-symbols-outlined text-tertiary text-[14px] leading-none">north_east</span></div><a aria-label="Settings &amp; Preferences" class="w-11 h-11 flex items-center justify-center rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high/60 transition-colors focus:outline-none" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">settings</span></a><a aria-label="Fighter Profile" class="w-11 h-11 flex items-center justify-center rounded-full transition-transform active:scale-95 flex-shrink-0 focus:outline-none" data-path="profile" href="#"><img alt="Fighter Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-primary/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3KculdONXAjCe1nI_9c4rfxFPaTFi3veKxR0uZWY9NvQCKO257xiMt0_5B_S-aSfQHL4p6jOsVEZXSj11qpmxlACwE9-ewMDVwGEf2lC70m01v4NmM8FH-9osCEWJS4IlAz2fCBLlBcvSZGfIKEZqlmpVkcbZ4ILp66CQBr9RWQjxccH9NH7ZnrUzksyq0hrOVQK2XyeP7E-CkmMZzCdU5v3MpdTzjgtv_Iq8ZtIfm5yAUiC7UFSj"/></a></div></div></header><main class="flex flex-col relative w-full pt-16 pb-20 bg-background min-h-screen"><div class="flex flex-col w-full px-gutter-mobile py-space-md gap-space-md">
+<!-- TOP CONTEXT HUD & QUICK ACTIONS -->
+<div class="flex items-center justify-between gap-space-sm bg-surface-container p-space-md rounded-xl">
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="font-headline-sm text-headline-sm uppercase tracking-wider text-on-surface">BOLUS ADVISOR HUD</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Target: 5.5 mmol/L • ICR 1:10g • ISF 2.2</p>
+</div>
+<div class="flex items-center gap-space-xs flex-shrink-0">
+<button class="flex items-center gap-1 px-space-sm py-1.5 rounded-lg bg-surface-container-high text-on-surface text-badge-label font-badge-label uppercase hover:bg-surface-bright active:scale-95 transition-all" id="quick-preset-btn">
+<span class="material-symbols-outlined text-[16px] text-tertiary">bookmark_manager</span>
+<span>Presets</span>
+</button>
+<button class="flex items-center gap-1 px-space-sm py-1.5 rounded-lg bg-primary-container text-on-primary-container text-badge-label font-badge-label uppercase active:scale-95 transition-all" id="jump-log-btn">
+<span class="material-symbols-outlined text-[16px]">edit_calendar</span>
+<span>History</span>
+</button>
+</div>
+</div>
+<!-- PRE-MEAL REMINDER TIMER WIDGET -->
+<section class="flex flex-col bg-surface-container-high rounded-xl p-space-md gap-space-sm relative overflow-hidden">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-tertiary-container/20 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-[20px] animate-pulse">timer</span>
+<span class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">PRE-MEAL COUNTDOWN</span>
+</div>
+<button class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container text-tertiary text-telemetry-unit font-telemetry-unit uppercase tracking-widest active:scale-95 transition-all" id="haptic-toggle">
+<span class="material-symbols-outlined text-[13px]" id="haptic-icon">notifications_active</span>
+<span id="haptic-label">AUDIO + VIBE</span>
+</button>
+</div>
+<!-- Timer readout panel -->
+<div class="flex items-baseline justify-between bg-surface-container-lowest p-space-sm rounded-lg">
+<div class="flex flex-col">
+<span class="font-display-xl-mobile text-display-xl-mobile text-tertiary tracking-tight leading-none" id="countdown-display">14:20</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1" id="timer-status-hint">Eat carbs by <strong class="text-on-surface font-semibold" id="target-eat-time">18:05</strong> to prevent active hypo</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant uppercase">BOLUS DELTA</span>
+<span class="font-headline-sm text-headline-sm text-secondary-fixed-dim tracking-wider">-15 MIN LAG</span>
+</div>
+</div>
+<!-- Timer Action Stepper Controls -->
+<div class="grid grid-cols-3 gap-space-xs mt-1">
+<button class="py-2 rounded-lg bg-tertiary-container text-on-tertiary-container font-headline-sm text-badge-label uppercase flex items-center justify-center gap-1 active:scale-95 transition-all" id="btn-timer-15">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span>Start 15m</span>
+</button>
+<button class="py-2 rounded-lg bg-surface-container text-on-surface font-headline-sm text-badge-label uppercase flex items-center justify-center gap-1 active:scale-95 transition-all" id="btn-timer-pause">
+<span class="material-symbols-outlined text-[16px]">pause</span>
+<span>Pause</span>
+</button>
+<button class="py-2 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface font-headline-sm text-badge-label uppercase flex items-center justify-center gap-1 active:scale-95 transition-all" id="btn-timer-reset">
+<span class="material-symbols-outlined text-[16px]">restart_alt</span>
+<span>Reset</span>
+</button>
+</div>
+</section>
+<!-- LOG MEAL & FAST INSULIN CALCULATOR CARD -->
+<section class="flex flex-col bg-surface-container rounded-xl p-space-md gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-[18px]">calculate</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md uppercase text-on-surface leading-tight">LOG MEAL &amp; DOSE</h2>
+<span class="font-telemetry-unit text-telemetry-unit text-tertiary uppercase tracking-wider">TACTICAL BOLUS SOLVER</span>
+</div>
+</div>
+<!-- Datetime Stamp Chip -->
+<button class="flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container-high text-on-surface-variant hover:text-on-surface text-telemetry-unit font-telemetry-unit uppercase tracking-wide" id="edit-timestamp-btn">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span id="timestamp-text">Today, 17:45</span>
+</button>
+</div>
+<!-- Live Dexcom BG Field with Manual Overwrite -->
+<div class="flex flex-col gap-1.5 bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-tertiary text-[16px]">sensors</span>
+<span class="font-telemetry-unit text-telemetry-unit uppercase text-on-surface-variant">BLOOD GLUCOSE SYNC</span>
+</div>
+<span class="font-telemetry-unit text-telemetry-unit uppercase text-tertiary">Dexcom G7 Auto-read</span>
+</div>
+<div class="flex items-center justify-between gap-space-sm">
+<div class="flex items-baseline gap-1">
+<input class="w-24 bg-surface-container-lowest text-on-surface font-telemetry-value text-telemetry-value px-2 py-1 rounded text-center focus:outline-none focus:bg-surface-bright" id="input-bg" step="0.1" type="number" value="6.6"/>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant uppercase">mmol/L</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="px-2 py-0.5 rounded bg-tertiary-container/30 text-tertiary font-headline-sm text-badge-label uppercase">In Range</span>
+<span class="text-on-surface-variant">Target 5.5</span>
+</div>
+</div>
+</div>
+<!-- PRESETS QUICK SHELF -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm uppercase text-on-surface tracking-wider">PRESET COMBAT CARBS</span>
+<button class="font-telemetry-unit text-telemetry-unit uppercase text-primary hover:text-on-primary-container transition-colors" id="manage-presets-toggle">+ Manage / Add</button>
+</div>
+<!-- Presets List with Interactive Steppers -->
+<div class="flex flex-col gap-1.5" id="preset-list">
+<!-- Item: Apple -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-high" data-carb="16" data-name="Apple">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-secondary text-[20px]">nutrition</span>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md text-on-surface font-medium truncate">Apple</span>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">16g carbs / unit</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<button class="step-down w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">-</button>
+<span class="item-count font-headline-sm text-headline-sm text-on-surface w-6 text-center">1</span>
+<button class="step-up w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">+</button>
+<span class="item-total-carbs font-telemetry-unit text-telemetry-unit text-tertiary w-10 text-right font-bold">16g</span>
+</div>
+</div>
+<!-- Item: Slice Bread -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-high" data-carb="15" data-name="Slice Wholewheat Bread">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-tertiary text-[20px]">bakery_dining</span>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md text-on-surface font-medium truncate">Wholewheat Bread</span>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">15g carbs / slice</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<button class="step-down w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">-</button>
+<span class="item-count font-headline-sm text-headline-sm text-on-surface w-6 text-center">2</span>
+<button class="step-up w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">+</button>
+<span class="item-total-carbs font-telemetry-unit text-telemetry-unit text-tertiary w-10 text-right font-bold">30g</span>
+</div>
+</div>
+<!-- Item: Banana -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-high" data-carb="27" data-name="Banana">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-primary text-[20px]">energy_savings_leaf</span>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md text-on-surface font-medium truncate">Banana</span>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">27g carbs / unit</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<button class="step-down w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">-</button>
+<span class="item-count font-headline-sm text-headline-sm text-on-surface w-6 text-center">0</span>
+<button class="step-up w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">+</button>
+<span class="item-total-carbs font-telemetry-unit text-telemetry-unit text-tertiary w-10 text-right font-bold">0g</span>
+</div>
+</div>
+<!-- Item: Combat Rice Bowl -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-high" data-carb="45" data-name="Combat Rice Bowl">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-secondary-fixed text-[20px]">rice_bowl</span>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md text-on-surface font-medium truncate">Combat Rice Bowl</span>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">45g carbs / serving</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<button class="step-down w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">-</button>
+<span class="item-count font-headline-sm text-headline-sm text-on-surface w-6 text-center">0</span>
+<button class="step-up w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">+</button>
+<span class="item-total-carbs font-telemetry-unit text-telemetry-unit text-tertiary w-10 text-right font-bold">0g</span>
+</div>
+</div>
+<!-- Item: Dextrose Gel Pack -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-high" data-carb="20" data-name="Dextrose Gel Pack">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-error text-[20px]">medical_services</span>
+<div class="flex flex-col min-w-0">
+<span class="font-body-md text-body-md text-on-surface font-medium truncate">Dextrose Gel Pack</span>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">20g carbs (Rapid rescue)</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<button class="step-down w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">-</button>
+<span class="item-count font-headline-sm text-headline-sm text-on-surface w-6 text-center">0</span>
+<button class="step-up w-8 h-8 rounded bg-surface-container-low text-on-surface flex items-center justify-center font-bold active:bg-surface-bright">+</button>
+<span class="item-total-carbs font-telemetry-unit text-telemetry-unit text-tertiary w-10 text-right font-bold">0g</span>
+</div>
+</div>
+</div>
+</div>
+<!-- AUTO-GENERATED SUMMARY BOX & CUSTOM INPUT -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<label class="font-telemetry-unit text-telemetry-unit text-on-surface-variant uppercase" for="food-summary-input">EDITABLE MEAL SUMMARY &amp; CARBS</label>
+<span class="font-headline-sm text-headline-sm text-tertiary uppercase" id="total-carbs-counter">46g Total</span>
+</div>
+<div class="relative">
+<textarea class="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md p-space-sm rounded-lg resize-none focus:outline-none focus:bg-surface-container-high" id="food-summary-input" rows="2">1 Apple (16g), 2 Wholewheat Bread (30g) — Total: 46g Carbs</textarea>
+</div>
+</div>
+<!-- 3-FIELD INSULIN CALCULATOR DISPLAY -->
+<div class="flex flex-col gap-space-xs bg-surface-container-lowest p-space-sm rounded-xl">
+<span class="font-telemetry-unit text-telemetry-unit uppercase text-on-surface-variant">RAPID DOSE BREAKDOWN (ICR 1:10 • ISF 2.2)</span>
+<div class="grid grid-cols-3 gap-2">
+<!-- Field 1: Food Dose -->
+<div class="flex flex-col bg-surface-container p-2 rounded-lg items-center">
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant uppercase text-center">FOOD DOSE</span>
+<div class="flex items-baseline gap-0.5 mt-1">
+<input class="w-14 bg-transparent text-center font-headline-md text-headline-md text-primary font-bold focus:outline-none" id="input-food-dose" step="0.1" type="number" value="4.6"/>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">U</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-[10px]">1:10g Carb</span>
+</div>
+<!-- Field 2: Correction Dose -->
+<div class="flex flex-col bg-surface-container p-2 rounded-lg items-center">
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant uppercase text-center">CORRECTION</span>
+<div class="flex items-baseline gap-0.5 mt-1">
+<input class="w-14 bg-transparent text-center font-headline-md text-headline-md text-secondary font-bold focus:outline-none" id="input-corr-dose" step="0.1" type="number" value="0.5"/>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">U</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-[10px]">+1.1 over 5.5</span>
+</div>
+<!-- Field 3: Total Dose -->
+<div class="flex flex-col bg-primary-container/20 p-2 rounded-lg items-center">
+<span class="font-telemetry-unit text-telemetry-unit text-tertiary uppercase text-center font-bold">TOTAL BOLUS</span>
+<div class="flex items-baseline gap-0.5 mt-1">
+<input class="w-16 bg-transparent text-center font-display-lg-mobile text-display-lg-mobile text-on-surface font-extrabold focus:outline-none" id="input-total-dose" step="0.1" type="number" value="5.1"/>
+<span class="font-headline-sm text-headline-sm text-tertiary">U</span>
+</div>
+<span class="font-body-sm text-body-sm text-tertiary text-[10px]">Auto-Summed</span>
+</div>
+</div>
+</div>
+<!-- PRIMARY ACTION BUTTON -->
+<button class="w-full py-3.5 px-space-md rounded-xl bg-primary-container text-on-primary-container font-headline-md text-headline-md uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-opacity-90 active:scale-[0.98] transition-all shadow-md" id="btn-submit-log">
+<span class="material-symbols-outlined text-[22px]">bolt</span>
+<span>Log Meal &amp; Dose + Start Pre-Meal Timer</span>
+</button>
+</section>
+<!-- RECENT FOOD & DOSE LOGBOOK HISTORY -->
+<section class="flex flex-col gap-space-sm" id="logbook-section">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[20px]">history_edu</span>
+<h3 class="font-headline-md text-headline-md uppercase text-on-surface">RECENT MEAL LOGBOOK</h3>
+</div>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant uppercase">3 ENTRIES TODAY</span>
+</div>
+<div class="flex flex-col gap-space-xs" id="history-container">
+<!-- History Item 1 -->
+<div class="flex flex-col bg-surface-container p-space-sm rounded-xl gap-2 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+<span class="font-headline-sm text-badge-label uppercase text-on-surface">Today, 13:15</span>
+</div>
+<span class="font-telemetry-unit text-telemetry-unit uppercase px-2 py-0.5 rounded bg-surface-container-high text-tertiary">BG 5.8 mmol/L</span>
+</div>
+<div class="flex flex-col">
+<p class="font-body-md text-body-md text-on-surface font-medium leading-snug">Oats, Blueberries &amp; Whey Isolate</p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">55g Carbs • Pre-Sparring Load</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-1 font-headline-sm text-badge-label">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary">FOOD: 5.5 U</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">CORR: 0.0 U</span>
+<span class="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-bold">TOTAL: 5.5 U</span>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Edit entry" class="w-7 h-7 rounded flex items-center justify-center text-outline hover:text-on-surface active:scale-90 transition-all">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<button aria-label="Delete entry" class="w-7 h-7 rounded flex items-center justify-center text-outline hover:text-error active:scale-90 transition-all">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- History Item 2 -->
+<div class="flex flex-col bg-surface-container p-space-sm rounded-xl gap-2 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="font-headline-sm text-badge-label uppercase text-on-surface">Today, 08:30</span>
+</div>
+<span class="font-telemetry-unit text-telemetry-unit uppercase px-2 py-0.5 rounded bg-surface-container-high text-secondary">BG 7.4 mmol/L</span>
+</div>
+<div class="flex flex-col">
+<p class="font-body-md text-body-md text-on-surface font-medium leading-snug">Sourdough Toast (2 pcs), 3 Eggs &amp; Espresso</p>
+<span class="font-body-sm text-body-sm text-on-surface-variant">36g Carbs • Morning Conditioning</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-1 font-headline-sm text-badge-label">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary">FOOD: 3.6 U</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-secondary">+0.9 U</span>
+<span class="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-bold">TOTAL: 4.5 U</span>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Edit entry" class="w-7 h-7 rounded flex items-center justify-center text-outline hover:text-on-surface active:scale-90 transition-all">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<button aria-label="Delete entry" class="w-7 h-7 rounded flex items-center justify-center text-outline hover:text-error active:scale-90 transition-all">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- DATA EXPORT ACTIONS PANEL -->
+<section class="flex flex-col bg-surface-container p-space-md rounded-xl gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-tertiary text-[20px]">ios_share</span>
+<h4 class="font-headline-sm text-headline-sm uppercase text-on-surface">DATA EXPORT &amp; CLINICAL AUDIT</h4>
+</div>
+<span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant uppercase">HIPAA / GDPR READY</span>
+</div>
+<!-- Date Range Quick Selector -->
+<div class="flex items-center gap-1 bg-surface-container-lowest p-1 rounded-lg">
+<button class="flex-1 py-1 rounded bg-surface-container-high text-on-surface font-headline-sm text-badge-label uppercase text-center">Past 7 Days</button>
+<button class="flex-1 py-1 rounded text-on-surface-variant hover:text-on-surface font-headline-sm text-badge-label uppercase text-center">Past 14 Days</button>
+<button class="flex-1 py-1 rounded text-on-surface-variant hover:text-on-surface font-headline-sm text-badge-label uppercase text-center">Month (30D)</button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Includes full clinical fields: Timestamp, meal composition, carb count, pre-meal BG, food bolus, correction units, and cumulative insulin.</p>
+<div class="grid grid-cols-2 gap-space-xs mt-1">
+<button class="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface font-headline-sm text-badge-label uppercase active:scale-95 transition-all" id="btn-export-pdf">
+<span class="material-symbols-outlined text-[18px] text-secondary">picture_as_pdf</span>
+<span>Export as PDF</span>
+</button>
+<button class="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface font-headline-sm text-badge-label uppercase active:scale-95 transition-all" id="btn-export-csv">
+<span class="material-symbols-outlined text-[18px] text-tertiary">table_chart</span>
+<span>Export as CSV</span>
+</button>
+</div>
+</section>
+</div>
+<script>
+  (function initBolusAdvisor() {
+    let timerDuration = 14 * 60 + 20; // 14:20
+    let timerRunning = false;
+    let timerInterval = null;
+
+    const display = document.getElementById('countdown-display');
+    const btn15 = document.getElementById('btn-timer-15');
+    const btnPause = document.getElementById('btn-timer-pause');
+    const btnReset = document.getElementById('btn-timer-reset');
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(timerDuration / 60);
+      const secs = timerDuration % 60;
+      if (display) {
+        display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+    }
+
+    function startTimer() {
+      if (timerRunning) return;
+      timerRunning = true;
+      if (timerDuration <= 0) timerDuration = 15 * 60;
+      timerInterval = setInterval(() => {
+        if (timerDuration > 0) {
+          timerDuration--;
+          updateTimerDisplay();
+        } else {
+          clearInterval(timerInterval);
+          timerRunning = false;
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      timerDuration = 15 * 60;
+      updateTimerDisplay();
+    }
+
+    if (btn15) btn15.addEventListener('click', startTimer);
+    if (btnPause) btnPause.addEventListener('click', pauseTimer);
+    if (btnReset) btnReset.addEventListener('click', resetTimer);
+
+    // Audio / Vibe Toggle
+    const hapticToggle = document.getElementById('haptic-toggle');
+    const hapticLabel = document.getElementById('haptic-label');
+    const hapticIcon = document.getElementById('haptic-icon');
+    let soundEnabled = true;
+
+    if (hapticToggle) {
+      hapticToggle.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        if (soundEnabled) {
+          hapticLabel.textContent = 'AUDIO + VIBE';
+          hapticIcon.textContent = 'notifications_active';
+          hapticToggle.classList.remove('text-on-surface-variant');
+          hapticToggle.classList.add('text-tertiary');
+        } else {
+          hapticLabel.textContent = 'MUTED';
+          hapticIcon.textContent = 'notifications_off';
+          hapticToggle.classList.remove('text-tertiary');
+          hapticToggle.classList.add('text-on-surface-variant');
+        }
+      });
+    }
+
+    // Interactive Steppers & Dynamic Insulin Calculation
+    const targetBG = 5.5;
+    const isf = 2.2; // 1 unit drops 2.2 mmol/L
+    const icr = 10;  // 1 unit per 10g carbs
+
+    const inputBG = document.getElementById('input-bg');
+    const inputFoodDose = document.getElementById('input-food-dose');
+    const inputCorrDose = document.getElementById('input-corr-dose');
+    const inputTotalDose = document.getElementById('input-total-dose');
+    const summaryInput = document.getElementById('food-summary-input');
+    const totalCarbsCounter = document.getElementById('total-carbs-counter');
+
+    function calculateDoses() {
+      const presetRows = document.querySelectorAll('#preset-list > div');
+      let totalCarbs = 0;
+      let summaryItems = [];
+
+      presetRows.forEach(row => {
+        const count = parseInt(row.querySelector('.item-count').textContent, 10) || 0;
+        const carbPerUnit = parseFloat(row.getAttribute('data-carb')) || 0;
+        const name = row.getAttribute('data-name');
+        const itemTotal = count * carbPerUnit;
+
+        const totalCarbsSpan = row.querySelector('.item-total-carbs');
+        if (totalCarbsSpan) totalCarbsSpan.textContent = itemTotal + 'g';
+
+        if (count > 0) {
+          totalCarbs += itemTotal;
+          summaryItems.push(`${count} ${name} (${itemTotal}g)`);
+        }
+      });
+
+      if (totalCarbsCounter) totalCarbsCounter.textContent = `${totalCarbs}g Total`;
+      if (summaryInput && summaryItems.length > 0) {
+        summaryInput.value = `${summaryItems.join(', ')} — Total: ${totalCarbs}g Carbs`;
+      }
+
+      // Bolus calculation
+      const foodDoseVal = (totalCarbs / icr);
+      if (inputFoodDose) inputFoodDose.value = foodDoseVal.toFixed(1);
+
+      const currentBG = parseFloat(inputBG.value) || targetBG;
+      let corrDoseVal = 0;
+      if (currentBG > targetBG) {
+        corrDoseVal = (currentBG - targetBG) / isf;
+      }
+      if (inputCorrDose) inputCorrDose.value = corrDoseVal > 0 ? corrDoseVal.toFixed(1) : '0.0';
+
+      const totalVal = Math.max(0, foodDoseVal + corrDoseVal);
+      if (inputTotalDose) inputTotalDose.value = totalVal.toFixed(1);
+    }
+
+    // Attach step listeners
+    document.querySelectorAll('#preset-list > div').forEach(row => {
+      const downBtn = row.querySelector('.step-down');
+      const upBtn = row.querySelector('.step-up');
+      const countSpan = row.querySelector('.item-count');
+
+      if (downBtn && upBtn && countSpan) {
+        downBtn.addEventListener('click', () => {
+          let current = parseInt(countSpan.textContent, 10) || 0;
+          if (current > 0) {
+            countSpan.textContent = current - 1;
+            calculateDoses();
+          }
+        });
+        upBtn.addEventListener('click', () => {
+          let current = parseInt(countSpan.textContent, 10) || 0;
+          countSpan.textContent = current + 1;
+          calculateDoses();
+        });
+      }
+    });
+
+    if (inputBG) {
+      inputBG.addEventListener('input', calculateDoses);
+    }
+
+    if (inputFoodDose && inputCorrDose && inputTotalDose) {
+      // Manual edit overrides total
+      const handleManualDoseChange = () => {
+        const f = parseFloat(inputFoodDose.value) || 0;
+        const c = parseFloat(inputCorrDose.value) || 0;
+        inputTotalDose.value = (f + c).toFixed(1);
+      };
+      inputFoodDose.addEventListener('input', handleManualDoseChange);
+      inputCorrDose.addEventListener('input', handleManualDoseChange);
+    }
+
+    // Submit Log & Start Timer
+    const submitBtn = document.getElementById('btn-submit-log');
+    const historyContainer = document.getElementById('history-container');
+
+    if (submitBtn && historyContainer) {
+      submitBtn.addEventListener('click', () => {
+        const currentBG = inputBG.value || '6.6';
+        const foodSummary = summaryInput.value || 'Custom Combat Fuel';
+        const totalCarbs = totalCarbsCounter.textContent || '46g Total';
+        const foodU = inputFoodDose.value || '4.6';
+        const corrU = inputCorrDose.value || '0.5';
+        const totalU = inputTotalDose.value || '5.1';
+
+        // Add to history
+        const newEntry = document.createElement('div');
+        newEntry.className = "flex flex-col bg-surface-container p-space-sm rounded-xl gap-2 transition-all border-l-2 border-primary";
+        newEntry.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+              <span class="font-headline-sm text-badge-label uppercase text-on-surface">Just Now, 17:45</span>
+            </div>
+            <span class="font-telemetry-unit text-telemetry-unit uppercase px-2 py-0.5 rounded bg-surface-container-high text-tertiary">BG ${currentBG} mmol/L</span>
+          </div>
+          <div class="flex flex-col">
+            <p class="font-body-md text-body-md text-on-surface font-medium leading-snug">${foodSummary}</p>
+            <span class="font-body-sm text-body-sm text-on-surface-variant">${totalCarbs} • Logged Dosing</span>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <div class="flex items-center gap-1 font-headline-sm text-badge-label">
+              <span class="px-2 py-0.5 rounded bg-surface-container-high text-primary">FOOD: ${foodU} U</span>
+              <span class="px-2 py-0.5 rounded bg-surface-container-high text-secondary">+${corrU} U</span>
+              <span class="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-bold">TOTAL: ${totalU} U</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="w-7 h-7 rounded flex items-center justify-center text-outline hover:text-on-surface active:scale-90" aria-label="Edit"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+              <button class="w-7 h-7 rounded flex items-center justify-center text-outline hover:text-error active:scale-90" aria-label="Delete"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+            </div>
+          </div>
+        `;
+        historyContainer.prepend(newEntry);
+
+        // Start 15m timer automatically
+        startTimer();
+
+        // Feedback toast / button text pulse
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span><span>Meal Logged! Timer Running</span>`;
+        submitBtn.classList.replace('bg-primary-container', 'bg-tertiary-container');
+        setTimeout(() => {
+          submitBtn.innerHTML = originalText;
+          submitBtn.classList.replace('bg-tertiary-container', 'bg-primary-container');
+        }, 2200);
+      });
+    }
+
+    // Scroll to Logbook
+    const jumpBtn = document.getElementById('jump-log-btn');
+    if (jumpBtn) {
+      jumpBtn.addEventListener('click', () => {
+        const target = document.getElementById('logbook-section');
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/95 backdrop-blur-xl border-t border-surface-container-highest/40" data-active-classes="text-primary font-bold"><div class="grid grid-cols-4 items-center h-16 px-gutter-mobile"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-0.5 text-outline hover:text-on-surface transition-colors" data-path="today" href="#"><span class="material-symbols-outlined text-[22px]">verified</span><span class="font-badge-label text-badge-label uppercase tracking-wider">Today</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-0.5 text-outline hover:text-on-surface transition-colors" data-path="train" href="#"><span class="material-symbols-outlined text-[22px]">sports_mma</span><span class="font-badge-label text-badge-label uppercase tracking-wider">Train</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-0.5 transition-colors text-primary font-bold" data-path="food-insulin" href="#"><span class="material-symbols-outlined text-[22px]">nutrition</span><span class="font-badge-label text-badge-label uppercase tracking-wider">Food &amp; Insulin</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-0.5 text-outline hover:text-on-surface transition-colors" data-path="analytics" href="#"><span class="material-symbols-outlined text-[22px]">monitoring</span><span class="font-badge-label text-badge-label uppercase tracking-wider">Analytics</span></a></div></nav></body></html>

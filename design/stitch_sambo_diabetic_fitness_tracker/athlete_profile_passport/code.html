@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-container-high": "#262a31", "surface-container-lowest": "#0a0e14", "on-tertiary": "#233143", "outline-variant": "#5b4041", "surface-container": "#1c2026", "on-primary": "#67001b", "primary-container": "#ff516a", "error-container": "#93000a", "tertiary": "#b9c8de", "on-secondary-fixed": "#001e2c", "inverse-surface": "#dfe2eb", "on-secondary-container": "#00374d", "surface": "#10141a", "on-secondary-fixed-variant": "#004c69", "secondary": "#7bd0ff", "outline": "#aa888a", "surface-container-highest": "#31353c", "primary-fixed": "#ffdadb", "on-tertiary-fixed": "#0d1c2d", "on-tertiary-fixed-variant": "#39485a", "on-surface": "#dfe2eb", "primary": "#ffb2b7", "surface-tint": "#ffb2b7", "surface-dim": "#10141a", "tertiary-fixed": "#d4e4fa", "tertiary-container": "#8392a6", "error": "#ffb4ab", "on-secondary": "#00354a", "on-primary-container": "#5b0017", "secondary-container": "#00a6e0", "on-background": "#dfe2eb", "on-surface-variant": "#e3bdbf", "tertiary-fixed-dim": "#b9c8de", "background": "#10141a", "inverse-primary": "#bc0b3b", "on-error-container": "#ffdad6", "primary-fixed-dim": "#ffb2b7", "on-primary-fixed-variant": "#92002a", "on-tertiary-container": "#1c2b3c", "secondary-fixed": "#c4e7ff", "surface-container-low": "#181c22", "surface-bright": "#353940", "inverse-on-surface": "#2d3137", "surface-variant": "#31353c", "secondary-fixed-dim": "#7bd0ff", "on-error": "#690005", "on-primary-fixed": "#40000d" }, borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, spacing: { "space-xl": "2.5rem", "space-sm": "0.5rem", "gutter-desktop": "2rem", "space-md": "1rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "gutter-tablet": "1.5rem", "gutter": "1rem", "margin-desktop": "3rem", "margin-tablet": "2rem", "margin": "1rem" }, fontFamily: { "label-mono": ["Geist"], "headline-sm": ["Space Grotesk"], "body-lg": ["Geist"], "body-md": ["Geist"], "headline-md": ["Space Grotesk"], "headline-lg": ["Space Grotesk"], "headline-lg-mobile": ["Space Grotesk"], "body-sm": ["Geist"], "display": ["Space Grotesk"], "label-metric": ["Space Grotesk"] }, fontSize: { "label-mono": ["11px", { lineHeight: "14px", letterSpacing: "0.06em", fontWeight: "500" }], "headline-sm": ["18px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "500" }], "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "400" }], "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }], "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "500" }], "headline-lg": ["40px", { lineHeight: "48px", letterSpacing: "-0.02em", fontWeight: "600" }], "headline-lg-mobile": ["30px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "600" }], "body-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "400" }], "display": ["56px", { lineHeight: "64px", letterSpacing: "-0.03em", fontWeight: "700" }], "label-metric": ["28px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "700" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-primary-container selection:text-on-primary-container"><header class="fixed top-0 inset-x-0 z-50 bg-surface/85 backdrop-blur-xl pt-safe"><div class="h-16 px-gutter flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><img alt="Kinetic Sambo Minimal Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1Vwc5MJdsZgW2fs5pwTayZ_-84qOxCtSYHkkIL_Mq5DS-2i0LiBJdU8lKpApE2GLEJxL2EZ1J-lZhGlb_k5IQi9Ps29YihohnJFeLI-14Nygv1cQ1zSeirZJpanOmzo3RtaxOikxxtr3zolukKKCcAPZ5o6DUkY6XHf7cJwQezUrlGyfV0zARzAnfP7bemlzy02Kb-7Oy_xcuW2nNGvNfS-wSPlfWMhWeFGcW_MxC83r43lL7hnY1OnqJo"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm uppercase tracking-wider text-on-surface leading-none">KINETIC</span><span class="font-label-mono text-label-mono uppercase text-tertiary-container tracking-widest mt-0.5">Profile</span></div></div><div class="flex items-center gap-space-sm"><div class="hidden xs:flex sm:flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container-high/80 text-on-surface"><span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span><span class="font-label-mono text-label-mono text-secondary tracking-normal">118 mg/dL</span><span class="text-tertiary-container text-[10px]">·</span><span class="font-label-mono text-label-mono text-on-surface-variant">Steady</span></div><button aria-label="Fighter Profile" class="w-11 h-11 flex items-center justify-center rounded-full transition-transform active:scale-95 flex-shrink-0 focus:outline-none"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3KculdONXAjCe1nI_9c4rfxFPaTFi3veKxR0uZWY9NvQCKO257xiMt0_5B_S-aSfQHL4p6jOsVEZXSj11qpmxlACwE9-ewMDVwGEf2lC70m01v4NmM8FH-9osCEWJS4IlAz2fCBLlBcvSZGfIKEZqlmpVkcbZ4ILp66CQBr9RWQjxccH9NH7ZnrUzksyq0hrOVQK2XyeP7E-CkmMZzCdU5v3MpdTzjgtv_Iq8ZtIfm5yAUiC7UFSj"/></button></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full px-gutter pb-space-xl gap-space-lg">
+<!-- Athlete Profile Card -->
+<section class="flex flex-col bg-surface-container rounded-xl p-space-lg relative overflow-hidden shadow-sm">
+<div class="absolute -right-12 -top-12 w-48 h-48 bg-secondary/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="absolute -left-12 -bottom-12 w-48 h-48 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-start gap-space-md">
+<!-- Fighter Portrait with Status Ring -->
+<div class="relative flex-shrink-0">
+<div class="p-1 rounded-full bg-surface-container-high">
+<div class="p-0.5 rounded-full bg-secondary">
+<img alt="Alexei Voronov" class="w-20 h-20 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3KculdONXAjCe1nI_9c4rfxFPaTFi3veKxR0uZWY9NvQCKO257xiMt0_5B_S-aSfQHL4p6jOsVEZXSj11qpmxlACwE9-ewMDVwGEf2lC70m01v4NmM8FH-9osCEWJS4IlAz2fCBLlBcvSZGfIKEZqlmpVkcbZ4ILp66CQBr9RWQjxccH9NH7ZnrUzksyq0hrOVQK2XyeP7E-CkmMZzCdU5v3MpdTzjgtv_Iq8ZtIfm5yAUiC7UFSj"/>
+</div>
+</div>
+<div class="absolute -bottom-1 -right-1 flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-lowest text-secondary shadow-sm" title="Telemetry Synchronized">
+<span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">sensors</span>
+</div>
+</div>
+<!-- Identity Meta -->
+<div class="flex flex-col min-w-0 justify-center">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="font-label-mono text-label-mono text-secondary uppercase tracking-widest">ID · KNT-8804</span>
+<span class="w-1 h-1 rounded-full bg-tertiary-container"></span>
+<span class="font-label-mono text-label-mono text-on-surface-variant">RUS</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface tracking-tight truncate leading-tight">Alexei Voronov</h1>
+<p class="font-body-md text-body-md text-primary font-medium tracking-normal mt-0.5">Master of Sport (Combat Sambo)</p>
+<div class="flex items-center gap-space-xs text-tertiary-container mt-1">
+<span class="material-symbols-outlined text-[16px]">shield</span>
+<span class="font-body-sm text-body-sm text-tertiary-container truncate">Dynamo Sambo Academy</span>
+</div>
+</div>
+</div>
+<!-- Tier & Division Pills -->
+<div class="grid grid-cols-2 gap-space-sm mt-space-md pt-space-md bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex flex-col px-space-sm">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase tracking-wider">Weight Class</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold mt-0.5">-88 kg <span class="font-body-sm text-body-sm text-tertiary font-normal">(Cruiser)</span></span>
+</div>
+<div class="flex flex-col px-space-sm">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase tracking-wider">Current Belt/Grade</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold mt-0.5">MSMK Candidate</span>
+</div>
+</div>
+<!-- Profile Action Triggers -->
+<div class="flex items-center gap-space-sm mt-space-md">
+<button class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-space-md rounded-lg bg-surface-container-high hover:bg-surface-bright active:scale-[0.98] transition-all text-on-surface" id="btn-edit-profile">
+<span class="material-symbols-outlined text-[18px]">badge</span>
+<span class="font-headline-sm text-body-md">Edit Profile</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-space-md rounded-lg bg-secondary-container hover:bg-secondary active:scale-[0.98] transition-all text-on-secondary-container" id="btn-share-passport">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span class="font-headline-sm text-body-md">Share Passport</span>
+</button>
+</div>
+</section>
+<!-- Medical & Diabetes Passport -->
+<section class="flex flex-col bg-surface-container rounded-xl p-space-lg shadow-sm">
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-md bg-secondary/15 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">medical_services</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Medical &amp; Diabetes Passport</h2>
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase tracking-wider">FIAS &amp; WADA Cleared TUE</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-mono text-label-mono">VALID</span>
+</div>
+<div class="flex flex-col gap-space-sm">
+<!-- Item 1: Diagnosis -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-tertiary">monitor_heart</span>
+<div class="flex flex-col">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase">Clinical Diagnosis</span>
+<span class="font-body-md text-body-md text-on-surface font-medium">Type 1 Diabetes (14 yrs)</span>
+</div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-mono">Basal/Bolus</span>
+</div>
+<!-- Item 2: Telemetry CGM -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-secondary">vital_signs</span>
+<div class="flex flex-col">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase">Continuous Sensor</span>
+<span class="font-body-md text-body-md text-on-surface font-medium">Dexcom G7 (Right Tricep)</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-label-mono text-label-mono text-secondary">Transmitting</span>
+</div>
+</div>
+<!-- Item 3: Coach/Corner Safety Link -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary">notifications_active</span>
+<div class="flex flex-col">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase">Coach &amp; Ring Doctor Alert</span>
+<span class="font-body-md text-body-md text-on-surface font-medium">Coach Mikhail Z. (+7 916 412)</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-primary font-label-mono text-label-mono">Active &amp; Linked</span>
+</div>
+</div>
+<!-- Quick Hypo Emergency Advice Note -->
+<div class="mt-space-md p-space-sm rounded-lg bg-surface-container-lowest flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[18px] text-tertiary-container flex-shrink-0">info</span>
+<p class="font-body-sm text-body-sm text-tertiary-container leading-tight">
+        Ring marshal note: Glucagon hypokit located inside primary red corner gear bag.
+      </p>
+</div>
+</section>
+<!-- Competition Season & Exertion Stats -->
+<section class="flex flex-col bg-surface-container rounded-xl p-space-lg shadow-sm gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-md bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">trophy</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Competition Season</h2>
+</div>
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase">2025/2026</span>
+</div>
+<!-- Record Stats Bento -->
+<div class="grid grid-cols-3 gap-space-sm">
+<div class="flex flex-col p-space-md rounded-lg bg-surface-container-low items-center text-center">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase">Bout Record</span>
+<span class="font-headline-md text-headline-md text-on-surface font-bold mt-1">18-3-0</span>
+<span class="font-body-sm text-body-sm text-secondary mt-0.5">85.7% Win</span>
+</div>
+<div class="flex flex-col p-space-md rounded-lg bg-surface-container-low items-center text-center">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase">Submissions</span>
+<span class="font-headline-md text-headline-md text-primary font-bold mt-1">11</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Finisher Rate</span>
+</div>
+<div class="flex flex-col p-space-md rounded-lg bg-surface-container-low items-center text-center">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase">KO / Points</span>
+<span class="font-headline-md text-headline-md text-tertiary font-bold mt-1">7</span>
+<span class="font-body-sm text-body-sm text-tertiary-container mt-0.5">Dominance</span>
+</div>
+</div>
+<!-- Target Bout Highlight -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-high">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-on-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">sports_martial_arts</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-mono text-label-mono text-primary uppercase font-bold tracking-wider">Next Target Bout</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold truncate">National Combat Sambo Cup</span>
+</div>
+</div>
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="font-label-metric text-headline-sm text-secondary leading-none">T-28</span>
+<span class="font-label-mono text-label-mono text-tertiary-container mt-0.5">Days Out</span>
+</div>
+</div>
+<!-- Weight Cut Tracker -->
+<div class="flex flex-col p-space-md rounded-lg bg-surface-container-low gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-tertiary">scale</span>
+<span class="font-body-md text-body-md text-on-surface font-medium">Weight Cut Progression</span>
+</div>
+<span class="font-label-mono text-label-mono text-secondary">−1.4 kg to target</span>
+</div>
+<!-- Numbers Display -->
+<div class="flex items-baseline justify-between pt-1">
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">89.4</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">kg (Now)</span>
+</div>
+<div class="flex items-center gap-2 text-tertiary-container">
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</div>
+<div class="text-right">
+<span class="font-headline-sm text-headline-sm text-primary font-bold">88.0</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">kg (Weigh-in)</span>
+</div>
+</div>
+<!-- Progress Meter -->
+<div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden relative">
+<div class="h-full bg-gradient-to-r from-secondary to-primary-container rounded-full" style="width: 72%;"></div>
+</div>
+<div class="flex justify-between font-label-mono text-label-mono text-tertiary-container">
+<span>Cycle Start: 92.5 kg</span>
+<span>72% Achieved</span>
+<span>Target: 88.0 kg</span>
+</div>
+</div>
+</section>
+<!-- Training Badges & Fighter Milestones -->
+<section class="flex flex-col bg-surface-container rounded-xl p-space-lg shadow-sm gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-md bg-secondary/15 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Mastery &amp; Protocols</h2>
+</div>
+</div>
+<!-- Interactive Filter Tabs -->
+<div class="flex rounded-lg bg-surface-container-low p-1 gap-1">
+<button class="flex-1 py-1.5 px-space-sm rounded-md text-center font-label-mono text-label-mono transition-all bg-surface-container-high text-on-surface shadow-sm" id="tab-technique">
+        Technique Mastery
+      </button>
+<button class="flex-1 py-1.5 px-space-sm rounded-md text-center font-label-mono text-label-mono transition-all text-tertiary-container hover:text-on-surface" id="tab-metabolic">
+        Metabolic Discipline
+      </button>
+</div>
+<!-- Tab 1: Technique Content -->
+<div class="flex flex-col gap-space-sm" id="content-technique">
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">fitness_center</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Knee Bar (Rychag Kolena)</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">Signature Submission · 6 Finishes</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-mono text-label-mono">ELITE</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">swap_calls</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Harai Goshi (Sweeping Hip)</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">Primary Takedown · 88% Success</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary/15 text-primary font-label-mono text-label-mono">MASTER</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Mata Leão / Rear Choke</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">Back Control Transition</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-mono text-label-mono">ADVANCED</span>
+</div>
+</div>
+<!-- Tab 2: Metabolic Content (Hidden by default) -->
+<div class="hidden flex-col gap-space-sm" id="content-metabolic">
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">timer</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">100% Active Mat Time</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">Zero bouts interrupted for glucose corrections</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-mono text-label-mono">GOLD</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">health_and_safety</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Zero Severe Hypos</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">180 consecutive sparring rounds &gt; 80 mg/dL</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-mono text-label-mono">180 RNDS</span>
+</div>
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[20px]">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Rapid Glycogen Reload</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">Post-match replenishment latency &lt; 35m</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-mono text-label-mono">OPTIMAL</span>
+</div>
+</div>
+</section>
+<!-- Interactive Modal / Notification Drawer Mock -->
+<div class="fixed bottom-20 left-4 right-4 z-50 transform translate-y-32 opacity-0 transition-all duration-300 pointer-events-none" id="toast-passport">
+<div class="bg-surface-container-highest text-on-surface p-space-md rounded-xl shadow-xl flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-[24px]">verified</span>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold">Medical Passport Ready</span>
+<span class="font-body-sm text-body-sm text-tertiary-container">Encrypted QR code generated for referee review</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-tertiary-container text-[18px]">done</span>
+</div>
+</div>
+</div>
+<script>
+  (function initProfileMicroInteractions() {
+    const tabTechnique = document.getElementById('tab-technique');
+    const tabMetabolic = document.getElementById('tab-metabolic');
+    const contentTechnique = document.getElementById('content-technique');
+    const contentMetabolic = document.getElementById('content-metabolic');
+    const btnSharePassport = document.getElementById('btn-share-passport');
+    const btnEditProfile = document.getElementById('btn-edit-profile');
+    const toastPassport = document.getElementById('toast-passport');
+
+    if (tabTechnique && tabMetabolic) {
+      tabTechnique.addEventListener('click', () => {
+        tabTechnique.className = 'flex-1 py-1.5 px-space-sm rounded-md text-center font-label-mono text-label-mono transition-all bg-surface-container-high text-on-surface shadow-sm';
+        tabMetabolic.className = 'flex-1 py-1.5 px-space-sm rounded-md text-center font-label-mono text-label-mono transition-all text-tertiary-container hover:text-on-surface';
+        contentTechnique.classList.remove('hidden');
+        contentTechnique.classList.add('flex');
+        contentMetabolic.classList.add('hidden');
+        contentMetabolic.classList.remove('flex');
+      });
+
+      tabMetabolic.addEventListener('click', () => {
+        tabMetabolic.className = 'flex-1 py-1.5 px-space-sm rounded-md text-center font-label-mono text-label-mono transition-all bg-surface-container-high text-on-surface shadow-sm';
+        tabTechnique.className = 'flex-1 py-1.5 px-space-sm rounded-md text-center font-label-mono text-label-mono transition-all text-tertiary-container hover:text-on-surface';
+        contentMetabolic.classList.remove('hidden');
+        contentMetabolic.classList.add('flex');
+        contentTechnique.classList.add('hidden');
+        contentTechnique.classList.remove('flex');
+      });
+    }
+
+    if (btnSharePassport && toastPassport) {
+      btnSharePassport.addEventListener('click', () => {
+        toastPassport.classList.remove('translate-y-32', 'opacity-0');
+        toastPassport.classList.add('translate-y-0', 'opacity-100');
+        setTimeout(() => {
+          toastPassport.classList.remove('translate-y-0', 'opacity-100');
+          toastPassport.classList.add('translate-y-32', 'opacity-0');
+        }, 3200);
+      });
+    }
+
+    if (btnEditProfile) {
+      btnEditProfile.addEventListener('click', () => {
+        btnEditProfile.classList.add('ring-0', 'scale-95');
+        setTimeout(() => btnEditProfile.classList.remove('scale-95'), 150);
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl" data-active-classes="text-primary font-medium"><div class="flex items-center justify-around h-16 px-gutter"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="today" href="#"><span class="material-symbols-outlined text-[22px]">target</span><span class="font-label-mono text-label-mono tracking-wide">Today</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="train" href="#"><span class="material-symbols-outlined text-[22px]">sports_mma</span><span class="font-label-mono text-label-mono tracking-wide">Train</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="biometrics" href="#"><span class="material-symbols-outlined text-[22px]">vital_signs</span><span class="font-label-mono text-label-mono tracking-wide">Biometrics</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 transition-colors text-primary font-medium" data-path="profile" href="#"><span class="material-symbols-outlined text-[22px]">badge</span><span class="font-label-mono text-label-mono tracking-wide">Profile</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">tune</span><span class="font-label-mono text-label-mono tracking-wide">Settings</span></a></div></nav></body></html>

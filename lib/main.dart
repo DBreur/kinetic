@@ -1,121 +1,122 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
-  runApp(const MyApp());
+import 'core/kinetic_localizations.dart';
+import 'services/system_bars.dart';
+import 'screens/auth_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/shell_screen.dart';
+import 'state/app_controller.dart';
+import 'theme/kinetic_theme.dart' as color;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Zonder dit toont een widget die niet kan renderen (een bug) een volledig
+  // lege/grijze vlek in een release-build — dit geeft in plaats daarvan
+  // altijd een zichtbare, begrijpelijke melding, met de technische details
+  // in de devconsole voor het debuggen.
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    debugPrint('Widget kon niet worden weergegeven: ${details.exception}');
+    return Container(
+      color: color.AppColor.bg,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(20),
+      child: Text(
+        'Er ging iets mis bij het weergeven van dit onderdeel.',
+        textAlign: TextAlign.center,
+        style: color.AppText.caption,
+      ),
+    );
+  };
+  await initializeDateFormatting('nl_NL');
+  final controller = AppController();
+  await controller.boot();
+  runApp(MyApp(controller: controller));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.controller});
 
-  // This widget is the root of your application.
+  final AppController controller;
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Kinetic',
+          theme: color.KineticTheme.dark,
+          locale: kineticLocale,
+          supportedLocales: const [kineticLocale],
+          localizationsDelegates: kineticLocalizationsDelegates(
+            controller.profile?.weekStart ?? 1,
+          ),
+          // Tijden altijd als 19:00, niet 7:00 PM — ook in tijdkiezers.
+          builder: kineticAppBuilder,
+          home: _Home(controller: controller),
+        );
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class _Home extends StatelessWidget {
+  const _Home({required this.controller});
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+  final AppController controller;
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    return switch (controller.state) {
+      AppBootState.loading => const _BootLoading(),
+      AppBootState.needsConfig => const _MissingConfigScreen(),
+      AppBootState.signedOut => AuthScreen(controller: controller),
+      AppBootState.needsOnboarding => OnboardingScreen(controller: controller),
+      AppBootState.ready => ShellScreen(controller: controller),
+    };
+  }
+}
+
+class _BootLoading extends StatelessWidget {
+  const _BootLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: color.AppColor.bg,
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _MissingConfigScreen extends StatelessWidget {
+  const _MissingConfigScreen();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+      backgroundColor: color.AppColor.bg,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Supabase configureren', style: color.AppText.display),
+              const SizedBox(height: 12),
+              Text(
+                'Start de app met --dart-define-from-file=dart_defines.json (SUPABASE_URL en SUPABASE_PUBLISHABLE_KEY). '
+                'Zonder deze waarden worden er geen wachtwoorden of sessies lokaal opgeslagen.',
+                style: color.AppText.body.copyWith(
+                  color: color.AppColor.inkMuted,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }

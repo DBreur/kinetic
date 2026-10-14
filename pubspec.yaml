@@ -1,5 +1,5 @@
 name: kinetic
-description: "A new Flutter project."
+description: "Kinetic - sambo training & glucose HUD."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -34,6 +34,23 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  google_fonts: ^8.2.1
+  supabase_flutter: ^2.17.2
+  http: ^1.6.0
+  intl: ^0.20.3
+  pdf: ^3.13.1
+  printing: ^5.15.1
+  share_plus: ^13.3.0
+  url_launcher: ^6.3.2
+  flutter_local_notifications: ^22.3.1
+  flutter_foreground_task: ^11.0.3
+  webview_flutter: ^4.13.0
+  timezone: ^0.11.1
+  flutter_secure_storage: ^11.2.0
+  image_picker: ^1.2.4
+  image: ^4.12.0
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -45,6 +62,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -87,3 +105,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icon/kinetic_icon.png"
+  # Android 8+ (adaptive icon): donkere achtergrond + transparant logo, zodat
+  # het startscherm-icoon bij de app past in plaats van op wit te staan.
+  adaptive_icon_background: "#10141A"
+  adaptive_icon_foreground: "assets/icon/kinetic_icon_foreground.png"

@@ -46,3 +46,9 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Lokale configuratie (Supabase-sleutels)
+dart_defines.json
+
+# Supabase CLI state
+lib/supabase/.temp/

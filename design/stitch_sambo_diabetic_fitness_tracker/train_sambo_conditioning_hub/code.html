@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-container-high": "#262a31", "surface-container-lowest": "#0a0e14", "on-tertiary": "#233143", "outline-variant": "#5b4041", "surface-container": "#1c2026", "on-primary": "#67001b", "primary-container": "#ff516a", "error-container": "#93000a", "tertiary": "#b9c8de", "on-secondary-fixed": "#001e2c", "inverse-surface": "#dfe2eb", "on-secondary-container": "#00374d", "surface": "#10141a", "on-secondary-fixed-variant": "#004c69", "secondary": "#7bd0ff", "outline": "#aa888a", "surface-container-highest": "#31353c", "primary-fixed": "#ffdadb", "on-tertiary-fixed": "#0d1c2d", "on-tertiary-fixed-variant": "#39485a", "on-surface": "#dfe2eb", "primary": "#ffb2b7", "surface-tint": "#ffb2b7", "surface-dim": "#10141a", "tertiary-fixed": "#d4e4fa", "tertiary-container": "#8392a6", "error": "#ffb4ab", "on-secondary": "#00354a", "on-primary-container": "#5b0017", "secondary-container": "#00a6e0", "on-background": "#dfe2eb", "on-surface-variant": "#e3bdbf", "tertiary-fixed-dim": "#b9c8de", "background": "#10141a", "inverse-primary": "#bc0b3b", "on-error-container": "#ffdad6", "primary-fixed-dim": "#ffb2b7", "on-primary-fixed-variant": "#92002a", "on-tertiary-container": "#1c2b3c", "secondary-fixed": "#c4e7ff", "surface-container-low": "#181c22", "surface-bright": "#353940", "inverse-on-surface": "#2d3137", "surface-variant": "#31353c", "secondary-fixed-dim": "#7bd0ff", "on-error": "#690005", "on-primary-fixed": "#40000d" }, borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, spacing: { "space-xl": "2.5rem", "space-sm": "0.5rem", "gutter-desktop": "2rem", "space-md": "1rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "gutter-tablet": "1.5rem", "gutter": "1rem", "margin-desktop": "3rem", "margin-tablet": "2rem", "margin": "1rem" }, fontFamily: { "label-mono": ["Geist"], "headline-sm": ["Space Grotesk"], "body-lg": ["Geist"], "body-md": ["Geist"], "headline-md": ["Space Grotesk"], "headline-lg": ["Space Grotesk"], "headline-lg-mobile": ["Space Grotesk"], "body-sm": ["Geist"], "display": ["Space Grotesk"], "label-metric": ["Space Grotesk"] }, fontSize: { "label-mono": ["11px", { lineHeight: "14px", letterSpacing: "0.06em", fontWeight: "500" }], "headline-sm": ["18px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "500" }], "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "400" }], "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }], "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "500" }], "headline-lg": ["40px", { lineHeight: "48px", letterSpacing: "-0.02em", fontWeight: "600" }], "headline-lg-mobile": ["30px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "600" }], "body-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "400" }], "display": ["56px", { lineHeight: "64px", letterSpacing: "-0.03em", fontWeight: "700" }], "label-metric": ["28px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "700" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-primary-container selection:text-on-primary-container"><header class="fixed top-0 inset-x-0 z-50 bg-surface/85 backdrop-blur-xl pt-safe"><div class="h-16 px-gutter flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><img alt="Kinetic Sambo Minimal Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1Vwc5MJdsZgW2fs5pwTayZ_-84qOxCtSYHkkIL_Mq5DS-2i0LiBJdU8lKpApE2GLEJxL2EZ1J-lZhGlb_k5IQi9Ps29YihohnJFeLI-14Nygv1cQ1zSeirZJpanOmzo3RtaxOikxxtr3zolukKKCcAPZ5o6DUkY6XHf7cJwQezUrlGyfV0zARzAnfP7bemlzy02Kb-7Oy_xcuW2nNGvNfS-wSPlfWMhWeFGcW_MxC83r43lL7hnY1OnqJo"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm uppercase tracking-wider text-on-surface leading-none">KINETIC</span><span class="font-label-mono text-label-mono uppercase text-tertiary-container tracking-widest mt-0.5">Train</span></div></div><div class="flex items-center gap-space-sm"><div class="hidden xs:flex sm:flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container-high/80 text-on-surface"><span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span><span class="font-label-mono text-label-mono text-secondary tracking-normal">118 mg/dL</span><span class="text-tertiary-container text-[10px]">·</span><span class="font-label-mono text-label-mono text-on-surface-variant">Steady</span></div><button aria-label="Fighter Profile" class="w-11 h-11 flex items-center justify-center rounded-full transition-transform active:scale-95 flex-shrink-0 focus:outline-none"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3KculdONXAjCe1nI_9c4rfxFPaTFi3veKxR0uZWY9NvQCKO257xiMt0_5B_S-aSfQHL4p6jOsVEZXSj11qpmxlACwE9-ewMDVwGEf2lC70m01v4NmM8FH-9osCEWJS4IlAz2fCBLlBcvSZGfIKEZqlmpVkcbZ4ILp66CQBr9RWQjxccH9NH7ZnrUzksyq0hrOVQK2XyeP7E-CkmMZzCdU5v3MpdTzjgtv_Iq8ZtIfm5yAUiC7UFSj"/></button></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full px-gutter pb-space-xl gap-space-lg">
+<!-- Interactive Segmented Control Top Bar -->
+<section class="flex flex-col w-full pt-space-xs">
+<div class="bg-surface-container-lowest p-1 rounded-full flex items-center shadow-inner relative">
+<button class="flex-1 py-2.5 px-3 rounded-full font-headline-sm text-body-sm text-surface-container-lowest bg-primary font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 focus:outline-none" id="tab-combat" onclick="switchTrainMode('combat')" type="button">
+<span class="material-symbols-outlined text-[18px]">sports_mma</span>
+        Combat Sambo
+      </button>
+<button class="flex-1 py-2.5 px-3 rounded-full font-headline-sm text-body-sm text-tertiary-container hover:text-on-surface transition-all duration-200 flex items-center justify-center gap-1.5 focus:outline-none" id="tab-sc" onclick="switchTrainMode('sc')" type="button">
+<span class="material-symbols-outlined text-[18px]">fitness_center</span>
+        Strength &amp; Conditioning
+      </button>
+</div>
+</section>
+<!-- COMBAT SAMBO VIEW -->
+<div class="flex flex-col w-full gap-space-lg transition-opacity duration-300" id="view-combat">
+<!-- Today's Mat Session Summary Card -->
+<div class="bg-surface-container rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md relative overflow-hidden">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-ping"></span>
+<span class="font-label-mono text-label-mono uppercase tracking-widest text-primary">Mat Session Log</span>
+</div>
+<span class="font-label-mono text-label-mono px-2 py-0.5 rounded-full bg-surface-container-high text-secondary">Target: RPE 8.5</span>
+</div>
+<div class="flex flex-col">
+<h2 class="font-headline-md text-headline-md text-on-surface">6 Rounds Sparring</h2>
+<p class="font-body-md text-body-md text-tertiary">High Cadence · Grip breaks &amp; transition pressure</p>
+</div>
+<!-- Quick Session Attributes Bar -->
+<div class="grid grid-cols-3 gap-2 pt-space-xs">
+<div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col items-center justify-center text-center">
+<span class="font-label-mono text-label-mono text-tertiary-container">DURATION</span>
+<span class="font-label-metric text-headline-sm text-on-surface">36 <span class="font-body-sm text-body-sm text-tertiary font-normal">min</span></span>
+</div>
+<div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col items-center justify-center text-center">
+<span class="font-label-mono text-label-mono text-tertiary-container">AVG HR</span>
+<span class="font-label-metric text-headline-sm text-secondary">164 <span class="font-body-sm text-body-sm text-tertiary font-normal">bpm</span></span>
+</div>
+<div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col items-center justify-center text-center">
+<span class="font-label-mono text-label-mono text-tertiary-container">METABOLIC</span>
+<span class="font-label-metric text-headline-sm text-primary">Zone 4.6</span>
+</div>
+</div>
+</div>
+<!-- Interactive Round Logger -->
+<div class="bg-surface-container rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<span class="font-label-mono text-label-mono uppercase tracking-wider text-tertiary-container">Round Selector</span>
+<span class="font-label-mono text-label-mono text-primary font-semibold" id="selected-round-label">Active: Round 1</span>
+</div>
+<!-- Round Pill Selector -->
+<div class="grid grid-cols-6 gap-1.5 w-full">
+<button class="rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-primary text-surface-container-lowest font-bold transition-all shadow-sm" id="btn-rd-1" onclick="selectRound(1)" type="button">R1</button>
+<button class="rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-surface-container-low text-tertiary hover:text-on-surface transition-all" id="btn-rd-2" onclick="selectRound(2)" type="button">R2</button>
+<button class="rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-surface-container-low text-tertiary hover:text-on-surface transition-all" id="btn-rd-3" onclick="selectRound(3)" type="button">R3</button>
+<button class="rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-surface-container-low text-tertiary hover:text-on-surface transition-all" id="btn-rd-4" onclick="selectRound(4)" type="button">R4</button>
+<button class="rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-surface-container-low text-tertiary hover:text-on-surface transition-all" id="btn-rd-5" onclick="selectRound(5)" type="button">R5</button>
+<button class="rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-surface-container-low text-tertiary hover:text-on-surface transition-all" id="btn-rd-6" onclick="selectRound(6)" type="button">R6</button>
+</div>
+<!-- Dynamic Round Stats Logger Box -->
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Takedowns Executed</span>
+<span class="font-body-sm text-body-sm text-tertiary">Throws &amp; re-attacks</span>
+</div>
+<div class="flex items-center gap-3 bg-surface-container px-2 py-1 rounded-full">
+<button class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface active:scale-90 transition-transform" onclick="decrementMetric('takedown')">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<span class="font-label-metric text-headline-sm text-on-surface w-4 text-center" id="metric-takedown">2</span>
+<button class="w-7 h-7 rounded-full bg-primary text-surface-container-lowest flex items-center justify-center active:scale-90 transition-transform" onclick="incrementMetric('takedown')">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Submissions Secured</span>
+<span class="font-body-sm text-body-sm text-tertiary">Leg locks &amp; pins</span>
+</div>
+<div class="flex items-center gap-3 bg-surface-container px-2 py-1 rounded-full">
+<button class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface active:scale-90 transition-transform" onclick="decrementMetric('submission')">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<span class="font-label-metric text-headline-sm text-on-surface w-4 text-center" id="metric-submission">1</span>
+<button class="w-7 h-7 rounded-full bg-primary text-surface-container-lowest flex items-center justify-center active:scale-90 transition-transform" onclick="incrementMetric('submission')">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+</div>
+<!-- RPE Range Slider -->
+<div class="flex flex-col gap-1.5 pt-1">
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-tertiary">Round Exertion Strain</span>
+<span class="font-label-mono text-label-mono text-primary font-bold" id="rpe-val">RPE 8.0 · Vigorous</span>
+</div>
+<input class="w-full accent-primary h-1.5 bg-surface-container-high rounded-lg cursor-pointer" id="rpe-slider" max="10" min="5" oninput="updateRpe(this.value)" step="0.5" type="range" value="8"/>
+</div>
+</div>
+<!-- Quick Technique Tag Pills -->
+<div class="flex flex-col gap-2 pt-1">
+<span class="font-label-mono text-label-mono text-tertiary-container uppercase tracking-wider">Stamp Key Sambo Techniques</span>
+<div class="flex flex-wrap gap-2" id="technique-pills">
+<button class="px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-body-sm text-body-sm hover:bg-surface-container-highest transition-colors active:scale-95 flex items-center gap-1" onclick="toggleTechnique(this)" type="button">
+<span>+ Harai Goshi</span>
+</button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-body-sm text-body-sm hover:bg-surface-container-highest transition-colors active:scale-95 flex items-center gap-1" onclick="toggleTechnique(this)" type="button">
+<span>+ Victor Roll</span>
+</button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-body-sm text-body-sm hover:bg-surface-container-highest transition-colors active:scale-95 flex items-center gap-1" onclick="toggleTechnique(this)" type="button">
+<span>+ Achille's Lock</span>
+</button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-body-sm text-body-sm hover:bg-surface-container-highest transition-colors active:scale-95 flex items-center gap-1" onclick="toggleTechnique(this)" type="button">
+<span>+ Clinch Knees</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Live Glucose Correlation Mini-Card -->
+<div class="bg-surface-container rounded-xl p-space-md shadow-sm flex items-start gap-space-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center flex-shrink-0 text-secondary mt-0.5">
+<span class="material-symbols-outlined text-[20px]">show_chart</span>
+</div>
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-body-md text-on-surface font-semibold">Continuous Glucose Dynamics</span>
+<span class="font-label-mono text-label-mono text-secondary px-1.5 py-0.2 rounded bg-surface-container-high">+18 mg/dL</span>
+</div>
+<p class="font-body-sm text-body-sm text-tertiary">
+          Steady rise (+18 mg/dL) during Rd 4 adrenaline peak, stabilizing naturally as lactate clearance kicks in.
+        </p>
+</div>
+</div>
+<!-- Tactical Mat Action Button -->
+<button class="w-full py-3.5 px-space-md rounded-xl bg-primary text-surface-container-lowest font-headline-sm text-body-lg font-bold flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-transform focus:outline-none" type="button">
+<span class="material-symbols-outlined text-[22px]">check_circle</span>
+      Save Round Telemetry
+    </button>
+</div>
+<!-- STRENGTH & CONDITIONING VIEW (Hidden initially or toggled) -->
+<div class="hidden flex flex-col w-full gap-space-lg transition-opacity duration-300" id="view-sc">
+<!-- Active Workout Plan Header -->
+<div class="bg-surface-container rounded-xl p-space-lg shadow-sm flex flex-col gap-2 relative">
+<div class="flex items-center justify-between">
+<span class="font-label-mono text-label-mono uppercase tracking-widest text-secondary">Combat S&amp;C Protocol</span>
+<span class="font-label-mono text-label-mono text-tertiary-container">Cycle B · Hypertrophy</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Mat Strength &amp; Grip Power</h2>
+<p class="font-body-md text-body-md text-tertiary">4 Core Compound Exercises · Grip fatigue prioritization</p>
+<!-- Micro visual stats -->
+<div class="flex items-center gap-4 pt-2">
+<div class="flex items-center gap-1.5 text-tertiary font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">timer</span>
+          45 mins
+        </div>
+<div class="flex items-center gap-1.5 text-tertiary font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">repeat</span>
+          14 Total Sets
+        </div>
+</div>
+</div>
+<!-- Clean Exercise List -->
+<div class="flex flex-col gap-space-sm" id="exercise-list">
+<!-- Exercise 1 -->
+<div class="bg-surface-container rounded-xl p-space-md flex items-center justify-between gap-space-sm shadow-sm transition-all" id="ex-card-0">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center font-headline-sm text-body-sm text-secondary font-bold flex-shrink-0">
+            1
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="ex-name font-headline-sm text-body-lg text-on-surface font-semibold truncate">Zercher Squats (Kurtka grip)</span>
+<span class="ex-detail font-body-sm text-body-sm text-tertiary">4 sets × 6 reps · Heavy load</span>
+</div>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-mono text-label-mono flex-shrink-0 transition-colors active:scale-95" onclick="openSwapDialog(0)" type="button">
+<span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+          Swap
+        </button>
+</div>
+<!-- Exercise 2 -->
+<div class="bg-surface-container rounded-xl p-space-md flex items-center justify-between gap-space-sm shadow-sm transition-all" id="ex-card-1">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center font-headline-sm text-body-sm text-secondary font-bold flex-shrink-0">
+            2
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="ex-name font-headline-sm text-body-lg text-on-surface font-semibold truncate">Double Kettlebell Clean &amp; Press</span>
+<span class="ex-detail font-body-sm text-body-sm text-tertiary">4 sets × 8 reps · Explosive hip drive</span>
+</div>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-mono text-label-mono flex-shrink-0 transition-colors active:scale-95" onclick="openSwapDialog(1)" type="button">
+<span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+          Swap
+        </button>
+</div>
+<!-- Exercise 3 -->
+<div class="bg-surface-container rounded-xl p-space-md flex items-center justify-between gap-space-sm shadow-sm transition-all" id="ex-card-2">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center font-headline-sm text-body-sm text-secondary font-bold flex-shrink-0">
+            3
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="ex-name font-headline-sm text-body-lg text-on-surface font-semibold truncate">Gi Towel Pull-Ups</span>
+<span class="ex-detail font-body-sm text-body-sm text-tertiary">3 sets × 10 reps · Forearm isometric</span>
+</div>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-mono text-label-mono flex-shrink-0 transition-colors active:scale-95" onclick="openSwapDialog(2)" type="button">
+<span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+          Swap
+        </button>
+</div>
+<!-- Exercise 4 -->
+<div class="bg-surface-container rounded-xl p-space-md flex items-center justify-between gap-space-sm shadow-sm transition-all" id="ex-card-3">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center font-headline-sm text-body-sm text-secondary font-bold flex-shrink-0">
+            4
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="ex-name font-headline-sm text-body-lg text-on-surface font-semibold truncate">Wrestler's Neck Bridges</span>
+<span class="ex-detail font-body-sm text-body-sm text-tertiary">3 sets × 45 sec · Cervical stability</span>
+</div>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-mono text-label-mono flex-shrink-0 transition-colors active:scale-95" onclick="openSwapDialog(3)" type="button">
+<span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+          Swap
+        </button>
+</div>
+</div>
+<!-- Start Workout Timer Button -->
+<button class="w-full py-4 px-space-md rounded-xl bg-primary text-surface-container-lowest font-headline-sm text-body-lg font-bold flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-transform focus:outline-none" type="button">
+<span class="material-symbols-outlined text-[24px]">play_arrow</span>
+      Start Workout Timer
+    </button>
+</div>
+<!-- Interactive Swap Modal Drawer (Hidden by default) -->
+<div class="fixed inset-0 z-50 bg-surface-container-lowest/80 backdrop-blur-sm hidden items-end sm:items-center justify-center p-gutter" id="swap-modal">
+<div class="bg-surface-container-high w-full max-w-sm rounded-xl p-space-lg shadow-2xl flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-mono text-label-mono uppercase text-secondary">Substitute Exercise</span>
+<span class="font-headline-sm text-headline-sm text-on-surface" id="swap-title">Select Alternative</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-tertiary hover:text-on-surface" onclick="closeSwapDialog()">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-2" id="swap-options">
+<!-- Rendered dynamically -->
+</div>
+</div>
+</div>
+</div>
+<script>
+  // State Store
+  const roundsData = {
+    1: { takedowns: 2, submissions: 1, rpe: 8.0 },
+    2: { takedowns: 3, submissions: 0, rpe: 8.5 },
+    3: { takedowns: 1, submissions: 2, rpe: 9.0 },
+    4: { takedowns: 4, submissions: 1, rpe: 9.5 },
+    5: { takedowns: 1, submissions: 0, rpe: 8.0 },
+    6: { takedowns: 2, submissions: 1, rpe: 8.5 }
+  };
+  let currentRound = 1;
+
+  const exerciseDb = [
+    {
+      current: { name: "Zercher Squats (Kurtka grip)", detail: "4 sets × 6 reps · Heavy load" },
+      alternatives: [
+        { name: "Safety Bar Good Mornings", detail: "4 sets × 8 reps · Posterior chain" },
+        { name: "Sandbag Front Carries", detail: "4 rounds × 40m · Torso bracing" }
+      ]
+    },
+    {
+      current: { name: "Double Kettlebell Clean & Press", detail: "4 sets × 8 reps · Explosive hip drive" },
+      alternatives: [
+        { name: "Barbell Push Press", detail: "4 sets × 5 reps · Triple extension" },
+        { name: "Dumbbell Snatch", detail: "3 sets × 6 reps/side · Unilateral drive" }
+      ]
+    },
+    {
+      current: { name: "Gi Towel Pull-Ups", detail: "3 sets × 10 reps · Forearm isometric" },
+      alternatives: [
+        { name: "Heavy Plate Pinch Farmer Walk", detail: "3 sets × 60 sec · Grip endurance" },
+        { name: "Weighted Neutral Grip Chins", detail: "3 sets × 6 reps · Back power" }
+      ]
+    },
+    {
+      current: { name: "Wrestler's Neck Bridges", detail: "3 sets × 45 sec · Cervical stability" },
+      alternatives: [
+        { name: "4-Way Neck Machine / Bands", detail: "3 sets × 15 reps · Multi-angle control" },
+        { name: "Plate-Loaded Neck Flexion", detail: "3 sets × 20 reps · Controlled tempo" }
+      ]
+    }
+  ];
+
+  let activeSwapIndex = null;
+
+  // View Switching
+  function switchTrainMode(mode) {
+    const combatTab = document.getElementById('tab-combat');
+    const scTab = document.getElementById('tab-sc');
+    const combatView = document.getElementById('view-combat');
+    const scView = document.getElementById('view-sc');
+
+    if (mode === 'combat') {
+      combatTab.className = "flex-1 py-2.5 px-3 rounded-full font-headline-sm text-body-sm text-surface-container-lowest bg-primary font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 focus:outline-none";
+      scTab.className = "flex-1 py-2.5 px-3 rounded-full font-headline-sm text-body-sm text-tertiary-container hover:text-on-surface transition-all duration-200 flex items-center justify-center gap-1.5 focus:outline-none";
+      combatView.classList.remove('hidden');
+      scView.classList.add('hidden');
+    } else {
+      scTab.className = "flex-1 py-2.5 px-3 rounded-full font-headline-sm text-body-sm text-surface-container-lowest bg-primary font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 focus:outline-none";
+      combatTab.className = "flex-1 py-2.5 px-3 rounded-full font-headline-sm text-body-sm text-tertiary-container hover:text-on-surface transition-all duration-200 flex items-center justify-center gap-1.5 focus:outline-none";
+      scView.classList.remove('hidden');
+      combatView.classList.add('hidden');
+    }
+  }
+
+  // Round Selector
+  function selectRound(rd) {
+    currentRound = rd;
+    for (let i = 1; i <= 6; i++) {
+      const btn = document.getElementById(`btn-rd-${i}`);
+      if (i === rd) {
+        btn.className = "rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-primary text-surface-container-lowest font-bold transition-all shadow-sm";
+      } else {
+        btn.className = "rd-btn py-2 rounded-lg font-headline-sm text-body-sm text-center bg-surface-container-low text-tertiary hover:text-on-surface transition-all";
+      }
+    }
+    document.getElementById('selected-round-label').textContent = `Active: Round ${rd}`;
+    document.getElementById('metric-takedown').textContent = roundsData[rd].takedowns;
+    document.getElementById('metric-submission').textContent = roundsData[rd].submissions;
+    const rpeInput = document.getElementById('rpe-slider');
+    rpeInput.value = roundsData[rd].rpe;
+    updateRpe(roundsData[rd].rpe);
+  }
+
+  function incrementMetric(type) {
+    if (type === 'takedown') {
+      roundsData[currentRound].takedowns += 1;
+      document.getElementById('metric-takedown').textContent = roundsData[currentRound].takedowns;
+    } else {
+      roundsData[currentRound].submissions += 1;
+      document.getElementById('metric-submission').textContent = roundsData[currentRound].submissions;
+    }
+  }
+
+  function decrementMetric(type) {
+    if (type === 'takedown' && roundsData[currentRound].takedowns > 0) {
+      roundsData[currentRound].takedowns -= 1;
+      document.getElementById('metric-takedown').textContent = roundsData[currentRound].takedowns;
+    } else if (type === 'submission' && roundsData[currentRound].submissions > 0) {
+      roundsData[currentRound].submissions -= 1;
+      document.getElementById('metric-submission').textContent = roundsData[currentRound].submissions;
+    }
+  }
+
+  function updateRpe(val) {
+    roundsData[currentRound].rpe = parseFloat(val);
+    let label = "Moderate";
+    if (val >= 9.5) label = "Maximal / Near Failure";
+    else if (val >= 8.5) label = "Heavy Pressure";
+    else if (val >= 7.5) label = "Vigorous Cadence";
+    document.getElementById('rpe-val').textContent = `RPE ${val} · ${label}`;
+  }
+
+  function toggleTechnique(button) {
+    const isSelected = button.classList.contains('bg-primary-container');
+    if (isSelected) {
+      button.classList.remove('bg-primary-container', 'text-on-primary-container');
+      button.classList.add('bg-surface-container-high', 'text-on-surface');
+    } else {
+      button.classList.remove('bg-surface-container-high', 'text-on-surface');
+      button.classList.add('bg-primary-container', 'text-on-primary-container');
+    }
+  }
+
+  // Swap Modal Logic
+  function openSwapDialog(index) {
+    activeSwapIndex = index;
+    const modal = document.getElementById('swap-modal');
+    const container = document.getElementById('swap-options');
+    const currentEx = exerciseDb[index].current;
+    
+    document.getElementById('swap-title').textContent = "Replace Exercise";
+    container.innerHTML = "";
+
+    exerciseDb[index].alternatives.forEach((alt) => {
+      const btn = document.createElement('button');
+      btn.type = "button";
+      btn.className = "w-full text-left p-3 rounded-lg bg-surface-container hover:bg-surface-container-highest transition-colors flex flex-col gap-0.5 active:scale-98";
+      btn.innerHTML = `
+        <span class="font-headline-sm text-body-md text-on-surface font-semibold">${alt.name}</span>
+        <span class="font-body-sm text-body-sm text-tertiary">${alt.detail}</span>
+      `;
+      btn.onclick = () => performSwap(alt);
+      container.appendChild(btn);
+    });
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeSwapDialog() {
+    const modal = document.getElementById('swap-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    activeSwapIndex = null;
+  }
+
+  function performSwap(chosenAlt) {
+    if (activeSwapIndex === null) return;
+    const card = document.getElementById(`ex-card-${activeSwapIndex}`);
+    const currentEx = exerciseDb[activeSwapIndex].current;
+    
+    // Swap in data structure
+    exerciseDb[activeSwapIndex].alternatives = exerciseDb[activeSwapIndex].alternatives.filter(a => a.name !== chosenAlt.name);
+    exerciseDb[activeSwapIndex].alternatives.push(currentEx);
+    exerciseDb[activeSwapIndex].current = chosenAlt;
+
+    // Update Card UI
+    card.querySelector('.ex-name').textContent = chosenAlt.name;
+    card.querySelector('.ex-detail').textContent = chosenAlt.detail;
+
+    // Brief highlight animation
+    card.classList.add('bg-surface-bright');
+    setTimeout(() => {
+      card.classList.remove('bg-surface-bright');
+    }, 300);
+
+    closeSwapDialog();
+  }
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl" data-active-classes="text-primary font-medium"><div class="flex items-center justify-around h-16 px-gutter"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="today" href="#"><span class="material-symbols-outlined text-[22px]">target</span><span class="font-label-mono text-label-mono tracking-wide">Today</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 transition-colors text-primary font-medium" data-path="train" href="#"><span class="material-symbols-outlined text-[22px]">sports_mma</span><span class="font-label-mono text-label-mono tracking-wide">Train</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="biometrics" href="#"><span class="material-symbols-outlined text-[22px]">vital_signs</span><span class="font-label-mono text-label-mono tracking-wide">Biometrics</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="profile" href="#"><span class="material-symbols-outlined text-[22px]">badge</span><span class="font-label-mono text-label-mono tracking-wide">Profile</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] gap-1 text-tertiary-container hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">tune</span><span class="font-label-mono text-label-mono tracking-wide">Settings</span></a></div></nav></body></html>

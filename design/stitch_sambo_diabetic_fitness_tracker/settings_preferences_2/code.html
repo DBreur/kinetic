@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;1,600&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-primary-container": "#eeefff", "on-surface-variant": "#c3c6d7", "on-error-container": "#ffdad6", "primary": "#b4c5ff", "error-container": "#93000a", "on-tertiary-fixed-variant": "#004e5c", "secondary-container": "#ad0224", "background": "#0f131c", "surface-container-highest": "#31353e", "on-primary": "#002a78", "surface-bright": "#353942", "on-secondary-fixed": "#410007", "surface-container-low": "#181c24", "secondary": "#ffb3b1", "surface": "#0f131c", "on-tertiary": "#003640", "on-primary-fixed": "#00174b", "on-primary-fixed-variant": "#003ea8", "inverse-primary": "#0053db", "surface-container-high": "#262a33", "outline": "#8d90a0", "tertiary-container": "#00788c", "primary-fixed-dim": "#b4c5ff", "tertiary-fixed": "#acedff", "on-background": "#dfe2ee", "surface-container-lowest": "#0a0e16", "on-error": "#690005", "inverse-on-surface": "#2c3039", "secondary-fixed-dim": "#ffb3b1", "outline-variant": "#434655", "primary-fixed": "#dbe1ff", "on-tertiary-fixed": "#001f26", "primary-container": "#2563eb", "surface-dim": "#0f131c", "surface-container": "#1c2028", "surface-tint": "#b4c5ff", "tertiary-fixed-dim": "#4cd7f6", "on-surface": "#dfe2ee", "on-secondary": "#680011", "tertiary": "#4cd7f6", "secondary-fixed": "#ffdad8", "error": "#ffb4ab", "on-secondary-container": "#ffb8b5", "surface-variant": "#31353e", "on-tertiary-container": "#d7f6ff", "inverse-surface": "#dfe2ee", "on-secondary-fixed-variant": "#92001c" }, borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, spacing: { "space-sm": "0.5rem", "gutter-mobile": "0.75rem", "gutter-desktop": "1.5rem", "margin": "1rem", "gutter": "1rem", "space-lg": "1.5rem", "margin-mobile": "0.75rem", "margin-desktop": "2rem", "space-xs": "0.25rem", "space-xl": "2rem", "space-md": "1rem" }, fontFamily: { "headline-sm": ["Barlow Condensed"], "display-xl-mobile": ["Barlow Condensed"], "telemetry-unit": ["Manrope"], "telemetry-value": ["Barlow Condensed"], "body-md": ["Manrope"], "display-lg-mobile": ["Barlow Condensed"], "headline-md": ["Barlow Condensed"], "display-lg": ["Barlow Condensed"], "body-sm": ["Manrope"], "headline-lg": ["Barlow Condensed"], "badge-label": ["Barlow Condensed"], "display-xl": ["Barlow Condensed"], "body-lg": ["Manrope"] }, fontSize: { "headline-sm": ["20px", { lineHeight: "24px", letterSpacing: "0.02em", fontWeight: "600" }], "display-xl-mobile": ["42px", { lineHeight: "44px", letterSpacing: "0.02em", fontWeight: "800" }], "telemetry-unit": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "600" }], "telemetry-value": ["36px", { lineHeight: "36px", letterSpacing: "0.02em", fontWeight: "700" }], "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0em", fontWeight: "400" }], "display-lg-mobile": ["34px", { lineHeight: "36px", letterSpacing: "0.02em", fontWeight: "700" }], "headline-md": ["24px", { lineHeight: "28px", letterSpacing: "0.02em", fontWeight: "600" }], "display-lg": ["44px", { lineHeight: "46px", letterSpacing: "0.02em", fontWeight: "700" }], "body-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "400" }], "headline-lg": ["30px", { lineHeight: "34px", letterSpacing: "0.03em", fontWeight: "700" }], "badge-label": ["13px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "700" }], "display-xl": ["56px", { lineHeight: "56px", letterSpacing: "0.02em", fontWeight: "800" }], "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0.01em", fontWeight: "500" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>body { min-height: max(884px, 100dvh); }</style></head><body class="bg-background font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-primary selection:text-on-primary"><header class="fixed top-0 inset-x-0 z-50 bg-background/90 backdrop-blur-xl pt-safe"><div class="h-16 px-gutter flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm"><button aria-label="Go Back" class="w-11 h-11 -ml-2 flex items-center justify-center rounded-lg text-on-surface hover:bg-surface-container-high/60 transition-colors focus:outline-none" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><h1 class="font-headline-md text-headline-md uppercase tracking-wider text-on-surface truncate">Settings</h1></div><div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high/90 border border-outline-variant/30 text-on-surface"><span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span><span class="font-headline-sm text-[16px] text-tertiary leading-none">6.6</span><span class="font-telemetry-unit text-telemetry-unit text-on-surface-variant">mmol/L</span></div></div></header><main class="flex flex-col relative w-full pt-16 pb-8 bg-background min-h-screen"><div class="flex flex-col w-full px-margin-mobile space-y-space-lg pb-12">
+<!-- Athlete Profile Banner with Micro-Delight Pulse -->
+<div class="bg-surface-container rounded-xl p-space-md shadow-md flex items-center justify-between relative overflow-hidden">
+<div class="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/10 rounded-full blur-xl pointer-events-none"></div>
+<div class="flex items-center space-x-3.5 z-10">
+<div class="relative">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-primary font-headline-md text-headline-md">
+          VK
+        </div>
+<span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-tertiary rounded-full shadow-sm"></span>
+</div>
+<div>
+<div class="flex items-center space-x-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">Viktor Kovalev</h2>
+<span class="px-1.5 py-0.5 rounded bg-primary-container/20 text-primary font-badge-label text-badge-label">FIAS #8491</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Combat Sambo -71kg | CGM Telemetry Active</p>
+</div>
+</div>
+<button class="z-10 px-3 py-1.5 rounded-lg bg-surface-container-highest text-tertiary font-badge-label text-badge-label flex items-center space-x-1 shadow-sm transition-all hover:bg-surface-bright" id="save-status-pill">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+<span>CLOUD SYNCED</span>
+</button>
+</div>
+<!-- SECTION 1: LANGUAGE SETTINGS -->
+<section class="space-y-space-xs">
+<div class="flex items-center space-x-2 px-1">
+<span class="material-symbols-outlined text-primary text-[20px]">translate</span>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Language &amp; Locale</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant px-1 pb-1">App interface language &amp; tactical combat terminology.</p>
+<div class="bg-surface-container-lowest p-1 rounded-xl flex space-x-1 shadow-sm">
+<button class="flex-1 py-2.5 px-3 rounded-lg text-center font-headline-sm text-headline-sm uppercase transition-all bg-surface-container-high text-on-surface shadow-sm" id="lang-en" onclick="setLanguage('en')">
+        English (EN)
+      </button>
+<button class="flex-1 py-2.5 px-3 rounded-lg text-center font-headline-sm text-headline-sm uppercase transition-all text-on-surface-variant hover:text-on-surface" id="lang-nl" onclick="setLanguage('nl')">
+        Nederlands (NL)
+      </button>
+</div>
+</section>
+<!-- SECTION 2: GLUCOSE UNIT & SENSOR DATA SOURCE -->
+<section class="space-y-space-sm">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-tertiary text-[20px]">sensors</span>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Glucose Unit &amp; Sensor Link</h3>
+</div>
+<div class="flex items-center space-x-1 px-2 py-0.5 rounded bg-surface-container-high text-tertiary font-badge-label text-badge-label">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+<span>LOCKED (FIAS CLINICAL)</span>
+</div>
+</div>
+<!-- mmol/L Lock Pill -->
+<div class="bg-surface-container rounded-lg p-space-sm flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[18px]">biotech</span>
+</div>
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface">mmol/L</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">All blood glucose values strictly standardized in mmol/L</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-tertiary text-[20px]">verified</span>
+</div>
+<!-- Sensor Source Selection Cards -->
+<div class="space-y-2 pt-1">
+<!-- Manual Entry Card -->
+<label class="block cursor-pointer">
+<input class="sr-only peer" name="glucose_source" onchange="updateSensorSource('manual')" type="radio" value="manual"/>
+<div class="bg-surface-container peer-checked:bg-surface-container-high p-space-md rounded-xl transition-all relative overflow-hidden flex flex-col space-y-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">water_drop</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Manual (Finger Prick)</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Discrete Entry</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">User enters lancet strip value manually prior to rounds.</p>
+</div>
+</label>
+<!-- Dexcom G7 (Active) -->
+<label class="block cursor-pointer">
+<input checked="" class="sr-only peer" name="glucose_source" onchange="updateSensorSource('dexcom')" type="radio" value="dexcom"/>
+<div class="bg-surface-container peer-checked:bg-surface-container-high p-space-md rounded-xl transition-all relative overflow-hidden flex flex-col space-y-1 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[18px] text-primary">bluetooth_connected</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Dexcom G7 / ONE Sensor</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-badge-label text-badge-label flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+<span>ACTIVE / SYNCED</span>
+</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Auto-reads continuous telemetry every 5 min; instantly editable at any time.</p>
+</div>
+</label>
+<!-- FreeStyle Libre 3 -->
+<label class="block cursor-pointer">
+<input class="sr-only peer" name="glucose_source" onchange="updateSensorSource('libre')" type="radio" value="libre"/>
+<div class="bg-surface-container peer-checked:bg-surface-container-high p-space-md rounded-xl transition-all relative overflow-hidden flex flex-col space-y-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">nfc</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">FreeStyle Libre 3 Sensor</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-badge-label text-badge-label">NFC READY</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">NFC &amp; Cloud auto-sync; ring-side manual override permanently enabled.</p>
+</div>
+</label>
+</div>
+<div class="bg-surface-container-lowest/80 p-space-sm rounded-lg flex items-start space-x-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">info</span>
+<p class="font-body-sm text-body-sm leading-snug">When a sensor is active, live telemetry auto-populates bolus calculations and can be overwritten manually at any time.</p>
+</div>
+</section>
+<!-- SECTION 3: TIME-OF-DAY SENSITIVITY MATRIX -->
+<section class="space-y-space-sm">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-[20px]">tune</span>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Insulin Sensitivity Matrix</h3>
+</div>
+<button class="font-badge-label text-badge-label text-secondary hover:text-on-surface transition-colors flex items-center space-x-1" onclick="triggerResetNotice()">
+<span class="material-symbols-outlined text-[14px]">history</span>
+<span>RESET DEFAULTS</span>
+</button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant px-1">Target glucose, Carb Ratio (ICR), and Insulin Sensitivity Factor (ISF) segmented by circadian metabolic load.</p>
+<!-- Slot 1: Morning -->
+<div class="bg-surface-container rounded-xl p-space-md space-y-space-sm shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-on-surface text-[18px]">wb_twilight</span>
+<span class="font-headline-sm text-headline-sm text-on-surface uppercase">Morning Slot</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-badge-label text-badge-label">06:00 – 12:00</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<!-- Target BG -->
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">Target (mmol/L)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('m_target', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-tertiary" id="m_target">5.5</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('m_target', 0.1)">+</button>
+</div>
+</div>
+<!-- Carb Ratio (ICR) -->
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ICR (1U / g)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('m_icr', -1)">-</button>
+<span class="font-telemetry-value text-[20px] text-primary" id="m_icr">8g</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('m_icr', 1)">+</button>
+</div>
+</div>
+<!-- ISF Drop -->
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ISF (1U / drop)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('m_isf', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-on-surface" id="m_isf">2.0</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('m_isf', 0.1)">+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Slot 2: Afternoon -->
+<div class="bg-surface-container rounded-xl p-space-md space-y-space-sm shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-on-surface text-[18px]">sunny</span>
+<span class="font-headline-sm text-headline-sm text-on-surface uppercase">Afternoon Slot</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-badge-label text-badge-label">12:00 – 18:00</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">Target (mmol/L)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('a_target', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-tertiary" id="a_target">5.8</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('a_target', 0.1)">+</button>
+</div>
+</div>
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ICR (1U / g)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('a_icr', -1)">-</button>
+<span class="font-telemetry-value text-[20px] text-primary" id="a_icr">10g</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('a_icr', 1)">+</button>
+</div>
+</div>
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ISF (1U / drop)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('a_isf', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-on-surface" id="a_isf">2.2</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('a_isf', 0.1)">+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Slot 3: Evening / Post-Sambo (Combat Buffer) -->
+<div class="bg-surface-container rounded-xl p-space-md space-y-space-sm shadow-sm relative overflow-hidden">
+<div class="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-bl-3xl pointer-events-none"></div>
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">sports_kabaddi</span>
+<span class="font-headline-sm text-headline-sm text-on-surface uppercase">Evening / Post-Sambo</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-badge-label text-badge-label">18:00 – 23:00</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">Target (mmol/L)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('e_target', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-tertiary" id="e_target">6.5</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('e_target', 0.1)">+</button>
+</div>
+</div>
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ICR (1U / g)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('e_icr', -1)">-</button>
+<span class="font-telemetry-value text-[20px] text-primary" id="e_icr">12g</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('e_icr', 1)">+</button>
+</div>
+</div>
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ISF (1U / drop)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('e_isf', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-on-surface" id="e_isf">2.5</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('e_isf', 0.1)">+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Slot 4: Night -->
+<div class="bg-surface-container rounded-xl p-space-md space-y-space-sm shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-on-surface text-[18px]">bedtime</span>
+<span class="font-headline-sm text-headline-sm text-on-surface uppercase">Night Slot (Recovery)</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-badge-label text-badge-label">23:00 – 06:00</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">Target (mmol/L)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('n_target', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-tertiary" id="n_target">6.0</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('n_target', 0.1)">+</button>
+</div>
+</div>
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ICR (1U / g)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('n_icr', -1)">-</button>
+<span class="font-telemetry-value text-[20px] text-primary" id="n_icr">14g</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('n_icr', 1)">+</button>
+</div>
+</div>
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-center">ISF (1U / drop)</span>
+<div class="flex items-center justify-between w-full mt-1">
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('n_isf', -0.1)">-</button>
+<span class="font-telemetry-value text-[20px] text-on-surface" id="n_isf">3.0</span>
+<button class="w-7 h-7 rounded bg-surface-container-high text-on-surface flex items-center justify-center font-bold hover:bg-surface-bright" onclick="adjustValue('n_isf', 0.1)">+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: PRE-MEAL REMINDER TIMER -->
+<section class="space-y-space-sm">
+<div class="flex items-center space-x-2 px-1">
+<span class="material-symbols-outlined text-primary text-[20px]">notifications_active</span>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Pre-Meal Reminder Protocol</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant px-1">Ensures optimal insulin lag phase prior to carbohydrate digestion.</p>
+<div class="bg-surface-container rounded-xl p-space-md space-y-4 shadow-md">
+<!-- Duration selector -->
+<div>
+<label class="block font-headline-sm text-[16px] text-on-surface uppercase mb-2">Default Countdown Duration</label>
+<div class="grid grid-cols-4 gap-2">
+<button class="py-2 rounded-lg bg-surface-container-high font-headline-sm text-headline-sm text-on-surface-variant hover:text-on-surface" id="timer-10" onclick="setTimerDuration(10)">10 MIN</button>
+<button class="py-2 rounded-lg bg-primary font-headline-sm text-headline-sm text-on-primary font-bold shadow-sm" id="timer-15" onclick="setTimerDuration(15)">15 MIN</button>
+<button class="py-2 rounded-lg bg-surface-container-high font-headline-sm text-headline-sm text-on-surface-variant hover:text-on-surface" id="timer-20" onclick="setTimerDuration(20)">20 MIN</button>
+<button class="py-2 rounded-lg bg-surface-container-high font-headline-sm text-headline-sm text-on-surface-variant hover:text-on-surface" id="timer-custom" onclick="setTimerDuration(0)">CUSTOM</button>
+</div>
+</div>
+<!-- Alert Tone & Haptic -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface-variant mb-1.5">Alert Feedback Pattern</label>
+<div class="bg-surface-container-low p-2.5 rounded-lg flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-[20px]">vibration</span>
+<span class="font-body-md text-body-md text-on-surface">Sound + Kurtka Haptic</span>
+</div>
+<span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
+</div>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface-variant mb-1.5">Audio Signal Tone</label>
+<div class="bg-surface-container-low p-1.5 rounded-lg flex space-x-1">
+<button class="flex-1 py-1 px-2 rounded font-badge-label text-badge-label bg-surface-container-high text-primary" id="tone-chime" onclick="setTone('chime')">Tactical Chime</button>
+<button class="flex-1 py-1 px-2 rounded font-badge-label text-badge-label text-on-surface-variant" id="tone-pulse" onclick="setTone('pulse')">Soft Pulse</button>
+<button class="flex-1 py-1 px-2 rounded font-badge-label text-badge-label text-on-surface-variant" id="tone-siren" onclick="setTone('siren')">Urgent Siren</button>
+</div>
+</div>
+</div>
+<!-- Snooze interval -->
+<div class="flex items-center justify-between pt-1">
+<div>
+<span class="font-headline-sm text-[16px] text-on-surface">Auto-Snooze Cadence</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Re-alerts if meal start isn't confirmed</p>
+</div>
+<div class="flex items-center space-x-2 bg-surface-container-low px-3 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">snooze</span>
+<span class="font-headline-sm text-headline-sm text-tertiary">5 MIN</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 5: FOOD PRESETS MANAGER -->
+<section class="space-y-space-sm">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-[20px]">restaurant</span>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Food Presets Manager</h3>
+</div>
+<span class="font-badge-label text-badge-label text-on-surface-variant" id="preset-count">4 LOADED</span>
+</div>
+<!-- Presets list -->
+<div class="space-y-2" id="presets-container">
+<!-- Preset 1 -->
+<div class="bg-surface-container p-3 rounded-xl flex items-center justify-between shadow-sm transition-all hover:bg-surface-container-high" id="preset-apple">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">nutrition</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Apple (Crisp Gala)</h4>
+<span class="font-body-sm text-body-sm text-tertiary font-semibold">16g carbs</span>
+</div>
+</div>
+<div class="flex items-center space-x-1">
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-colors" onclick="editPreset('Apple', 16)" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary hover:text-error hover:bg-surface-bright transition-colors" onclick="deletePreset('preset-apple')" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Preset 2 -->
+<div class="bg-surface-container p-3 rounded-xl flex items-center justify-between shadow-sm transition-all hover:bg-surface-container-high" id="preset-bread">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">bakery_dining</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Slice Sourdough Bread</h4>
+<span class="font-body-sm text-body-sm text-tertiary font-semibold">15g carbs</span>
+</div>
+</div>
+<div class="flex items-center space-x-1">
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-colors" onclick="editPreset('Slice Bread', 15)" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary hover:text-error hover:bg-surface-bright transition-colors" onclick="deletePreset('preset-bread')" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Preset 3 -->
+<div class="bg-surface-container p-3 rounded-xl flex items-center justify-between shadow-sm transition-all hover:bg-surface-container-high" id="preset-banana">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">energy_savings_leaf</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Banana (Medium Ripe)</h4>
+<span class="font-body-sm text-body-sm text-tertiary font-semibold">27g carbs</span>
+</div>
+</div>
+<div class="flex items-center space-x-1">
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-colors" onclick="editPreset('Banana', 27)" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary hover:text-error hover:bg-surface-bright transition-colors" onclick="deletePreset('preset-banana')" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Preset 4 -->
+<div class="bg-surface-container p-3 rounded-xl flex items-center justify-between shadow-sm transition-all hover:bg-surface-container-high" id="preset-shake">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">sports_martial_arts</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Sambo Recovery Shake</h4>
+<span class="font-body-sm text-body-sm text-tertiary font-semibold">35g carbs</span>
+</div>
+</div>
+<div class="flex items-center space-x-1">
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-colors" onclick="editPreset('Sambo Recovery Shake', 35)" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary hover:text-error hover:bg-surface-bright transition-colors" onclick="deletePreset('preset-shake')" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Create Preset Trigger -->
+<button class="w-full py-3 px-4 rounded-xl bg-surface-container-high hover:bg-surface-bright text-primary font-headline-sm text-headline-sm uppercase tracking-wider flex items-center justify-center space-x-2 transition-all" onclick="openNewPresetModal()">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+<span>Create New Food Preset</span>
+</button>
+</section>
+<!-- SECTION 6: COMPETITION & WEIGHT-CUT MODE -->
+<section class="space-y-space-sm">
+<div class="bg-surface-container rounded-xl p-space-md space-y-3 relative overflow-hidden shadow-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/40 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[22px]">military_tech</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Competition &amp; Sambo Tournament Mode</h3>
+<span class="font-badge-label text-badge-label text-secondary" id="comp-mode-badge">CURRENTLY ACTIVE</span>
+</div>
+</div>
+<!-- Custom Switch Toggle -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" id="comp-mode-toggle" onchange="toggleCompMode(this)" type="checkbox"/>
+<div class="w-14 h-8 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-on-primary after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+        Active competition camp profile: Displays weight-cut water progression graphs, FIAS/WADA medical passport insulin timestamps, bout adrenaline surge filters, and ring marshal alerts. Disable during off-season recovery.
+      </p>
+<!-- Sub-options visible when Competition Mode is on -->
+<div class="pt-2 space-y-2" id="comp-mode-extras">
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-[18px]">scale</span>
+<span class="font-body-md text-body-md text-on-surface">Target Weigh-in Division</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface">71.0 KG</span>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-tertiary text-[18px]">verified_user</span>
+<span class="font-body-md text-body-md text-on-surface">WADA TUE Registry Status</span>
+</div>
+<span class="font-badge-label text-badge-label text-tertiary">APPROVED (TUE-2025-08)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 7: EXPORT & CLINICAL REPORTING -->
+<section class="space-y-space-sm">
+<div class="flex items-center space-x-2 px-1">
+<span class="material-symbols-outlined text-primary text-[20px]">ios_share</span>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Export Preferences</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant px-1">Configure format for endocrinologist, FIAS medical commission, and coach.</p>
+<div class="bg-surface-container rounded-xl p-space-md space-y-3 shadow-md">
+<label class="block font-headline-sm text-[16px] text-on-surface uppercase">Default Medical Log Format</label>
+<div class="grid grid-cols-2 gap-2">
+<label class="cursor-pointer">
+<input checked="" class="sr-only peer" name="export_format" onchange="setExportFormat('pdf')" type="radio" value="pdf"/>
+<div class="bg-surface-container-high peer-checked:bg-primary-container peer-checked:text-on-primary-container p-3 rounded-lg flex items-center justify-between transition-all">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+<span class="font-headline-sm text-headline-sm">PDF Report</span>
+</div>
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+</label>
+<label class="cursor-pointer">
+<input class="sr-only peer" name="export_format" onchange="setExportFormat('csv')" type="radio" value="csv"/>
+<div class="bg-surface-container-high peer-checked:bg-primary-container peer-checked:text-on-primary-container p-3 rounded-lg flex items-center justify-between transition-all text-on-surface-variant">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[20px]">table_view</span>
+<span class="font-headline-sm text-headline-sm">CSV Dataset</span>
+</div>
+<span class="material-symbols-outlined text-[16px] opacity-0 peer-checked:opacity-100">check</span>
+</div>
+</label>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">FIAS Clinical Header Stamp</span>
+<span class="font-badge-label text-badge-label text-primary">INCLUDED</span>
+</div>
+</div>
+</section>
+<!-- SECTION 8: THEME & DISPLAY PREFERENCES -->
+<section class="space-y-space-sm">
+<div class="flex items-center space-x-2 px-1">
+<span class="material-symbols-outlined text-primary text-[20px]">palette</span>
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface">Tactical Display &amp; Dark Theme</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant px-1">Aesthetic luminescence profiles for combat mat and locker room environments.</p>
+<div class="bg-surface-container rounded-xl p-space-md space-y-4 shadow-md">
+<!-- Theme Options -->
+<div>
+<label class="block font-headline-sm text-[16px] text-on-surface uppercase mb-2">Tactical Substrate Shade</label>
+<div class="grid grid-cols-3 gap-2">
+<button class="p-2.5 rounded-lg bg-surface-container-highest text-primary font-headline-sm text-[16px] flex flex-col items-center space-y-1" id="theme-obsidian" onclick="setThemeVariant('obsidian')">
+<span class="w-4 h-4 rounded-full bg-background border border-primary"></span>
+<span>Obsidian</span>
+</button>
+<button class="p-2.5 rounded-lg bg-surface-container-high text-on-surface-variant font-headline-sm text-[16px] flex flex-col items-center space-y-1" id="theme-titanium" onclick="setThemeVariant('titanium')">
+<span class="w-4 h-4 rounded-full bg-surface-container-highest"></span>
+<span>Titanium</span>
+</button>
+<button class="p-2.5 rounded-lg bg-surface-container-high text-on-surface-variant font-headline-sm text-[16px] flex flex-col items-center space-y-1" id="theme-oled" onclick="setThemeVariant('oled')">
+<span class="w-4 h-4 rounded-full bg-black"></span>
+<span>OLED Black</span>
+</button>
+</div>
+</div>
+<!-- Information Density -->
+<div class="pt-1">
+<label class="block font-headline-sm text-[16px] text-on-surface uppercase mb-2">Mat HUD Information Density</label>
+<div class="bg-surface-container-lowest p-1 rounded-lg flex space-x-1">
+<button class="flex-1 py-2 rounded font-headline-sm text-headline-sm uppercase text-on-surface-variant transition-all" id="density-min" onclick="setDensity('minimal')">
+            Minimal
+          </button>
+<button class="flex-1 py-2 rounded font-headline-sm text-headline-sm uppercase bg-surface-container-high text-primary shadow-sm transition-all" id="density-pro" onclick="setDensity('pro')">
+            Telemetry Pro
+          </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive Modal for New/Edit Preset (Hidden by default) -->
+<div class="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity" id="preset-modal">
+<div class="bg-surface-container-high w-full max-w-md rounded-t-2xl sm:rounded-2xl p-space-lg space-y-4 shadow-2xl">
+<div class="flex items-center justify-between pb-2">
+<h3 class="font-headline-md text-headline-md uppercase text-on-surface" id="modal-title">Add Food Preset</h3>
+<button class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-on-surface" onclick="closePresetModal()">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="space-y-3">
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface-variant mb-1">Item Title</label>
+<input class="w-full bg-surface-container-lowest text-on-surface px-3 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary font-body-md text-body-md" id="modal-food-name" placeholder="e.g., Energy Gel, Oatmeal" type="text"/>
+</div>
+<div>
+<label class="block font-body-sm text-body-sm text-on-surface-variant mb-1">Carbohydrates (Grams)</label>
+<div class="flex items-center space-x-2">
+<input class="w-full bg-surface-container-lowest text-on-surface px-3 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary font-telemetry-value text-[24px]" id="modal-food-carbs" placeholder="25" type="number"/>
+<span class="font-headline-sm text-headline-sm text-tertiary">GRAMS</span>
+</div>
+</div>
+</div>
+<div class="flex space-x-2 pt-2">
+<button class="flex-1 py-3 rounded-lg bg-surface-container text-on-surface font-headline-sm text-headline-sm uppercase" onclick="closePresetModal()">Cancel</button>
+<button class="flex-1 py-3 rounded-lg bg-primary text-on-primary font-headline-sm text-headline-sm uppercase shadow-sm" onclick="savePresetModal()">Save Preset</button>
+</div>
+</div>
+</div>
+<!-- Toast Notification for Micro-Delight feedback -->
+<div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2.5 rounded-full bg-surface-bright text-tertiary font-headline-sm text-[16px] uppercase shadow-2xl flex items-center space-x-2 opacity-0 pointer-events-none transition-all duration-300 z-50" id="toast-pill">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span id="toast-message">Settings Auto-Saved</span>
+</div>
+</div>
+<script>
+  // Micro-Delight Toast Helper
+  function showToast(msg) {
+    const toast = document.getElementById('toast-pill');
+    const label = document.getElementById('toast-message');
+    if (!toast || !label) return;
+    label.innerText = msg;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'pointer-events-none');
+      toast.classList.remove('opacity-100');
+    }, 2200);
+  }
+
+  // Language Toggle
+  function setLanguage(lang) {
+    const btnEn = document.getElementById('lang-en');
+    const btnNl = document.getElementById('lang-nl');
+    if (lang === 'en') {
+      btnEn.className = 'flex-1 py-2.5 px-3 rounded-lg text-center font-headline-sm text-headline-sm uppercase transition-all bg-surface-container-high text-on-surface shadow-sm';
+      btnNl.className = 'flex-1 py-2.5 px-3 rounded-lg text-center font-headline-sm text-headline-sm uppercase transition-all text-on-surface-variant hover:text-on-surface';
+      showToast('Language: English (EN) Active');
+    } else {
+      btnNl.className = 'flex-1 py-2.5 px-3 rounded-lg text-center font-headline-sm text-headline-sm uppercase transition-all bg-surface-container-high text-on-surface shadow-sm';
+      btnEn.className = 'flex-1 py-2.5 px-3 rounded-lg text-center font-headline-sm text-headline-sm uppercase transition-all text-on-surface-variant hover:text-on-surface';
+      showToast('Taal gewijzigd naar Nederlands');
+    }
+  }
+
+  // Stepper Fine-tuning
+  function adjustValue(id, delta) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let text = el.innerText;
+    let isGram = text.includes('g');
+    let val = parseFloat(text);
+    val = Math.round((val + delta) * 10) / 10;
+    if (val < 1) val = 1;
+    el.innerText = isGram ? val + 'g' : val.toFixed(1);
+    showToast('Telemetry Parameter Adjusted');
+  }
+
+  function triggerResetNotice() {
+    showToast('Sensitivity Matrix Reset to Sambo Baseline');
+  }
+
+  // Timer Configuration Selector
+  function setTimerDuration(mins) {
+    ['10', '15', '20', 'custom'].forEach(m => {
+      const btn = document.getElementById('timer-' + m);
+      if (btn) {
+        btn.className = 'py-2 rounded-lg bg-surface-container-high font-headline-sm text-headline-sm text-on-surface-variant hover:text-on-surface';
+      }
+    });
+    const key = mins === 0 ? 'custom' : mins.toString();
+    const active = document.getElementById('timer-' + key);
+    if (active) {
+      active.className = 'py-2 rounded-lg bg-primary font-headline-sm text-headline-sm text-on-primary font-bold shadow-sm';
+    }
+    showToast(`Pre-Meal Timer: ${mins === 0 ? 'Custom' : mins + ' Minutes'}`);
+  }
+
+  // Tone selector
+  function setTone(tone) {
+    ['chime', 'pulse', 'siren'].forEach(t => {
+      const btn = document.getElementById('tone-' + t);
+      if (btn) btn.className = 'flex-1 py-1 px-2 rounded font-badge-label text-badge-label text-on-surface-variant';
+    });
+    const target = document.getElementById('tone-' + tone);
+    if (target) {
+      target.className = 'flex-1 py-1 px-2 rounded font-badge-label text-badge-label bg-surface-container-high text-primary';
+    }
+    showToast(`Alert Tone Updated: ${tone.toUpperCase()}`);
+  }
+
+  // Presets Management
+  function deletePreset(id) {
+    const row = document.getElementById(id);
+    if (row) {
+      row.style.opacity = '0';
+      row.style.transform = 'translateX(20px)';
+      setTimeout(() => {
+        row.remove();
+        showToast('Food Preset Removed');
+      }, 200);
+    }
+  }
+
+  function editPreset(name, carbs) {
+    document.getElementById('modal-title').innerText = 'Edit Food Preset';
+    document.getElementById('modal-food-name').value = name;
+    document.getElementById('modal-food-carbs').value = carbs;
+    document.getElementById('preset-modal').classList.remove('hidden');
+  }
+
+  function openNewPresetModal() {
+    document.getElementById('modal-title').innerText = 'Create New Food Preset';
+    document.getElementById('modal-food-name').value = '';
+    document.getElementById('modal-food-carbs').value = '';
+    document.getElementById('preset-modal').classList.remove('hidden');
+  }
+
+  function closePresetModal() {
+    document.getElementById('preset-modal').classList.add('hidden');
+  }
+
+  function savePresetModal() {
+    const name = document.getElementById('modal-food-name').value || 'New Item';
+    const carbs = document.getElementById('modal-food-carbs').value || '20';
+    closePresetModal();
+    showToast(`Preset Saved: ${name} (${carbs}g)`);
+  }
+
+  // Competition Mode Toggle
+  function toggleCompMode(checkbox) {
+    const badge = document.getElementById('comp-mode-badge');
+    const extras = document.getElementById('comp-mode-extras');
+    if (checkbox.checked) {
+      badge.innerText = 'CURRENTLY ACTIVE';
+      badge.className = 'font-badge-label text-badge-label text-secondary';
+      if (extras) extras.style.display = 'block';
+      showToast('Competition & Tournament Protocol Enabled');
+    } else {
+      badge.innerText = 'OFF-SEASON MODE';
+      badge.className = 'font-badge-label text-badge-label text-on-surface-variant';
+      if (extras) extras.style.display = 'none';
+      showToast('Off-Season Rest Mode Set');
+    }
+  }
+
+  function setExportFormat(fmt) {
+    showToast(`Export Baseline: ${fmt.toUpperCase()}`);
+  }
+
+  function updateSensorSource(src) {
+    showToast(`Glucose Source Switched: ${src.toUpperCase()}`);
+  }
+
+  function setThemeVariant(variant) {
+    ['obsidian', 'titanium', 'oled'].forEach(v => {
+      const b = document.getElementById('theme-' + v);
+      if (b) b.className = 'p-2.5 rounded-lg bg-surface-container-high text-on-surface-variant font-headline-sm text-[16px] flex flex-col items-center space-y-1';
+    });
+    const cur = document.getElementById('theme-' + variant);
+    if (cur) cur.className = 'p-2.5 rounded-lg bg-surface-container-highest text-primary font-headline-sm text-[16px] flex flex-col items-center space-y-1';
+    showToast(`Display Profile: ${variant.toUpperCase()}`);
+  }
+
+  function setDensity(d) {
+    const min = document.getElementById('density-min');
+    const pro = document.getElementById('density-pro');
+    if (d === 'minimal') {
+      min.className = 'flex-1 py-2 rounded font-headline-sm text-headline-sm uppercase bg-surface-container-high text-primary shadow-sm transition-all';
+      pro.className = 'flex-1 py-2 rounded font-headline-sm text-headline-sm uppercase text-on-surface-variant transition-all';
+      showToast('Density: Minimal Stream');
+    } else {
+      pro.className = 'flex-1 py-2 rounded font-headline-sm text-headline-sm uppercase bg-surface-container-high text-primary shadow-sm transition-all';
+      min.className = 'flex-1 py-2 rounded font-headline-sm text-headline-sm uppercase text-on-surface-variant transition-all';
+      showToast('Density: Telemetry Pro Mode');
+    }
+  }
+</script></main></body></html>

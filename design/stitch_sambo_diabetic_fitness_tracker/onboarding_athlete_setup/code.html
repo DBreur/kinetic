@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_blank" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-container-high": "#262a31", "surface-container-lowest": "#0a0e14", "on-tertiary": "#233143", "outline-variant": "#5b4041", "surface-container": "#1c2026", "on-primary": "#67001b", "primary-container": "#ff516a", "error-container": "#93000a", "tertiary": "#b9c8de", "on-secondary-fixed": "#001e2c", "inverse-surface": "#dfe2eb", "on-secondary-container": "#00374d", "surface": "#10141a", "on-secondary-fixed-variant": "#004c69", "secondary": "#7bd0ff", "outline": "#aa888a", "surface-container-highest": "#31353c", "primary-fixed": "#ffdadb", "on-tertiary-fixed": "#0d1c2d", "on-tertiary-fixed-variant": "#39485a", "on-surface": "#dfe2eb", "primary": "#ffb2b7", "surface-tint": "#ffb2b7", "surface-dim": "#10141a", "tertiary-fixed": "#d4e4fa", "tertiary-container": "#8392a6", "error": "#ffb4ab", "on-secondary": "#00354a", "on-primary-container": "#5b0017", "secondary-container": "#00a6e0", "on-background": "#dfe2eb", "on-surface-variant": "#e3bdbf", "tertiary-fixed-dim": "#b9c8de", "background": "#10141a", "inverse-primary": "#bc0b3b", "on-error-container": "#ffdad6", "primary-fixed-dim": "#ffb2b7", "on-primary-fixed-variant": "#92002a", "on-tertiary-container": "#1c2b3c", "secondary-fixed": "#c4e7ff", "surface-container-low": "#181c22", "surface-bright": "#353940", "inverse-on-surface": "#2d3137", "surface-variant": "#31353c", "secondary-fixed-dim": "#7bd0ff", "on-error": "#690005", "on-primary-fixed": "#40000d" }, borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, spacing: { "space-xl": "2.5rem", "space-sm": "0.5rem", "gutter-desktop": "2rem", "space-md": "1rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "gutter-tablet": "1.5rem", "gutter": "1rem", "margin-desktop": "3rem", "margin-tablet": "2rem", "margin": "1rem" }, fontFamily: { "label-mono": ["Geist"], "headline-sm": ["Space Grotesk"], "body-lg": ["Geist"], "body-md": ["Geist"], "headline-md": ["Space Grotesk"], "headline-lg": ["Space Grotesk"], "headline-lg-mobile": ["Space Grotesk"], "body-sm": ["Geist"], "display": ["Space Grotesk"], "label-metric": ["Space Grotesk"] }, fontSize: { "label-mono": ["11px", { lineHeight: "14px", letterSpacing: "0.06em", fontWeight: "500" }], "headline-sm": ["18px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "500" }], "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "400" }], "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }], "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "500" }], "headline-lg": ["40px", { lineHeight: "48px", letterSpacing: "-0.02em", fontWeight: "600" }], "headline-lg-mobile": ["30px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "600" }], "body-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "400" }], "display": ["56px", { lineHeight: "64px", letterSpacing: "-0.03em", fontWeight: "700" }], "label-metric": ["28px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "700" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-primary-container selection:text-on-primary-container"><main class="flex flex-col relative w-full pt-safe pb-safe bg-surface min-h-screen"><div class="flex flex-col w-full px-margin-tablet pb-space-xl">
+<!-- Minimalist Brand Header -->
+<header class="flex flex-col items-center text-center pt-space-md pb-space-lg">
+<div class="relative w-16 h-16 mb-space-sm flex items-center justify-center rounded-xl bg-surface-container-high shadow-md">
+<img alt="Kinetic Sambo Minimal Logo" class="w-12 h-12 object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Vwc5MJdsZgW2fs5pwTayZ_-84qOxCtSYHkkIL_Mq5DS-2i0LiBJdU8lKpApE2GLEJxL2EZ1J-lZhGlb_k5IQi9Ps29YihohnJFeLI-14Nygv1cQ1zSeirZJpanOmzo3RtaxOikxxtr3zolukKKCcAPZ5o6DUkY6XHf7cJwQezUrlGyfV0zARzAnfP7bemlzy02Kb-7Oy_xcuW2nNGvNfS-wSPlfWMhWeFGcW_MxC83r43lL7hnY1OnqJo"/>
+<span class="absolute -top-1 -right-1 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
+</span>
+</div>
+<div class="flex items-center gap-space-xs mb-space-xs">
+<span class="font-headline-md text-headline-md tracking-wider uppercase text-on-surface">KINETIC</span>
+<span class="font-label-mono text-label-mono uppercase px-space-xs py-0.5 rounded bg-surface-container-highest text-secondary">HUD v2.4</span>
+</div>
+<p class="font-body-md text-body-md text-tertiary max-w-xs leading-relaxed">
+      Precision training meets intelligent metabolic balance for combat athletes.
+    </p>
+</header>
+<!-- Step Progress Indicator -->
+<div class="w-full max-w-md mx-auto mb-space-lg bg-surface-container-low p-space-sm rounded-xl">
+<div class="flex items-center justify-between px-space-xs mb-space-xs">
+<span class="font-label-mono text-label-mono uppercase text-secondary" id="stepLabel">Step 1 of 3: Athlete Profile</span>
+<span class="font-label-mono text-label-mono text-tertiary" id="stepPercent">33%</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-1.5 rounded-full overflow-hidden flex">
+<div class="h-full bg-primary-container transition-all duration-500 ease-out rounded-full" id="stepProgressBar" style="width: 33.33%;"></div>
+</div>
+<!-- Tab Jump Selectors -->
+<div class="grid grid-cols-3 gap-space-xs mt-space-sm">
+<button class="py-space-xs px-space-xs rounded font-label-mono text-label-mono text-center transition-colors bg-surface-container text-primary" id="tabBtn1" onclick="goToStep(1)" type="button">
+        01 Profile
+      </button>
+<button class="py-space-xs px-space-xs rounded font-label-mono text-label-mono text-center transition-colors bg-surface-container-lowest text-tertiary hover:text-on-surface" id="tabBtn2" onclick="goToStep(2)" type="button">
+        02 Biosensors
+      </button>
+<button class="py-space-xs px-space-xs rounded font-label-mono text-label-mono text-center transition-colors bg-surface-container-lowest text-tertiary hover:text-on-surface" id="tabBtn3" onclick="goToStep(3)" type="button">
+        03 Safety
+      </button>
+</div>
+</div>
+<!-- Interactive Form Container -->
+<div class="w-full max-w-md mx-auto relative overflow-hidden min-h-[410px]">
+<!-- STEP 1: ATHLETE PROFILE -->
+<section class="step-pane w-full flex flex-col gap-space-md transition-all duration-300" id="step1">
+<div class="bg-surface-container p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary-container">sports_martial_arts</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Discipline Matrix</span>
+</div>
+<span class="font-label-mono text-label-mono text-tertiary">CONFIG</span>
+</div>
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-mono text-label-mono uppercase text-tertiary">Primary Sambo Focus</label>
+<div class="grid grid-cols-1 gap-space-xs" id="disciplineSelector">
+<button class="discipline-btn flex items-center justify-between p-space-sm rounded-lg bg-surface-container-high text-on-surface font-body-md text-body-md transition-all text-left" onclick="setDiscipline(this, 'Combat Sambo')" type="button">
+<span class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary">flash_on</span>
+<span>Combat Sambo</span>
+</span>
+<span class="discipline-indicator w-2 h-2 rounded-full bg-secondary"></span>
+</button>
+<button class="discipline-btn flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest text-tertiary font-body-md text-body-md transition-all text-left" onclick="setDiscipline(this, 'Sport Sambo')" type="button">
+<span class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined">shield</span>
+<span>Sport Sambo</span>
+</span>
+<span class="discipline-indicator w-2 h-2 rounded-full bg-transparent"></span>
+</button>
+<button class="discipline-btn flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest text-tertiary font-body-md text-body-md transition-all text-left" onclick="setDiscipline(this, 'Dual Competitor')" type="button">
+<span class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined">all_inclusive</span>
+<span>Dual Competitor</span>
+</span>
+<span class="discipline-indicator w-2 h-2 rounded-full bg-transparent"></span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-space-xs">
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-mono text-label-mono uppercase text-tertiary">Weight Class</label>
+<div class="relative bg-surface-container-lowest rounded-lg p-space-sm flex items-center">
+<select class="w-full bg-transparent text-on-surface font-body-md text-body-md appearance-none outline-none cursor-pointer">
+<option class="bg-surface-container-high" value="64">64 kg (Bantam)</option>
+<option class="bg-surface-container-high" selected="" value="71">71 kg (Light)</option>
+<option class="bg-surface-container-high" value="79">79 kg (Welter)</option>
+<option class="bg-surface-container-high" value="88">88 kg (Middle)</option>
+<option class="bg-surface-container-high" value="98">98 kg (Heavy)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 text-tertiary pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-mono text-label-mono uppercase text-tertiary">Target Match</label>
+<div class="relative bg-surface-container-lowest rounded-lg p-space-sm flex items-center">
+<input class="w-full bg-transparent text-on-surface font-body-md text-body-md outline-none cursor-pointer" type="date" value="2025-05-18"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- STEP 2: SENSOR INTEGRATION -->
+<section class="step-pane w-full flex flex-col gap-space-md hidden transition-all duration-300" id="step2">
+<div class="bg-surface-container p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary">sensors</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Bio-Telemetry Sync</span>
+</div>
+<span class="font-label-mono text-label-mono uppercase px-space-xs py-0.5 rounded bg-surface-container-high text-secondary">LIVE BT</span>
+</div>
+<p class="font-body-sm text-body-sm text-tertiary">
+          Pair live interstitial glucose telemetry to map lactic surge vs hypoglycemia risk on the mat.
+        </p>
+<!-- Device 1: Dexcom -->
+<div class="flex items-center justify-between p-space-sm rounded-lg bg-surface-container-high transition-colors">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-lowest flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">vital_signs</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Dexcom G7 / G6</span>
+<span class="font-label-mono text-label-mono text-secondary">Active Receiver Connected</span>
+</div>
+</div>
+<button class="px-space-sm py-1 rounded font-label-mono text-label-mono bg-surface-container-lowest text-secondary" onclick="toggleSensor(this)" type="button">
+            SYNCED
+          </button>
+</div>
+<!-- Device 2: Libre 3 -->
+<div class="flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest transition-colors">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">graphic_eq</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Freestyle Libre 3</span>
+<span class="font-label-mono text-label-mono text-tertiary">Standby mode</span>
+</div>
+</div>
+<button class="px-space-sm py-1 rounded font-label-mono text-label-mono bg-surface-container-high text-on-surface hover:text-secondary" onclick="toggleSensor(this)" type="button">
+            CONNECT
+          </button>
+</div>
+<!-- Device 3: Smart Pen / Pump -->
+<div class="flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest transition-colors">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">medication</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Smart Insulin Pen / Pump</span>
+<span class="font-label-mono text-label-mono text-tertiary">Optional basal intake tracking</span>
+</div>
+</div>
+<button class="px-space-sm py-1 rounded font-label-mono text-label-mono bg-surface-container-high text-on-surface hover:text-secondary" onclick="toggleSensor(this)" type="button">
+            CONNECT
+          </button>
+</div>
+</div>
+</section>
+<!-- STEP 3: GLUCOSE SAFETY THRESHOLDS -->
+<section class="step-pane w-full flex flex-col gap-space-md hidden transition-all duration-300" id="step3">
+<div class="bg-surface-container p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary-container">speed</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Pre-Bout Safe Zone</span>
+</div>
+<button class="text-tertiary hover:text-secondary flex items-center" onclick="toggleTooltip()" type="button">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="hidden p-space-sm rounded-lg bg-surface-container-high text-tertiary font-body-sm text-body-sm" id="safetyTooltip">
+          Sambo grappling produces intense anaerobic surges that trigger immediate hepatic glycogen release. We recommend an entrance zone of 110–160 mg/dL to prevent mid-round crashes.
+        </div>
+<!-- Target Metric Display -->
+<div class="flex items-center justify-between p-space-md rounded-lg bg-surface-container-lowest">
+<div class="flex flex-col">
+<span class="font-label-mono text-label-mono text-tertiary uppercase">Target Floor</span>
+<div class="flex items-baseline gap-1">
+<span class="font-label-metric text-label-metric text-secondary" id="minThresholdDisplay">110</span>
+<span class="font-label-mono text-label-mono text-tertiary">mg/dL</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-mono text-label-mono text-tertiary uppercase">Target Ceiling</span>
+<div class="flex items-baseline gap-1">
+<span class="font-label-metric text-label-metric text-primary" id="maxThresholdDisplay">160</span>
+<span class="font-label-mono text-label-mono text-tertiary">mg/dL</span>
+</div>
+</div>
+</div>
+<!-- Dual Range Interactive Stepper -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex justify-between items-center">
+<span class="font-label-mono text-label-mono uppercase text-tertiary">Target Tolerance Adjustment</span>
+<span class="font-label-mono text-label-mono text-secondary" id="rangeSpread">50 mg/dL Spread</span>
+</div>
+<input class="w-full accent-primary bg-surface-container-lowest h-2 rounded-lg cursor-pointer" id="thresholdSlider" max="140" min="90" oninput="updateThresholds(this.value)" step="5" type="range" value="110"/>
+<div class="flex justify-between font-label-mono text-label-mono text-tertiary mt-1">
+<span>Conservative (90)</span>
+<span>Optimal (110)</span>
+<span>Surge Guard (140)</span>
+</div>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container-high flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary">verified_user</span>
+<span class="font-body-sm text-body-sm text-on-surface">Automatic vibration alert primed if dropping below threshold during warm-up.</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Primary & Secondary Interactive Action Bar -->
+<div class="w-full max-w-md mx-auto mt-space-md flex flex-col gap-space-sm">
+<button class="w-full py-space-sm px-space-lg rounded-xl bg-primary-container text-on-primary font-headline-sm text-headline-sm font-semibold flex items-center justify-center gap-space-xs shadow-md transition-all active:scale-[0.98] hover:opacity-95 cursor-pointer" id="nextActionBtn" onclick="nextStep()" type="button">
+<span id="nextBtnText">Next Phase</span>
+<span class="material-symbols-outlined" id="nextBtnIcon">arrow_forward</span>
+</button>
+<button class="w-full py-space-xs px-space-sm rounded-lg text-tertiary hover:text-on-surface font-label-mono text-label-mono tracking-wider uppercase transition-colors text-center cursor-pointer" onclick="skipOnboarding()" type="button">
+      Skip for now
+    </button>
+</div>
+<!-- Bottom Visual Delight: Subtle Biometric Mat Indicator -->
+<footer class="w-full max-w-md mx-auto mt-space-lg flex items-center justify-between px-space-sm py-space-xs rounded bg-surface-container-lowest">
+<div class="flex items-center gap-space-xs">
+<span class="inline-block w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-mono text-label-mono text-tertiary">HEURISTIC ENGINES READY</span>
+</div>
+<span class="font-label-mono text-label-mono text-tertiary">SAMBO FEDERATION PROTOCOL</span>
+</footer>
+</div>
+<script>
+  let currentStep = 1;
+
+  function goToStep(step) {
+    currentStep = step;
+    updateUI();
+  }
+
+  function nextStep() {
+    if (currentStep < 3) {
+      currentStep++;
+      updateUI();
+    } else {
+      completeOnboarding();
+    }
+  }
+
+  function updateUI() {
+    // Hide all steps
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    
+    step1.classList.add('hidden');
+    step2.classList.add('hidden');
+    step3.classList.add('hidden');
+
+    // Show active step
+    if (currentStep === 1) {
+      step1.classList.remove('hidden');
+    } else if (currentStep === 2) {
+      step2.classList.remove('hidden');
+    } else if (currentStep === 3) {
+      step3.classList.remove('hidden');
+    }
+
+    // Update progress bar & label
+    const label = document.getElementById('stepLabel');
+    const percent = document.getElementById('stepPercent');
+    const bar = document.getElementById('stepProgressBar');
+    const btnText = document.getElementById('nextBtnText');
+    const btnIcon = document.getElementById('nextBtnIcon');
+
+    if (currentStep === 1) {
+      label.textContent = 'Step 1 of 3: Athlete Profile';
+      percent.textContent = '33%';
+      bar.style.width = '33.33%';
+      btnText.textContent = 'Continue to Biosensors';
+      btnIcon.textContent = 'arrow_forward';
+    } else if (currentStep === 2) {
+      label.textContent = 'Step 2 of 3: Biosensor Sync';
+      percent.textContent = '66%';
+      bar.style.width = '66.66%';
+      btnText.textContent = 'Set Safety Thresholds';
+      btnIcon.textContent = 'arrow_forward';
+    } else {
+      label.textContent = 'Step 3 of 3: Safety Guardrails';
+      percent.textContent = '100%';
+      bar.style.width = '100%';
+      btnText.textContent = 'Enter Octagon Cockpit';
+      btnIcon.textContent = 'check_circle';
+    }
+
+    // Update tab bar buttons
+    for (let i = 1; i <= 3; i++) {
+      const tabBtn = document.getElementById('tabBtn' + i);
+      if (i === currentStep) {
+        tabBtn.className = 'py-space-xs px-space-xs rounded font-label-mono text-label-mono text-center transition-colors bg-surface-container text-primary';
+      } else {
+        tabBtn.className = 'py-space-xs px-space-xs rounded font-label-mono text-label-mono text-center transition-colors bg-surface-container-lowest text-tertiary hover:text-on-surface';
+      }
+    }
+  }
+
+  function setDiscipline(targetBtn, name) {
+    const buttons = document.querySelectorAll('.discipline-btn');
+    buttons.forEach(btn => {
+      btn.className = 'discipline-btn flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest text-tertiary font-body-md text-body-md transition-all text-left';
+      const ind = btn.querySelector('.discipline-indicator');
+      if (ind) {
+        ind.className = 'discipline-indicator w-2 h-2 rounded-full bg-transparent';
+      }
+    });
+
+    targetBtn.className = 'discipline-btn flex items-center justify-between p-space-sm rounded-lg bg-surface-container-high text-on-surface font-body-md text-body-md transition-all text-left';
+    const activeInd = targetBtn.querySelector('.discipline-indicator');
+    if (activeInd) {
+      activeInd.className = 'discipline-indicator w-2 h-2 rounded-full bg-secondary';
+    }
+  }
+
+  function toggleSensor(btn) {
+    if (btn.textContent.trim() === 'CONNECT') {
+      btn.textContent = 'SYNCED';
+      btn.className = 'px-space-sm py-1 rounded font-label-mono text-label-mono bg-surface-container-lowest text-secondary';
+      const parent = btn.parentElement;
+      parent.classList.remove('bg-surface-container-lowest');
+      parent.classList.add('bg-surface-container-high');
+    } else {
+      btn.textContent = 'CONNECT';
+      btn.className = 'px-space-sm py-1 rounded font-label-mono text-label-mono bg-surface-container-high text-on-surface hover:text-secondary';
+      const parent = btn.parentElement;
+      parent.classList.remove('bg-surface-container-high');
+      parent.classList.add('bg-surface-container-lowest');
+    }
+  }
+
+  function updateThresholds(val) {
+    const minVal = parseInt(val, 10);
+    const maxVal = minVal + 50;
+    document.getElementById('minThresholdDisplay').textContent = minVal;
+    document.getElementById('maxThresholdDisplay').textContent = maxVal;
+  }
+
+  function toggleTooltip() {
+    const tip = document.getElementById('safetyTooltip');
+    tip.classList.toggle('hidden');
+  }
+
+  function completeOnboarding() {
+    const btn = document.getElementById('nextActionBtn');
+    btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-on-primary">sync</span><span class="font-headline-sm text-headline-sm">Calibrating HUD...</span>';
+    setTimeout(() => {
+      btn.innerHTML = '<span class="material-symbols-outlined text-on-primary">done_all</span><span class="font-headline-sm text-headline-sm">Profile Armed</span>';
+    }, 700);
+  }
+
+  function skipOnboarding() {
+    goToStep(3);
+  }
+</script></main></body></html>
