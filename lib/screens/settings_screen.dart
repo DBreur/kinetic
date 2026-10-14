@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/formatters.dart';
+import '../models/dashboard_config.dart';
 import '../models/app_profile.dart';
 import '../models/bolus_period.dart';
 import '../models/food_preset.dart';
@@ -12,6 +13,7 @@ import '../services/dexcom_credentials.dart';
 import '../services/dexcom_share_service.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/dashboard_editor.dart';
 import '../widgets/kinetic.dart';
 import 'food_presets_screen.dart';
 
@@ -49,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late List<FoodPreset> _foodPresets;
   late int _weekStart;
   late bool _hideSystemBars;
+  late DashboardConfig _dashboard;
   late bool _foodWaitReminderSound;
   late bool _mealRemindersEnabled;
   late List<MealReminder> _mealReminders;
@@ -93,6 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _foodPresets = List.of(profile.foodPresets);
     _weekStart = profile.weekStart;
     _hideSystemBars = profile.hideSystemBars;
+    _dashboard = profile.dashboard;
     _foodWaitReminderSound = profile.foodWaitReminderSound;
     _mealRemindersEnabled = profile.mealRemindersEnabled;
     _mealReminders = List.of(profile.mealReminders);
@@ -403,6 +407,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         foodPresets: _foodPresets,
         weekStart: _weekStart,
         hideSystemBars: _hideSystemBars,
+        dashboard: _dashboard,
         foodWaitReminderSound: _foodWaitReminderSound,
         mealRemindersEnabled: _mealRemindersEnabled,
         mealReminders: _mealReminders,
@@ -1130,6 +1135,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _Section(
+              label: 'Dashboard',
+              child: DashboardEditor(
+                config: _dashboard,
+                onChanged: (c) => setState(() => _dashboard = c),
               ),
             ),
             const SizedBox(height: 20),

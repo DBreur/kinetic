@@ -75,8 +75,9 @@ class DashboardEditor extends StatelessWidget {
             locked: locked,
             label: (a) => a.label,
             icon: (a) => a.icon,
-            subtitle: (a) =>
-                a == QuickAction.finger ? 'Alleen bij meten met vingerprik' : null,
+            subtitle: (a) => a == QuickAction.finger
+                ? 'Alleen bij meten met vingerprik'
+                : null,
             onChanged: (items) => onChanged(config.copyWith(actions: items)),
           ),
         ),

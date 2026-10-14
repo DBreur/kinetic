@@ -137,16 +137,8 @@ class DashboardConfig {
   factory DashboardConfig.fromJson(Map<String, dynamic>? json) {
     if (json == null || json.isEmpty) return standard;
     return DashboardConfig(
-      sections: _read(
-        json['sections'],
-        DashSection.values,
-        (_) => true,
-      ),
-      actions: _read(
-        json['actions'],
-        QuickAction.values,
-        (a) => a.defaultOn,
-      ),
+      sections: _read(json['sections'], DashSection.values, (_) => true),
+      actions: _read(json['actions'], QuickAction.values, (a) => a.defaultOn),
       locked: (json['locked'] as bool?) ?? true,
     );
   }
