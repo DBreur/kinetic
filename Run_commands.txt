@@ -5,6 +5,11 @@ flutter build apk --release `
   --dart-define="SUPABASE_PUBLISHABLE_KEY=sb_publishable_zzZXBVJMVGY5BL5HiY95BA_S7Oqx7ZC" `
   --dart-define=NIGHTSCOUT_URL=https://cgm-remote-monitor-latest-urlj.onrender.com
 
+flutter clean
+flutter pub get
+flutter build apk --release --dart-define-from-file=dart_defines.json
+
+
 flutter run `
   --dart-define="SUPABASE_URL=https://wpexdeglubtzkdejehkj.supabase.co" `
   --dart-define="SUPABASE_PUBLISHABLE_KEY=sb_publishable_zzZXBVJMVGY5BL5HiY95BA_S7Oqx7ZC" `
