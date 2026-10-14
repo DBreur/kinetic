@@ -9,69 +9,71 @@ void main() {
   group('topbalk om de camera heen', () {
     const width = 412.0;
     const title = 75.0;
+    // Echte breedtes: klok, glucose (getal), export, profiel.
+    const clock = 52.0, pill = 51.0, export = 48.0, avatar = 50.0;
 
-    test('geen camera: alles normaal, niets verschoven', () {
+    test('geen camera: één vak, geen gat', () {
       final l = topBarLayout(width: width, titleWidth: title);
       expect(l.leftInset, 0);
       expect(l.hole, 0);
-      expect(l.fallbackBelow, isFalse);
+      expect(l.beforeHole, greaterThan(200));
     });
 
-    test('camera rechts: klok/glucose links, knoppen rechts ervan', () {
+    test('camera rechts op Vandaag: glucose links, klok + profiel rechts', () {
       final l = topBarLayout(
         width: width,
         titleWidth: title,
         cutout: const Rect.fromLTWH(265, 6, 28, 28),
       );
-      expect(l.split, isTrue);
       expect(l.hole, closeTo(40, .01)); // 28 + 2× 6 marge
-      expect(l.fallbackBelow, isFalse);
-    });
-
-    test('camera in het midden: alles rechts van de camera', () {
-      // Klok + pil (getal) en alleen het profielrondje.
-      final l = topBarLayout(
-        width: width,
-        titleWidth: title,
-        cutout: const Rect.fromLTWH(192, 6, 28, 28),
-        infoWidth: 110,
-        actionsWidth: 50,
+      final k = placeTopBarItems(
+        const [clock, pill, avatar],
+        before: l.beforeHole,
+        after: l.afterHole,
+        hasHole: true,
       );
-      expect(l.split, isFalse);
-      expect(l.clusterBeforeHole, isFalse);
-      expect(l.fallbackBelow, isFalse);
+      expect(k, isNotNull);
+      // Zo veel mogelijk rechts: profiel blijft in de hoek.
+      expect(k, lessThan(3));
     });
 
-    test('Eten (met exportknop), camera rechts: nog steeds gesplitst', () {
+    test('camera rechts op Eten (met export): past nog om de camera', () {
       final l = topBarLayout(
         width: width,
-        titleWidth: 60,
+        titleWidth: 50,
         cutout: const Rect.fromLTWH(265, 6, 28, 28),
-        infoWidth: 104,
-        actionsWidth: 98,
       );
-      expect(l.split, isTrue);
-      expect(l.beforeHole, greaterThanOrEqualTo(104));
-      expect(l.afterHole, greaterThanOrEqualTo(98));
+      expect(
+        placeTopBarItems(
+          const [clock, pill, export, avatar],
+          before: l.beforeHole,
+          after: l.afterHole,
+          hasHole: true,
+        ),
+        isNotNull,
+      );
     });
 
-    test('camera links: logo en titel schuiven op', () {
+    test('camera links: logo en titel schuiven op, geen gat', () {
       final l = topBarLayout(
         width: width,
         titleWidth: title,
         cutout: const Rect.fromLTWH(22, 6, 28, 28),
       );
       expect(l.leftInset, greaterThan(0));
-      expect(l.fallbackBelow, isFalse);
+      expect(l.hole, 0);
     });
 
-    test('nergens plek (smal scherm): balk zakt onder de camera', () {
-      final l = topBarLayout(
-        width: 260,
-        titleWidth: title,
-        cutout: const Rect.fromLTWH(170, 6, 28, 28),
+    test('past nergens: null (dan zakt de balk onder de camera)', () {
+      expect(
+        placeTopBarItems(
+          const [clock, pill, export, avatar],
+          before: 40,
+          after: 40,
+          hasHole: true,
+        ),
+        isNull,
       );
-      expect(l.fallbackBelow, isTrue);
     });
 
     test('uitsparing buiten de balk wordt genegeerd', () {
@@ -82,7 +84,6 @@ void main() {
       );
       expect(l.hole, 0);
       expect(l.beforeHole, greaterThan(0));
-      expect(l.fallbackBelow, isFalse);
     });
 
     test('alleen een uitsparing bovenin telt', () {

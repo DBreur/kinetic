@@ -128,13 +128,8 @@ class KTopBar extends StatelessWidget {
     // Vaste breedtes (niets schaalt): klok, pil (met/zonder "mmol/L"),
     // exportknop, profielrondje.
     final clockW = showClock ? measure('00:00', clockStyle) + _itemGap : 0.0;
-    double pillW(String text) => reading == null
-        ? 0
-        : KPill.widthFor(text, measure) + _itemGap;
-    final double actionsW =
-        (trailing != null ? _iconButton : 0.0) +
-        (onProfile != null || onSettings != null ? _avatarBox : 0.0);
-
+    double pillW(String text) =>
+        reading == null ? 0 : KPill.widthFor(text, measure);
     final title = Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,80 +146,124 @@ class KTopBar extends StatelessWidget {
       ],
     );
 
-    List<Widget> info({required bool compact}) => [
-      if (showClock) ...[
-        KClock(style: clockStyle),
-        const SizedBox(width: _itemGap),
-      ],
-      if (reading != null) ...[
-        KPill(text: compact ? value : fullText, color: pillColor, dot: true),
-        const SizedBox(width: _itemGap),
-      ],
-    ];
-    final actions = <Widget>[
-      ?trailing,
-      if (onProfile != null || onSettings != null)
-        PopupMenuButton<VoidCallback>(
-          tooltip: 'Profiel en instellingen',
-          offset: const Offset(0, 52),
-          onSelected: (action) => action(),
-          itemBuilder: (_) => [
-            if (onProfile != null)
-              PopupMenuItem(
-                value: onProfile,
-                child: const ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.badge_outlined),
-                  title: Text('Profiel'),
-                ),
-              ),
-            if (onSettings != null)
-              PopupMenuItem(
-                value: onSettings,
-                child: const ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.tune),
-                  title: Text('Instellingen'),
-                ),
-              ),
-          ],
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: KAvatar(url: avatarUrl, initials: initials, size: 34),
+    // De rechterkant als losse onderdelen in vaste volgorde, elk met een
+    // vaste breedte: klok, glucose, (export), profiel.
+    List<(Widget, double)> items({required bool compact}) => [
+      if (showClock)
+        (
+          Padding(
+            padding: const EdgeInsets.only(right: _itemGap),
+            child: KClock(style: clockStyle),
           ),
+          clockW,
+        ),
+      // Geen eigen ruimte rechts: export/profiel hebben zelf al ruimte om
+      // zich heen.
+      if (reading != null)
+        (
+          KPill(
+            text: compact ? value : fullText,
+            color: pillColor,
+            dot: true,
+          ),
+          pillW(compact ? value : fullText),
+        ),
+      if (trailing != null) (trailing!, _iconButton),
+      if (onProfile != null || onSettings != null)
+        (
+          PopupMenuButton<VoidCallback>(
+            tooltip: 'Profiel en instellingen',
+            offset: const Offset(0, 52),
+            onSelected: (action) => action(),
+            itemBuilder: (_) => [
+              if (onProfile != null)
+                PopupMenuItem(
+                  value: onProfile,
+                  child: const ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.badge_outlined),
+                    title: Text('Profiel'),
+                  ),
+                ),
+              if (onSettings != null)
+                PopupMenuItem(
+                  value: onSettings,
+                  child: const ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.tune),
+                    title: Text('Instellingen'),
+                  ),
+                ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: KAvatar(url: avatarUrl, initials: initials, size: 34),
+            ),
+          ),
+          _avatarBox,
         ),
     ];
-    Widget group(List<Widget> children) => Align(
+    Widget group(List<(Widget, double)> list) => Align(
       alignment: Alignment.centerRight,
-      child: Row(mainAxisSize: MainAxisSize.min, children: children),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [for (final (w, _) in list) w],
+      ),
     );
 
     return ColoredBox(
       color: AppColor.bg,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final layout = topBarLayout(
-            width: constraints.maxWidth,
-            titleWidth: _titleWidth(context),
-            // Alleen met verborgen systeembalken staat de balk tegen de
-            // bovenrand, en kan de camera er dus in vallen.
-            cutout: SystemBars.hidden
-                ? topCutout(MediaQuery.displayFeaturesOf(context), _height)
-                : null,
-            infoWidth: clockW + pillW(value),
-            actionsWidth: actionsW,
+          final width = constraints.maxWidth;
+          final titleWidth = _titleWidth(context);
+          // Alleen met verborgen systeembalken staat de balk tegen de
+          // bovenrand, en kan de camera er dus in vallen.
+          final cutout = SystemBars.hidden
+              ? topCutout(MediaQuery.displayFeaturesOf(context), _height)
+              : null;
+
+          // Eerst proberen om de camera heen (volledige pil, dan alleen het
+          // getal); lukt dat nergens, dan onder de camera over de volle
+          // breedte.
+          var layout = topBarLayout(
+            width: width,
+            titleWidth: titleWidth,
+            cutout: cutout,
           );
-          // Past de pil mét "mmol/L" in het vak? Anders alleen het getal.
-          final infoRoom = layout.split
-              ? layout.beforeHole
-              : (layout.clusterBeforeHole
-                        ? layout.beforeHole
-                        : layout.afterHole) -
-                    actionsW;
-          final compact = clockW + pillW(fullText) > infoRoom;
-          final cluster = group([...info(compact: compact), ...actions]);
+          var below = false;
+          List<(Widget, double)>? chosen;
+          int? splitAt;
+          for (final compact in [false, true]) {
+            final list = items(compact: compact);
+            final k = placeTopBarItems(
+              [for (final (_, w) in list) w],
+              before: layout.beforeHole,
+              after: layout.afterHole,
+              hasHole: layout.hole > 0,
+            );
+            if (k != null) {
+              chosen = list;
+              splitAt = k;
+              break;
+            }
+          }
+          if (chosen == null) {
+            below = true;
+            layout = topBarLayout(width: width, titleWidth: titleWidth);
+            for (final compact in [false, true]) {
+              final list = items(compact: compact);
+              final total = list.fold<double>(0, (n, e) => n + e.$2);
+              chosen = list;
+              splitAt = list.length;
+              if (total <= layout.beforeHole) break;
+            }
+          }
+          final list = chosen!;
+          final k = splitAt!;
+
           final row = Row(
             children: [
               SizedBox(width: KTopBar._leftPad + layout.leftInset),
@@ -234,24 +273,16 @@ class KTopBar extends StatelessWidget {
               const SizedBox(width: _titleGap),
               SizedBox(
                 width: layout.beforeHole,
-                child: layout.split
-                    ? group(info(compact: compact))
-                    : (layout.clusterBeforeHole ? cluster : null),
+                child: group(list.sublist(0, k)),
               ),
               SizedBox(width: layout.hole),
               // Flexibel: vangt afrondingsverschillen in de tekstbreedte op.
-              Expanded(
-                child: layout.split
-                    ? group(actions)
-                    : (layout.clusterBeforeHole ? const SizedBox() : cluster),
-              ),
+              Expanded(child: group(list.sublist(k))),
               const SizedBox(width: _rightPad),
             ],
           );
           final bar = SizedBox(height: _height, child: row);
-          // Laatste redmiddel: nergens plek naast de camera → dan toch
-          // onder de camera.
-          return layout.fallbackBelow ? CutoutAwarePadding(child: bar) : bar;
+          return below ? CutoutAwarePadding(child: bar) : bar;
         },
       ),
     );
@@ -295,56 +326,38 @@ Rect? topCutout(List<DisplayFeature> features, double barHeight) {
   return null;
 }
 
-/// Hoe de topbalk om een camera-uitsparing heen loopt.
+/// Hoe de topbalk om een camera-uitsparing heen loopt: welke ruimte er
+/// vóór en na het "gat" van de camera is.
 class TopBarLayout {
   /// Extra ruimte vóór het logo (camera links).
   final double leftInset;
 
-  /// Ruimte vóór en na het "gat" van de camera, en het gat zelf.
+  /// Ruimte vóór en na het gat van de camera, en het gat zelf.
   final double beforeHole;
   final double hole;
   final double afterHole;
-
-  /// Klok/glucose/knoppen links van de camera (anders rechts).
-  final bool clusterBeforeHole;
-
-  /// Verdeeld: klok + glucose links van de camera, knoppen rechts ervan.
-  final bool split;
-
-  /// Geen plek naast de camera: dan zakt de balk eronder.
-  final bool fallbackBelow;
 
   const TopBarLayout({
     required this.leftInset,
     required this.beforeHole,
     required this.hole,
     required this.afterHole,
-    required this.clusterBeforeHole,
-    this.split = false,
-    this.fallbackBelow = false,
   });
 }
 
 /// Pure berekening (te testen zonder scherm): de balk blijft tegen de
-/// bovenrand; logo/titel en de rechterkant (klok, glucose, knoppen) gaan om
-/// de camera heen in plaats van eronder.
+/// bovenrand; zit de camera over logo/titel, dan schuiven die op, anders
+/// komt er een "gat" in de rechterkant.
 TopBarLayout topBarLayout({
   required double width,
   required double titleWidth,
   Rect? cutout,
   double margin = 6,
-  double infoWidth = 90,
-  double actionsWidth = 98,
 }) {
-  // Kleinste vorm van de rechterkant: pil met alleen het getal.
-  final minInfo = infoWidth;
-  final minActions = actionsWidth;
-  final minCluster = infoWidth + actionsWidth;
   const fixed =
       KTopBar._leftPad + KTopBar._logoWidth + KTopBar._logoGap + KTopBar._titleGap;
-  var leftInset = 0.0;
-  var titleEnd = fixed + titleWidth;
   final end = width - KTopBar._rightPad;
+  var titleEnd = fixed + titleWidth;
 
   // Uitsparing die niet binnen de breedte van de balk valt telt niet mee.
   if (cutout != null && (cutout.right <= 0 || cutout.left >= width)) {
@@ -356,7 +369,6 @@ TopBarLayout topBarLayout({
       beforeHole: math.max(0, end - titleEnd),
       hole: 0,
       afterHole: 0,
-      clusterBeforeHole: true,
     );
   }
   final holeLeft = math.max(0.0, cutout.left - margin);
@@ -364,35 +376,44 @@ TopBarLayout topBarLayout({
 
   // Camera over logo/titel: die schuiven op tot rechts van de camera.
   if (holeLeft < titleEnd && holeRight > KTopBar._leftPad) {
-    leftInset = holeRight - KTopBar._leftPad;
+    final leftInset = holeRight - KTopBar._leftPad;
     titleEnd += leftInset;
-    final room = end - titleEnd;
     return TopBarLayout(
       leftInset: leftInset,
-      beforeHole: math.max(0, room),
+      beforeHole: math.max(0, end - titleEnd),
       hole: 0,
       afterHole: 0,
-      clusterBeforeHole: true,
-      fallbackBelow: room < minCluster,
     );
   }
 
-  // Camera in het rechterdeel: rechterkant links óf rechts van de camera,
-  // waar de meeste ruimte is.
-  final before = math.max(0.0, holeLeft - titleEnd);
-  final after = math.max(0.0, end - holeRight);
-  // Aan beide kanten plek: klok + glucose links, knoppen rechts van de
-  // camera — dan hoeft niets kleiner.
-  final split = before >= minInfo && after >= minActions;
   return TopBarLayout(
     leftInset: 0,
-    beforeHole: before,
+    beforeHole: math.max(0, holeLeft - titleEnd),
     hole: math.max(0.0, holeRight - holeLeft),
-    afterHole: after,
-    clusterBeforeHole: before >= after,
-    split: split,
-    fallbackBelow: !split && math.max(before, after) < minCluster,
+    afterHole: math.max(0, end - holeRight),
   );
+}
+
+/// Waar de onderdelen van de rechterkant (in vaste volgorde, met vaste
+/// [widths]) splitsen rond het camera-gat: de eerste k vóór het gat, de rest
+/// erna. Null = past niet. Zonder gat: k = alles (in de ruimte [before]).
+/// Bij meerdere mogelijkheden zo veel mogelijk rechts van de camera, zodat
+/// het profielrondje altijd in de hoek blijft.
+int? placeTopBarItems(
+  List<double> widths, {
+  required double before,
+  required double after,
+  required bool hasHole,
+}) {
+  final total = widths.fold<double>(0, (n, w) => n + w);
+  if (!hasHole) return total <= before ? widths.length : null;
+  var sumBefore = 0.0;
+  for (var k = 0; k <= widths.length; k++) {
+    if (k > 0) sumBefore += widths[k - 1];
+    if (sumBefore > before) break;
+    if (total - sumBefore <= after) return k;
+  }
+  return null;
 }
 
 /// Rond profielplaatje: foto als die er is, anders initialen.
