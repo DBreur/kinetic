@@ -344,7 +344,6 @@ class _TechniqueMapRow extends StatelessWidget {
         : technique.updates.map((u) => u.at).reduce((a, b) => a.isAfter(b) ? a : b);
     final stars = rating > 0 ? '★' * rating + '☆' * (5 - rating) : 'nog niet beoordeeld';
     final meta = [
-      if (technique.transition.isNotEmpty) technique.transition,
       '$count×',
       if (lastDate != null) 'laatst ${dutchShortDate(lastDate)}',
     ].join(' · ');
@@ -420,11 +419,15 @@ class _TechniqueMapRow extends StatelessWidget {
                 ),
               ],
             ),
-            if (technique.groundPositions.isNotEmpty) ...[
+            if (technique.groundPositions.isNotEmpty ||
+                technique.transition.isNotEmpty) ...[
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.only(left: 18),
-                child: GroundPositionTags(positions: technique.groundPositions),
+                child: GroundPositionTags(
+                  transition: technique.transition,
+                  positions: technique.groundPositions,
+                ),
               ),
             ],
           ],

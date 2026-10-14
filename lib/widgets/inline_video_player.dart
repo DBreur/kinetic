@@ -16,7 +16,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../services/video_labels.dart';
 import '../theme/kinetic_theme.dart';
+import 'video_link_row.dart' show editVideoLabel;
 
 /// Zet bekende "kijkpagina"-links om naar hun ingebedde speler-variant, zodat
 /// je een schone player krijgt i.p.v. de volledige website — YouTube en
@@ -241,7 +243,27 @@ class _CollapsibleVideoTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Video ${index + 1}', style: AppText.bodyStrong),
+                  child: ValueListenableBuilder<Map<String, String>>(
+                    valueListenable: VideoLabels.labels,
+                    builder: (context, labels, _) => Text(
+                      VideoLabels.titleFor(url, index),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.bodyStrong,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => editVideoLabel(context, url),
+                  borderRadius: BorderRadius.circular(99),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Icon(
+                      Icons.edit_outlined,
+                      size: 15,
+                      color: AppColor.inkFaint,
+                    ),
+                  ),
                 ),
                 Icon(
                   expanded ? Icons.expand_less : Icons.expand_more,

@@ -201,18 +201,40 @@ class ExerciseSet {
   /// betekent gewoon een reps-gebaseerde set zoals voorheen.
   final int? seconds;
 
+  /// "Tot verzuring": door tot je verzuring voelt, en dan nog [extraTarget]
+  /// herhalingen (bv. "5–10"). [extraReps] = hoeveel het er na de
+  /// verzuring echt werden.
+  final bool toBurn;
+  final String extraTarget;
+  final int? extraReps;
+
+  /// Gelukt (true) / niet gelukt (false) / niet aangegeven (null), met
+  /// optioneel waarom.
+  final bool? completed;
+  final String note;
+
   const ExerciseSet({
     required this.kg,
     required this.reps,
     this.done = false,
     this.seconds,
+    this.toBurn = false,
+    this.extraTarget = '',
+    this.extraReps,
+    this.completed,
+    this.note = '',
   });
 
   factory ExerciseSet.fromJson(Map<String, dynamic> json) => ExerciseSet(
-    kg: (json['kg'] as num).toDouble(),
-    reps: (json['reps'] as num).toInt(),
+    kg: (json['kg'] as num?)?.toDouble() ?? 0,
+    reps: (json['reps'] as num?)?.toInt() ?? 0,
     done: (json['done'] as bool?) ?? false,
     seconds: (json['seconds'] as num?)?.toInt(),
+    toBurn: (json['to_burn'] as bool?) ?? false,
+    extraTarget: (json['extra_target'] as String?) ?? '',
+    extraReps: (json['extra_reps'] as num?)?.toInt(),
+    completed: json['completed'] as bool?,
+    note: (json['note'] as String?) ?? '',
   );
 
   Map<String, dynamic> toJson() => {
@@ -220,6 +242,11 @@ class ExerciseSet {
     'reps': reps,
     'done': done,
     if (seconds != null) 'seconds': seconds,
+    if (toBurn) 'to_burn': true,
+    if (extraTarget.isNotEmpty) 'extra_target': extraTarget,
+    if (extraReps != null) 'extra_reps': extraReps,
+    if (completed != null) 'completed': completed,
+    if (note.isNotEmpty) 'note': note,
   };
 
   ExerciseSet copyWith({
@@ -228,12 +255,39 @@ class ExerciseSet {
     bool? done,
     int? seconds,
     bool clearSeconds = false,
+    bool? toBurn,
+    String? extraTarget,
+    int? extraReps,
+    bool clearExtraReps = false,
+    bool? completed,
+    bool clearCompleted = false,
+    String? note,
   }) => ExerciseSet(
     kg: kg ?? this.kg,
     reps: reps ?? this.reps,
     done: done ?? this.done,
     seconds: clearSeconds ? null : (seconds ?? this.seconds),
+    toBurn: toBurn ?? this.toBurn,
+    extraTarget: extraTarget ?? this.extraTarget,
+    extraReps: clearExtraReps ? null : (extraReps ?? this.extraReps),
+    completed: clearCompleted ? null : (completed ?? this.completed),
+    note: note ?? this.note,
   );
+
+  /// Korte omschrijving voor overzichten: "20 kg × 8", "45 s",
+  /// "verzuring +7".
+  String get summary {
+    final weight = kg > 0 ? '${_num(kg)} kg · ' : '';
+    if (seconds != null) return '$weight${seconds}s';
+    if (toBurn) {
+      return '${weight}verzuring'
+          '${extraReps != null ? ' +$extraReps' : (extraTarget.isNotEmpty ? ' (+$extraTarget)' : '')}';
+    }
+    return '$weight× $reps';
+  }
+
+  static String _num(double v) =>
+      v % 1 == 0 ? v.toInt().toString() : v.toString().replaceAll('.', ',');
 }
 
 /// Eén keer dat een oefening werd gedaan, met de sets van die dag — voor het

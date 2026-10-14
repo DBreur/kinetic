@@ -7,6 +7,7 @@ import '../models/combination.dart';
 import '../models/technique.dart';
 import '../repositories/combination_repository.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/video_link_row.dart';
 import '../widgets/inline_video_player.dart';
 
 class CombinationDetailScreen extends StatefulWidget {
@@ -75,6 +76,8 @@ class _CombinationDetailScreenState extends State<CombinationDetailScreen> {
       _videoUrls.add(url);
       _newVideoUrl.clear();
     });
+    // Meteen een naam laten geven (overslaan mag).
+    editVideoLabel(context, url);
   }
 
   void _removeVideoUrl(int i) => setState(() => _videoUrls.removeAt(i));
@@ -406,40 +409,9 @@ class _CombinationDetailScreenState extends State<CombinationDetailScreen> {
               Text('VIDEO\'S (OPTIONEEL)', style: AppText.overline),
               const SizedBox(height: 10),
               for (var i = 0; i < _videoUrls.length; i++)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColor.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _videoUrls[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.body,
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => _removeVideoUrl(i),
-                        borderRadius: BorderRadius.circular(8),
-                        child: const Padding(
-                          padding: EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.close,
-                            size: 16,
-                            color: AppColor.inkFaint,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                VideoLinkRow(
+                  url: _videoUrls[i],
+                  onRemove: () => _removeVideoUrl(i),
                 ),
               Row(
                 children: [

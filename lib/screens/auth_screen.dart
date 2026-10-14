@@ -18,6 +18,13 @@ class _AuthScreenState extends State<AuthScreen> {
   final _password = TextEditingController();
   bool _register = false;
 
+  /// Uitleg na registreren (geen fout): bv. "check je mail".
+  String? _info;
+
+  /// E-mailadres dat nog bevestigd moet worden — dan tonen we "opnieuw
+  /// sturen".
+  String? _awaitingConfirm;
+
   @override
   void dispose() {
     _email.dispose();
@@ -27,11 +34,50 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
+    final email = _email.text.trim();
+    setState(() => _info = null);
     if (_register) {
-      await widget.controller.register(_email.text.trim(), _password.text);
+      final outcome = await widget.controller.register(email, _password.text);
+      if (!mounted) return;
+      setState(() {
+        switch (outcome) {
+          case RegisterOutcome.confirmEmail:
+            _register = false;
+            _awaitingConfirm = email;
+            _info =
+                'Je account is aangemaakt. We hebben een bevestigingsmail '
+                'gestuurd naar $email — klik op de link in die mail (kijk '
+                'ook in je spam) en log daarna hier in.';
+          case RegisterOutcome.alreadyExists:
+            _register = false;
+            _info =
+                'Er bestaat al een account met $email. Log in, of gebruik '
+                '"Wachtwoord vergeten".';
+          case RegisterOutcome.signedIn || RegisterOutcome.failed:
+            break;
+        }
+      });
     } else {
-      await widget.controller.signIn(_email.text.trim(), _password.text);
+      await widget.controller.signIn(email, _password.text);
+      if (!mounted) return;
+      // Nog niet bevestigd? Dan meteen de knop om de mail opnieuw te sturen.
+      final error = widget.controller.authError ?? '';
+      if (error.startsWith('Bevestig eerst')) {
+        setState(() => _awaitingConfirm = email);
+      }
     }
+  }
+
+  Future<void> _resend() async {
+    final email = _awaitingConfirm;
+    if (email == null) return;
+    final ok = await widget.controller.resendConfirmation(email);
+    if (!mounted || !ok) return;
+    setState(
+      () => _info =
+          'Nieuwe bevestigingsmail verstuurd naar $email. Klik op de link en '
+          'log daarna in.',
+    );
   }
 
   Future<void> _reset() async {
@@ -100,6 +146,30 @@ class _AuthScreenState extends State<AuthScreen> {
                     style: AppText.caption.copyWith(color: AppColor.redBright),
                   ),
                 ],
+                if (_info != null && error == null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColor.greenWash,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.mark_email_unread_outlined,
+                          size: 18,
+                          color: AppColor.ice,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(_info!, style: AppText.body),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: widget.controller.busy ? null : _submit,
@@ -115,13 +185,21 @@ class _AuthScreenState extends State<AuthScreen> {
                 TextButton(
                   onPressed: widget.controller.busy
                       ? null
-                      : () => setState(() => _register = !_register),
+                      : () => setState(() {
+                          _register = !_register;
+                          _info = null;
+                        }),
                   child: Text(
                     _register
                         ? 'Ik heb al een account'
                         : 'Nieuw account aanmaken',
                   ),
                 ),
+                if (_awaitingConfirm != null && !_register)
+                  TextButton(
+                    onPressed: widget.controller.busy ? null : _resend,
+                    child: const Text('Bevestigingsmail opnieuw sturen'),
+                  ),
                 TextButton(
                   onPressed: widget.controller.busy ? null : _reset,
                   child: const Text('Wachtwoord vergeten'),

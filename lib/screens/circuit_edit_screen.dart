@@ -1,14 +1,15 @@
 // circuit_edit_screen.dart — circuit maken/aanpassen
 //
-// Een circuit is een naam + een lijst oefeningnamen die je in rondes
-// doorloopt, elk voor dezelfde werktijd met dezelfde rust ertussen (bv.
-// "3 rondes van 40s werk / 20s rust"). Ook een warming-up is gewoon een
-// circuit — geen apart concept. Vereenvoudigde versie van
-// workout_template_edit_screen.dart: geen sets/kg/reps, alleen namen.
+// Een circuit is een naam + stappen die je in rondes doorloopt, met rust
+// ertussen. Elke stap is óf een tijd ("1 min schaduwboksen", telt af) óf
+// een aantal herhalingen ("10× push-up", je tikt "Klaar"). Ook een
+// warming-up is gewoon een circuit. Met beschrijving en video's, zoals
+// bij technieken.
 
 import 'package:flutter/material.dart';
 
 import '../core/exercise_library.dart';
+import '../models/agenda.dart' show normalizeUrl;
 import '../models/circuit.dart';
 import '../models/exercise.dart';
 import '../repositories/circuit_repository.dart';
@@ -16,6 +17,8 @@ import '../repositories/exercise_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/block_widgets.dart' show AddBlockButton, NumberStepper;
+import '../widgets/kinetic.dart';
+import '../widgets/video_link_row.dart';
 
 /// Resultaat van het circuit-aanpasscherm: het opgeslagen circuit, of een
 /// signaal dat het is verwijderd.
@@ -40,9 +43,11 @@ class CircuitEditScreen extends StatefulWidget {
 
 class _CircuitEditScreenState extends State<CircuitEditScreen> {
   late final TextEditingController _name;
-  late List<String> _exerciseNames;
+  late final TextEditingController _description;
+  final _newVideo = TextEditingController();
+  late List<CircuitStep> _steps;
+  late List<String> _videoUrls;
   late int _rounds;
-  late int _workSeconds;
   late int _restSeconds;
   bool _adding = false;
   bool _busy = false;
@@ -57,11 +62,13 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: widget.circuit?.name ?? '');
-    _exerciseNames = List.of(widget.circuit?.exerciseNames ?? const []);
-    _rounds = widget.circuit?.rounds ?? 3;
-    _workSeconds = widget.circuit?.workSeconds ?? 40;
-    _restSeconds = widget.circuit?.restSeconds ?? 20;
+    final c = widget.circuit;
+    _name = TextEditingController(text: c?.name ?? '');
+    _description = TextEditingController(text: c?.description ?? '');
+    _steps = List.of(c?.effectiveSteps ?? const []);
+    _videoUrls = List.of(c?.videoUrls ?? const []);
+    _rounds = c?.rounds ?? 3;
+    _restSeconds = c?.restSeconds ?? 20;
     _exerciseRepo = ExerciseRepository(widget.controller.client!);
     _circuitRepo = CircuitRepository(widget.controller.client!);
     _loadKnownExercises();
@@ -81,6 +88,8 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _description.dispose();
+    _newVideo.dispose();
     _query.dispose();
     _scroll.dispose();
     super.dispose();
@@ -97,11 +106,45 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
     });
   }
 
-  void _reorderExercise(int oldIndex, int newIndex) {
+  void _reorderStep(int oldIndex, int newIndex) {
     setState(() {
-      final moved = _exerciseNames.removeAt(oldIndex);
-      _exerciseNames.insert(newIndex, moved);
+      final moved = _steps.removeAt(oldIndex);
+      _steps.insert(newIndex, moved);
     });
+  }
+
+  /// Nieuwe stap: zelfde soort doel als de vorige stap (handig bij
+  /// "1 min ..., 1 min ..."), anders 40 seconden.
+  void _addStep(String name) {
+    final last = _steps.isEmpty ? null : _steps.last;
+    setState(() {
+      _steps.add(
+        last == null || last.isTimed
+            ? CircuitStep(name: name, seconds: last?.seconds ?? 40)
+            : CircuitStep(name: name, reps: last.reps),
+      );
+      _adding = false;
+      _query.clear();
+    });
+  }
+
+  Future<void> _editTarget(int i) async {
+    final result = await showModalBottomSheet<CircuitStep>(
+      context: context,
+      builder: (_) => _StepTargetSheet(step: _steps[i]),
+    );
+    if (result != null) setState(() => _steps[i] = result);
+  }
+
+  void _addVideo({bool askLabel = true}) {
+    final url = normalizeUrl(_newVideo.text);
+    if (url.isEmpty) return;
+    setState(() {
+      _videoUrls.add(url);
+      _newVideo.clear();
+    });
+    // Meteen een naam laten geven (overslaan mag).
+    if (askLabel) editVideoLabel(context, url);
   }
 
   Future<void> _save() async {
@@ -112,7 +155,7 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
       );
       return;
     }
-    if (_exerciseNames.isEmpty) {
+    if (_steps.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Voeg minstens één oefening toe.')),
       );
@@ -120,29 +163,22 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
     }
     final userId = widget.controller.user?.id;
     if (userId == null) return;
+    // Een link die je nog in het veld had staan telt ook mee.
+    if (_newVideo.text.trim().isNotEmpty) _addVideo(askLabel: false);
     setState(() => _busy = true);
+    final circuit = (widget.circuit ?? const Circuit(id: '', name: '')).copyWith(
+      name: name,
+      exerciseNames: [for (final s in _steps) s.name],
+      steps: _steps,
+      rounds: _rounds,
+      restSeconds: _restSeconds,
+      description: _description.text.trim(),
+      videoUrls: _videoUrls,
+    );
     try {
       final saved = _isNew
-          ? await _circuitRepo.create(
-              Circuit(
-                id: '',
-                name: name,
-                exerciseNames: _exerciseNames,
-                rounds: _rounds,
-                workSeconds: _workSeconds,
-                restSeconds: _restSeconds,
-              ),
-              userId,
-            )
-          : await _circuitRepo.updateContent(
-              widget.circuit!.copyWith(
-                name: name,
-                exerciseNames: _exerciseNames,
-                rounds: _rounds,
-                workSeconds: _workSeconds,
-                restSeconds: _restSeconds,
-              ),
-            );
+          ? await _circuitRepo.create(circuit, userId)
+          : await _circuitRepo.updateContent(circuit);
       if (mounted) {
         Navigator.pop(context, CircuitEditResult.saved(saved));
       }
@@ -164,7 +200,6 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: AppColor.surface,
         title: Text('Circuit verwijderen?', style: AppText.cardTitle),
         content: Text(
           '"${circuit.name}" wordt verwijderd.',
@@ -205,19 +240,16 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.bg,
       appBar: AppBar(
-        backgroundColor: AppColor.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
         leading: BackButton(onPressed: () => Navigator.pop(context)),
         title: Text(
           _isNew ? 'Nieuw circuit' : 'Circuit aanpassen',
-          style: AppText.bodyStrong.copyWith(fontSize: 14),
+          style: AppText.bodyStrong,
         ),
         actions: [
           if (!_isNew)
             IconButton(
+              tooltip: 'Verwijderen',
               onPressed: _busy ? null : _confirmDelete,
               icon: const Icon(Icons.delete_outline, color: AppColor.redBright),
             ),
@@ -228,38 +260,36 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
           ListView(
             controller: _scroll,
             padding: EdgeInsets.fromLTRB(
-              20,
-              18,
-              20,
+              16,
+              12,
+              16,
               100 + MediaQuery.of(context).padding.bottom,
             ),
             children: [
-              Text('NAAM', style: AppText.overline),
+              const KLabel('Naam'),
               const SizedBox(height: 8),
               TextField(
                 controller: _name,
                 style: AppText.bodyStrong,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: AppColor.surface,
-                  hintText: 'Bijvoorbeeld "Warming-up mobiliteit"',
-                  hintStyle: AppText.body.copyWith(color: AppColor.inkGhost),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide.none,
-                  ),
+                decoration: const InputDecoration(
+                  hintText: 'Bijvoorbeeld "Conditie + schaduwboksen"',
                 ),
               ),
-              const SizedBox(height: 22),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 4,
+              const SizedBox(height: 16),
+              const KLabel('Beschrijving (optioneel)'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _description,
+                style: AppText.body,
+                minLines: 2,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  hintText: 'Bv. tempo hoog, techniek boven snelheid',
                 ),
-                decoration: BoxDecoration(
-                  color: AppColor.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                ),
+              ),
+              const SizedBox(height: 16),
+              KCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 child: Column(
                   children: [
                     NumberStepper(
@@ -273,19 +303,7 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                     ),
                     const Divider(height: 24, color: AppColor.line),
                     NumberStepper(
-                      label: 'WERKTIJD',
-                      value: _workSeconds,
-                      suffix: 's',
-                      onDown: () => setState(
-                        () => _workSeconds = (_workSeconds - 5).clamp(5, 600),
-                      ),
-                      onUp: () => setState(
-                        () => _workSeconds = (_workSeconds + 5).clamp(5, 600),
-                      ),
-                    ),
-                    const Divider(height: 24, color: AppColor.line),
-                    NumberStepper(
-                      label: 'RUSTTIJD',
+                      label: 'RUST TUSSEN STAPPEN',
                       value: _restSeconds,
                       suffix: 's',
                       onDown: () => setState(
@@ -298,25 +316,31 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 22),
-              Text('OEFENINGEN', style: AppText.overline),
+              const SizedBox(height: 20),
+              const KLabel('Stappen'),
+              const SizedBox(height: 4),
+              Text(
+                'Tik op de tijd of het aantal om te kiezen tussen tijd en '
+                'herhalingen.',
+                style: AppText.caption,
+              ),
               const SizedBox(height: 10),
-              if (_exerciseNames.isNotEmpty)
+              if (_steps.isNotEmpty)
                 ReorderableListView(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   buildDefaultDragHandles: false,
-                  onReorderItem: _reorderExercise,
+                  onReorderItem: _reorderStep,
                   children: [
-                    for (var i = 0; i < _exerciseNames.length; i++)
+                    for (var i = 0; i < _steps.length; i++)
                       Padding(
-                        key: ValueKey('$i-${_exerciseNames[i]}'),
+                        key: ValueKey('$i-${_steps[i].name}'),
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: _CircuitExerciseRow(
+                        child: _CircuitStepRow(
                           index: i,
-                          name: _exerciseNames[i],
-                          onRemove: () =>
-                              setState(() => _exerciseNames.removeAt(i)),
+                          step: _steps[i],
+                          onTarget: () => _editTarget(i),
+                          onRemove: () => setState(() => _steps.removeAt(i)),
                           dragHandle: ReorderableDragStartListener(
                             index: i,
                             child: const Padding(
@@ -336,11 +360,7 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                 _AddCircuitExerciseInline(
                   query: _query,
                   customExercises: _knownExercises,
-                  onPick: (name) => setState(() {
-                    _exerciseNames.add(name);
-                    _adding = false;
-                    _query.clear();
-                  }),
+                  onPick: _addStep,
                   onCancel: () => setState(() {
                     _adding = false;
                     _query.clear();
@@ -354,11 +374,40 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                     _scrollToBottom();
                   },
                 ),
+              const SizedBox(height: 20),
+              const KLabel("Video's (optioneel)"),
+              const SizedBox(height: 8),
+              for (var i = 0; i < _videoUrls.length; i++)
+                VideoLinkRow(
+                  url: _videoUrls[i],
+                  onRemove: () => setState(() => _videoUrls.removeAt(i)),
+                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _newVideo,
+                      keyboardType: TextInputType.url,
+                      style: AppText.body,
+                      onSubmitted: (_) => _addVideo(),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        hintText: 'Link naar video (YouTube, Instagram, …)',
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Video toevoegen',
+                    onPressed: () => _addVideo(),
+                    icon: const Icon(Icons.add_link, color: AppColor.ice),
+                  ),
+                ],
+              ),
             ],
           ),
           Positioned(
-            left: 20,
-            right: 20,
+            left: 16,
+            right: 16,
             bottom: 16 + MediaQuery.of(context).padding.bottom,
             child: FilledButton(
               onPressed: _busy ? null : _save,
@@ -374,23 +423,25 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
   }
 }
 
-class _CircuitExerciseRow extends StatelessWidget {
-  const _CircuitExerciseRow({
+class _CircuitStepRow extends StatelessWidget {
+  const _CircuitStepRow({
     required this.index,
-    required this.name,
+    required this.step,
+    required this.onTarget,
     required this.onRemove,
     this.dragHandle,
   });
 
   final int index;
-  final String name;
+  final CircuitStep step;
+  final VoidCallback onTarget;
   final VoidCallback onRemove;
   final Widget? dragHandle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
       decoration: BoxDecoration(
         color: AppColor.surfaceRaised,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -407,14 +458,97 @@ class _CircuitExerciseRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(child: Text(name, style: AppText.bodyStrong)),
-          InkWell(
-            onTap: onRemove,
-            borderRadius: BorderRadius.circular(7),
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(Icons.close, size: 16, color: AppColor.inkFaint),
+          Expanded(child: Text(step.name, style: AppText.bodyStrong)),
+          ActionChip(
+            avatar: Icon(
+              step.isTimed ? Icons.timer_outlined : Icons.repeat,
+              size: 16,
+              color: AppColor.ice,
             ),
+            label: Text(
+              step.targetLabel,
+              style: AppText.bodyStrong.copyWith(color: AppColor.ice),
+            ),
+            onPressed: onTarget,
+          ),
+          IconButton(
+            tooltip: 'Verwijderen',
+            onPressed: onRemove,
+            icon: const Icon(Icons.close, size: 16, color: AppColor.inkFaint),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kiest het doel van een stap: een tijd (in stappen van 5 s) of een aantal
+/// herhalingen.
+class _StepTargetSheet extends StatefulWidget {
+  const _StepTargetSheet({required this.step});
+
+  final CircuitStep step;
+
+  @override
+  State<_StepTargetSheet> createState() => _StepTargetSheetState();
+}
+
+class _StepTargetSheetState extends State<_StepTargetSheet> {
+  late bool _timed = widget.step.isTimed;
+  late int _seconds = widget.step.seconds ?? 60;
+  late int _reps = widget.step.reps ?? 10;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        20 + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(widget.step.name, style: AppText.title),
+          const SizedBox(height: 14),
+          KSegmented<bool>(
+            options: const [
+              (true, 'Tijd', Icons.timer_outlined),
+              (false, 'Herhalingen', Icons.repeat),
+            ],
+            selected: _timed,
+            onChanged: (v) => setState(() => _timed = v),
+          ),
+          const SizedBox(height: 16),
+          if (_timed)
+            NumberStepper(
+              label: 'TIJD',
+              value: _seconds,
+              suffix: 's',
+              onDown: () =>
+                  setState(() => _seconds = (_seconds - 5).clamp(5, 900)),
+              onUp: () =>
+                  setState(() => _seconds = (_seconds + 5).clamp(5, 900)),
+            )
+          else
+            NumberStepper(
+              label: 'HERHALINGEN',
+              value: _reps,
+              suffix: '×',
+              onDown: () => setState(() => _reps = (_reps - 1).clamp(1, 200)),
+              onUp: () => setState(() => _reps = (_reps + 1).clamp(1, 200)),
+            ),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+              context,
+              _timed
+                  ? CircuitStep(name: widget.step.name, seconds: _seconds)
+                  : CircuitStep(name: widget.step.name, reps: _reps),
+            ),
+            child: const Text('Klaar'),
           ),
         ],
       ),

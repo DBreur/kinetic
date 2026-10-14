@@ -458,6 +458,16 @@ class _ExerciseSummary extends StatelessWidget {
   const _ExerciseSummary({required this.entry});
   final ExerciseEntry entry;
 
+  /// Sets met meer dan kg × reps (tijd, verzuring, gelukt/reden) krijgen
+  /// elk een eigen regel; anders blijft het één compacte regel.
+  bool get _detailed => entry.sets.any(
+    (s) =>
+        s.seconds != null ||
+        s.toBurn ||
+        s.completed != null ||
+        s.note.isNotEmpty,
+  );
+
   @override
   Widget build(BuildContext context) {
     final summary = entry.sets.isEmpty
@@ -471,18 +481,87 @@ class _ExerciseSummary extends StatelessWidget {
         color: AppColor.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
-      child: Row(
-        children: [
-          Expanded(child: Text(entry.name, style: AppText.bodyStrong)),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              summary,
-              style: AppText.caption,
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
+      child: !_detailed
+          ? Row(
+              children: [
+                Expanded(child: Text(entry.name, style: AppText.bodyStrong)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    summary,
+                    style: AppText.caption,
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entry.name, style: AppText.bodyStrong),
+                const SizedBox(height: 6),
+                for (var i = 0; i < entry.sets.length; i++)
+                  _SetLine(index: i, set: entry.sets[i]),
+              ],
             ),
+    );
+  }
+}
+
+class _SetLine extends StatelessWidget {
+  const _SetLine({required this.index, required this.set});
+  final int index;
+  final ExerciseSet set;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 20,
+                child: Text('${index + 1}', style: AppText.caption),
+              ),
+              if (set.toBurn)
+                const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(
+                    Icons.local_fire_department_outlined,
+                    size: 14,
+                    color: AppColor.amber,
+                  ),
+                ),
+              Expanded(
+                child: Text(
+                  set.summary,
+                  style: AppText.caption.copyWith(color: AppColor.ink),
+                ),
+              ),
+              if (set.completed != null)
+                Text(
+                  set.completed! ? 'gelukt' : 'niet gelukt',
+                  style: AppText.caption.copyWith(
+                    color: set.completed!
+                        ? AppColor.greenBright
+                        : AppColor.redBright,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
           ),
+          if (set.note.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 1),
+              child: Text(
+                set.note,
+                style: AppText.caption.copyWith(fontStyle: FontStyle.italic),
+              ),
+            ),
         ],
       ),
     );
@@ -508,8 +587,9 @@ class _CircuitSummary extends StatelessWidget {
           Text(circuit.name, style: AppText.bodyStrong),
           const SizedBox(height: 2),
           Text(
-            '${circuit.exerciseNames.join(', ')} · ${circuit.rounds} rondes '
-            '· ${circuit.workSeconds}s/${circuit.restSeconds}s',
+            '${circuit.stepsLabel} · ${circuit.rounds} '
+            'ronde${circuit.rounds == 1 ? '' : 's'}'
+            '${circuit.restSeconds > 0 ? ' · ${circuit.restSeconds}s rust' : ''}',
             style: AppText.caption,
           ),
         ],

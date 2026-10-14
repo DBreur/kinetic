@@ -111,6 +111,9 @@ class AppProfile {
   /// (tijdens een live training gebeurt dat altijd).
   final bool hideSystemBars;
 
+  /// Eigen namen voor video's: videolink → naam (zie VideoLabels).
+  final Map<String, String> videoLabels;
+
   /// Vaste eetmomenten met een dagelijkse herinnering (apart aan/uit), en
   /// hoeveel minuten vóór het eetmoment die melding komt.
   final bool mealRemindersEnabled;
@@ -184,6 +187,7 @@ class AppProfile {
     this.sex = '',
     this.weekStart = 1,
     this.hideSystemBars = false,
+    this.videoLabels = const {},
     this.mealRemindersEnabled = false,
     this.mealReminders = const [],
     this.mealReminderOffset = 0,
@@ -251,6 +255,11 @@ class AppProfile {
       sex: (json['sex'] as String?) ?? '',
       weekStart: (json['week_start'] as num?)?.toInt() ?? 1,
       hideSystemBars: (json['hide_system_bars'] as bool?) ?? false,
+      videoLabels: {
+        for (final e
+            in ((json['video_labels'] as Map?) ?? const {}).entries)
+          if (e.value is String) '${e.key}': e.value as String,
+      },
       mealRemindersEnabled: (json['meal_reminders_enabled'] as bool?) ?? false,
       mealReminders: ((json['meal_reminders'] as List?) ?? [])
           .map(MealReminder.fromJson)
@@ -312,6 +321,7 @@ class AppProfile {
     'sex': sex,
     'week_start': weekStart,
     'hide_system_bars': hideSystemBars,
+    'video_labels': videoLabels,
     'meal_reminders_enabled': mealRemindersEnabled,
     'meal_reminders': mealReminders.map((m) => m.toJson()).toList(),
     'meal_reminder_offset': mealReminderOffset,
@@ -354,6 +364,7 @@ class AppProfile {
     String? sex,
     int? weekStart,
     bool? hideSystemBars,
+    Map<String, String>? videoLabels,
     bool? mealRemindersEnabled,
     List<MealReminder>? mealReminders,
     int? mealReminderOffset,
@@ -400,6 +411,7 @@ class AppProfile {
       sex: sex ?? this.sex,
       weekStart: weekStart ?? this.weekStart,
       hideSystemBars: hideSystemBars ?? this.hideSystemBars,
+      videoLabels: videoLabels ?? this.videoLabels,
       mealRemindersEnabled: mealRemindersEnabled ?? this.mealRemindersEnabled,
       mealReminders: mealReminders ?? this.mealReminders,
       mealReminderOffset: mealReminderOffset ?? this.mealReminderOffset,

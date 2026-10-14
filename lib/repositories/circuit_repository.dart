@@ -30,13 +30,7 @@ class CircuitRepository {
   Future<Circuit> updateContent(Circuit circuit) async {
     final row = await _client
         .from('circuits')
-        .update({
-          'name': circuit.name,
-          'exercise_names': circuit.exerciseNames,
-          'rounds': circuit.rounds,
-          'work_seconds': circuit.workSeconds,
-          'rest_seconds': circuit.restSeconds,
-        })
+        .update(circuit.toUpdateJson())
         .eq('id', circuit.id)
         .select()
         .single();

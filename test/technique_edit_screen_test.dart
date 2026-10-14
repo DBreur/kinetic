@@ -61,10 +61,9 @@ void main() {
         scrollable: listScrollable,
       );
       expect(find.text('VIDEO\'S (OPTIONEEL)'), findsOneWidget);
-      expect(
-        find.text('https://www.tiktok.com/@user/video/12345'),
-        findsOneWidget,
-      );
+      // Zonder eigen naam: "Naam geven" met de ingekorte link eronder.
+      expect(find.text('tiktok.com/@user/video/12345'), findsOneWidget);
+      expect(find.text('Naam geven'), findsOneWidget);
 
       expect(find.text('Wijzigingen bewaren'), findsOneWidget);
       expect(tester.takeException(), isNull);

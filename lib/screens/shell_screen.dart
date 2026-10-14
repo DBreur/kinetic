@@ -1941,9 +1941,7 @@ class _TechniqueTile extends StatelessWidget {
                       Text(stat.name, style: AppText.bodyStrong),
                       const SizedBox(height: 3),
                       Text(
-                        stat.transition.isNotEmpty
-                            ? '${stat.transition} · ${stat.count}× · laatst ${stat.lastDate != null ? dutchShortDate(stat.lastDate!) : ''}'
-                            : '${stat.count}× · laatst ${stat.lastDate != null ? dutchShortDate(stat.lastDate!) : ''}',
+                        '${stat.count}× · laatst ${stat.lastDate != null ? dutchShortDate(stat.lastDate!) : ''}',
                         style: AppText.caption,
                       ),
                       if (stat.learningStatus != LearningStatus.none) ...[
@@ -1974,11 +1972,15 @@ class _TechniqueTile extends StatelessWidget {
                 ),
               ],
             ),
-            if (stat.groundPositions.isNotEmpty) ...[
+            if (stat.groundPositions.isNotEmpty ||
+                stat.transition.isNotEmpty) ...[
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.only(left: 34),
-                child: GroundPositionTags(positions: stat.groundPositions),
+                child: GroundPositionTags(
+                  transition: stat.transition,
+                  positions: stat.groundPositions,
+                ),
               ),
             ],
           ],

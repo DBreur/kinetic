@@ -15,10 +15,12 @@ import '../repositories/circuit_repository.dart';
 import '../state/strength_session_controller.dart';
 import '../services/system_bars.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/info_sheet.dart';
 import '../widgets/kinetic.dart';
 import '../widgets/block_widgets.dart' show AddBlockButton;
 import '../widgets/manual_glucose.dart' show FingerHistoryStrip;
 import '../widgets/nutrition_log.dart';
+import '../widgets/set_outcome_sheet.dart';
 import 'exercise_history_screen.dart';
 import 'mat_mode_screen.dart' show GlucoseBand;
 
@@ -161,9 +163,7 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
                       children: [
                         Text(c.name, style: AppText.bodyStrong),
                         Text(
-                          '${c.exerciseNames.length} oefeningen · '
-                          '${c.rounds} rondes · ${c.workSeconds}s/'
-                          '${c.restSeconds}s',
+                          c.summary,
                           style: AppText.caption.copyWith(fontSize: 11),
                         ),
                       ],
@@ -369,8 +369,11 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
                                         _c.updateSet(ei, si, patch),
                                     onStartSetTimer: (si) =>
                                         _c.startSetTimer(ei, si),
-                                    onToggleSetMode: (si, timeBased) => _c
-                                        .setSetMode(ei, si, timeBased: timeBased),
+                                    onToggleSetMode: (si, mode) =>
+                                        _c.setSetMode(ei, si, mode),
+                                    info: _c.matchingCustomExercise(
+                                      _c.exercises[ei].name,
+                                    ),
                                     dragHandle: ReorderableDragStartListener(
                                       index: ei,
                                       child: const Padding(
@@ -447,10 +450,14 @@ class _ExerciseCard extends StatelessWidget {
   final VoidCallback onOpenHistory;
   final void Function(int setIndex, LiveSet Function(LiveSet)) onSetChanged;
   final void Function(int setIndex) onStartSetTimer;
-  final void Function(int setIndex, bool timeBased) onToggleSetMode;
+  final void Function(int setIndex, SetMode mode) onToggleSetMode;
   final Widget? dragHandle;
+
+  /// De eigen oefening (met beschrijving en video's), als die er is.
+  final Exercise? info;
   const _ExerciseCard({
     required this.exercise,
+    this.info,
     required this.onRemove,
     required this.onAddSet,
     required this.onOpenHistory,
@@ -460,31 +467,23 @@ class _ExerciseCard extends StatelessWidget {
     this.dragHandle,
   });
 
-  void _showDescription(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: AppColor.surface,
-        title: Text(exercise.name, style: AppText.cardTitle),
-        content: Text(
-          exercise.description,
-          style: AppText.body.copyWith(color: AppColor.inkMuted),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('Sluiten'),
-          ),
-        ],
-      ),
-    );
-  }
+  String get _description => (info?.description ?? '').isNotEmpty
+      ? info!.description
+      : exercise.description;
+  List<String> get _videoUrls => info?.videoUrls ?? const [];
+
+  void _showDescription(BuildContext context) => showInfoSheet(
+    context,
+    title: exercise.name,
+    description: _description,
+    videoUrls: _videoUrls,
+  );
 
   String _fmtKg(double kg) =>
       kg % 1 == 0 ? kg.toInt().toString() : kg.toString();
 
   String _formatLastPerformance(List<ExerciseSet> sets) =>
-      sets.map((s) => '${_fmtKg(s.kg)}kg × ${s.reps}').join(', ');
+      sets.map((s) => s.summary).join(', ');
 
   @override
   Widget build(BuildContext context) {
@@ -515,7 +514,7 @@ class _ExerciseCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (exercise.description.isNotEmpty)
+              if (_description.isNotEmpty || _videoUrls.isNotEmpty)
                 InkWell(
                   onTap: () => _showDescription(context),
                   borderRadius: BorderRadius.circular(99),
@@ -594,7 +593,7 @@ class _ExerciseCard extends StatelessWidget {
                 liveSet: exercise.sets[si],
                 onChanged: (patch) => onSetChanged(si, patch),
                 onStartTimer: () => onStartSetTimer(si),
-                onToggleMode: (timeBased) => onToggleSetMode(si, timeBased),
+                onToggleMode: (mode) => onToggleSetMode(si, mode),
               ),
             ),
           const SizedBox(height: 8),
@@ -629,7 +628,7 @@ class _SetRow extends StatelessWidget {
   final LiveSet liveSet;
   final void Function(LiveSet Function(LiveSet)) onChanged;
   final VoidCallback onStartTimer;
-  final ValueChanged<bool> onToggleMode;
+  final ValueChanged<SetMode> onToggleMode;
   const _SetRow({
     required this.num,
     required this.liveSet,
@@ -743,12 +742,57 @@ class _SetRow extends StatelessWidget {
     );
   }
 
+  Widget _burnControl() {
+    final extra = liveSet.extraReps ?? 0;
+    final target = liveSet.extraTarget;
+    return _stepper(
+      value: '+$extra',
+      unit: target.isEmpty ? 'na verzuring' : 'na verzuring ($target)',
+      onDown: () => onChanged(
+        (s) => s..extraReps = ((s.extraReps ?? 0) - 1).clamp(0, 100),
+      ),
+      onUp: () => onChanged(
+        (s) => s..extraReps = ((s.extraReps ?? 0) + 1).clamp(0, 100),
+      ),
+    );
+  }
+
+  /// reps → tijd → tot verzuring → reps.
+  SetMode get _nextMode => switch (liveSet.mode) {
+    SetMode.reps => SetMode.time,
+    SetMode.time => SetMode.burn,
+    SetMode.burn => SetMode.reps,
+  };
+
+  Future<void> _editOutcome(BuildContext context) async {
+    final result = await showSetOutcomeSheet(
+      context,
+      title: 'Set $num',
+      completed: liveSet.completed,
+      note: liveSet.note,
+    );
+    if (result == null) return;
+    onChanged(
+      (s) => s
+        ..completed = result.completed
+        ..note = result.note,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final failed = liveSet.completed == false;
+    final outcomeColor = switch (liveSet.completed) {
+      true => AppColor.greenBright,
+      false => AppColor.redBright,
+      null => liveSet.note.isNotEmpty ? AppColor.ice : AppColor.inkFaint,
+    };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
-        color: liveSet.done
+        color: failed
+            ? AppColor.coralWash
+            : liveSet.done
             ? AppColor.greenWash
             : AppColor.surfaceRaised,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -756,7 +800,7 @@ class _SetRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 20,
+            width: 18,
             child: Text(
               '$num',
               textAlign: TextAlign.center,
@@ -775,29 +819,60 @@ class _SetRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: liveSet.seconds != null
-                ? _timeControl()
-                : _stepper(
-                    value: '${liveSet.reps}',
-                    unit: 'reps',
-                    onDown: () =>
-                        onChanged((s) => s..reps = (s.reps - 1).clamp(1, 100)),
-                    onUp: () =>
-                        onChanged((s) => s..reps = (s.reps + 1).clamp(1, 100)),
-                  ),
+            child: switch (liveSet.mode) {
+              SetMode.time => _timeControl(),
+              SetMode.burn => _burnControl(),
+              SetMode.reps => _stepper(
+                value: '${liveSet.reps}',
+                unit: 'reps',
+                onDown: () =>
+                    onChanged((s) => s..reps = (s.reps - 1).clamp(1, 100)),
+                onUp: () =>
+                    onChanged((s) => s..reps = (s.reps + 1).clamp(1, 100)),
+              ),
+            },
           ),
-          InkWell(
-            onTap: () => onToggleMode(liveSet.seconds == null),
-            borderRadius: BorderRadius.circular(99),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(
-                liveSet.seconds != null ? Icons.repeat : Icons.timer_outlined,
-                size: 16,
-                color: AppColor.inkFaint,
+          Tooltip(
+            message: switch (_nextMode) {
+              SetMode.reps => 'Naar herhalingen',
+              SetMode.time => 'Naar tijd',
+              SetMode.burn => 'Naar tot verzuring',
+            },
+            child: InkWell(
+              onTap: () => onToggleMode(_nextMode),
+              borderRadius: BorderRadius.circular(99),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+                child: Icon(
+                  switch (liveSet.mode) {
+                    SetMode.reps => Icons.repeat,
+                    SetMode.time => Icons.timer_outlined,
+                    SetMode.burn => Icons.local_fire_department_outlined,
+                  },
+                  size: 17,
+                  color: liveSet.toBurn ? AppColor.amber : AppColor.inkFaint,
+                ),
               ),
             ),
           ),
+          Tooltip(
+            message: 'Gelukt / niet gelukt',
+            child: InkWell(
+              onTap: () => _editOutcome(context),
+              borderRadius: BorderRadius.circular(99),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+                child: Icon(
+                  liveSet.note.isNotEmpty
+                      ? Icons.comment
+                      : Icons.mode_comment_outlined,
+                  size: 17,
+                  color: outcomeColor,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 2),
           InkWell(
             onTap: () => onChanged((s) => s..done = !s.done),
             borderRadius: BorderRadius.circular(9),
@@ -1068,7 +1143,9 @@ class _CircuitCard extends StatelessWidget {
     final mm = (secondsLeft ~/ 60).toString().padLeft(2, '0');
     final ss = (secondsLeft % 60).toString().padLeft(2, '0');
     final isResting = liveCircuit.phase == CircuitPhase.rest;
-    final total = isResting ? c.restSeconds : c.workSeconds;
+    final total = isResting
+        ? c.restSeconds
+        : (liveCircuit.currentStep?.seconds ?? c.workSeconds);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1082,6 +1159,24 @@ class _CircuitCard extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(c.name, style: AppText.cardTitle)),
+              if (c.description.isNotEmpty || c.videoUrls.isNotEmpty)
+                InkWell(
+                  onTap: () => showInfoSheet(
+                    context,
+                    title: c.name,
+                    description: c.description,
+                    videoUrls: c.videoUrls,
+                  ),
+                  borderRadius: BorderRadius.circular(99),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: AppColor.inkFaint,
+                    ),
+                  ),
+                ),
               if (!liveCircuit.isRunning)
                 InkWell(
                   onTap: onRemove,
@@ -1104,8 +1199,7 @@ class _CircuitCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${c.exerciseNames.length} oefeningen · ${c.rounds} rondes · '
-            '${c.workSeconds}s/${c.restSeconds}s',
+            c.summary,
             style: AppText.caption.copyWith(fontSize: 11),
           ),
           const SizedBox(height: 10),
@@ -1138,6 +1232,12 @@ class _CircuitCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
+                if (liveCircuit.waitingForTap)
+                  _RepStepBox(
+                    target: liveCircuit.currentStep!.targetLabel,
+                    onDone: onSkip,
+                  )
+                else
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -1219,6 +1319,48 @@ class _CircuitCard extends StatelessWidget {
               ),
               child: const Text('Start circuit'),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Een herhalingen-stap in een lopend circuit: geen klok, je tikt "Klaar"
+/// als je ze gedaan hebt.
+class _RepStepBox extends StatelessWidget {
+  const _RepStepBox({required this.target, required this.onDone});
+
+  final String target;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: AppColor.greenWash,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColor.green.withValues(alpha: .35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.repeat, size: 16, color: AppColor.greenBright),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              target,
+              style: AppText.cardTitle.copyWith(color: AppColor.greenBright),
+            ),
+          ),
+          FilledButton(
+            onPressed: onDone,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColor.green,
+              foregroundColor: AppColor.greenInk,
+              minimumSize: const Size(88, 40),
+            ),
+            child: const Text('Klaar'),
+          ),
         ],
       ),
     );

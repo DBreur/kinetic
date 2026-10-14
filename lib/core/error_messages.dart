@@ -33,6 +33,12 @@ String _friendlyAuthMessage(AuthException error) {
   if (message.contains('user already registered')) {
     return 'Er bestaat al een account met dit e-mailadres.';
   }
+  if (message.contains('rate limit') ||
+      message.contains('security purposes') ||
+      error.statusCode == '429') {
+    return 'Er zijn net al e-mails verstuurd. Wacht een paar minuten en '
+        'probeer het dan opnieuw.';
+  }
   if (message.contains('password') && message.contains('least')) {
     return 'Kies een wachtwoord van minstens 6 tekens.';
   }

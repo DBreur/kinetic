@@ -8,9 +8,39 @@ import '../models/app_profile.dart';
 import '../models/glucose.dart';
 import '../models/glucose_entry.dart';
 import '../repositories/profile_repository.dart';
+import '../services/video_labels.dart';
 import '../widgets/glucose_alarm.dart';
 
 enum AppBootState { loading, needsConfig, signedOut, needsOnboarding, ready }
+
+/// Wat er gebeurde bij "Account maken".
+enum RegisterOutcome {
+  /// Account gemaakt en meteen ingelogd (bevestiging staat uit).
+  signedIn,
+
+  /// Account gemaakt; eerst de link in de bevestigingsmail aanklikken.
+  confirmEmail,
+
+  /// Er bestond al een account met dit e-mailadres.
+  alreadyExists,
+
+  /// Fout (zie [AppController.authError]).
+  failed,
+}
+
+/// Leidt de uitkomst af uit het antwoord van Supabase. Bestaat het
+/// e-mailadres al, dan geeft Supabase (om accounts niet te verraden) géén
+/// fout maar een gebruiker zonder inlogmethodes terug.
+RegisterOutcome registerOutcomeFor({
+  required bool hasSession,
+  required List<Object>? identities,
+}) {
+  if (hasSession) return RegisterOutcome.signedIn;
+  if (identities != null && identities.isEmpty) {
+    return RegisterOutcome.alreadyExists;
+  }
+  return RegisterOutcome.confirmEmail;
+}
 
 /// Uitkomst van `AppController.alarmDecision()` — de enige plek in de app
 /// die bepaalt of, en hoe, het hypo-alarm mag afgaan. Niets anders in de
@@ -44,7 +74,28 @@ class AppController extends ChangeNotifier {
   ProfileRepository? _profiles;
 
   AppBootState state = AppBootState.loading;
-  AppProfile? profile;
+  AppProfile? _profile;
+  AppProfile? get profile => _profile;
+  set profile(AppProfile? next) {
+    _profile = next;
+    VideoLabels.attach(
+      next?.videoLabels ?? const {},
+      next == null ? null : _saveVideoLabels,
+    );
+  }
+
+  /// Bewaart videonamen stil op de achtergrond — zonder de busy-status van
+  /// [saveProfile], want je zit dan gewoon in een techniek of sessie.
+  Future<void> _saveVideoLabels(Map<String, String> labels) async {
+    final p = _profile;
+    if (p == null || _profiles == null) return;
+    try {
+      _profile = await _profiles!.upsert(p.copyWith(videoLabels: labels));
+    } catch (_) {
+      // Naam blijft lokaal staan tot de volgende keer opslaan lukt.
+    }
+  }
+
   String? authError;
   bool busy = false;
 
@@ -311,11 +362,30 @@ class AppController extends ChangeNotifier {
     });
   }
 
-  Future<void> register(String email, String password) async {
+  /// Maakt een account aan. Staat e-mailbevestiging aan in Supabase (zo
+  /// staat het nu ingesteld), dan is er daarna nog geen sessie: dan moet je
+  /// eerst op de link in de mail klikken — de aanroeper toont dat.
+  Future<RegisterOutcome> register(String email, String password) async {
+    var outcome = RegisterOutcome.failed;
     await _authAction(() async {
-      await _client!.auth.signUp(email: email, password: password);
-      await refresh();
+      final res = await _client!.auth.signUp(email: email, password: password);
+      outcome = registerOutcomeFor(
+        hasSession: res.session != null,
+        identities: res.user?.identities,
+      );
+      if (outcome == RegisterOutcome.signedIn) await refresh();
     });
+    return outcome;
+  }
+
+  /// Bevestigingsmail van het aanmaken van een account opnieuw sturen.
+  Future<bool> resendConfirmation(String email) async {
+    var ok = false;
+    await _authAction(() async {
+      await _client!.auth.resend(type: OtpType.signup, email: email);
+      ok = true;
+    });
+    return ok;
   }
 
   Future<void> resetPassword(String email) async {

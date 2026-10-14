@@ -49,7 +49,18 @@ class SessionEditScreen extends StatefulWidget {
 class _EditSet {
   double kg;
   int reps;
-  _EditSet({this.kg = 0, this.reps = 8});
+
+  /// De oorspronkelijke set, zodat tijd, verzuring en gelukt/reden bij
+  /// opslaan blijven staan — hier pas je alleen kg en reps aan.
+  final ExerciseSet? base;
+  _EditSet({this.kg = 0, this.reps = 8, this.base});
+
+  ExerciseSet toSet() =>
+      (base ?? const ExerciseSet(kg: 0, reps: 0)).copyWith(
+        kg: kg,
+        reps: reps,
+        done: true,
+      );
 }
 
 class _EditExercise {
@@ -88,7 +99,9 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         .map(
           (e) => _EditExercise(
             name: e.name,
-            sets: e.sets.map((s) => _EditSet(kg: s.kg, reps: s.reps)).toList(),
+            sets: e.sets
+                .map((s) => _EditSet(kg: s.kg, reps: s.reps, base: s))
+                .toList(),
           ),
         )
         .toList();
@@ -202,9 +215,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
             .map(
               (e) => ExerciseEntry(
                 name: e.name,
-                sets: e.sets
-                    .map((s) => ExerciseSet(kg: s.kg, reps: s.reps, done: true))
-                    .toList(),
+                sets: e.sets.map((s) => s.toSet()).toList(),
               ),
             )
             .toList(),

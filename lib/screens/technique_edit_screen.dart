@@ -12,6 +12,8 @@ import '../core/positions.dart';
 import '../models/technique.dart';
 import '../repositories/technique_repository.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/ground_position_tags.dart';
+import '../widgets/video_link_row.dart';
 import '../widgets/block_widgets.dart' show kBlockCategories;
 
 /// Resultaat van het bewerkscherm: de opgeslagen techniek, een signaal dat
@@ -104,13 +106,15 @@ class _TechniqueEditScreenState extends State<TechniqueEditScreen> {
       _videoUrls.add(url);
       _newVideoUrl.clear();
     });
+    // Meteen een naam laten geven (overslaan mag).
+    editVideoLabel(context, url);
   }
 
   void _removeVideoUrl(int i) => setState(() => _videoUrls.removeAt(i));
 
   /// Chips voor één kant (van/naar) van de transitie — de kant die al aan de
   /// andere zijde gekozen is, kan hier niet nogmaals gekozen worden. "Van"
-  /// krijgt alleen de vijf posities ([kPositions]); "naar" ook de afgeronde
+  /// krijgt alleen de posities ([kPositions]); "naar" ook de afgeronde
   /// scores ([kOutcomes]) — je kunt wel ergens vertrekken, maar niet vanuit
   /// een ippon.
   Widget _positionChips({
@@ -406,12 +410,10 @@ class _TechniqueEditScreenState extends State<TechniqueEditScreen> {
                             ),
                             if (!_transitionExpanded) ...[
                               const SizedBox(height: 4),
-                              Text(
-                                _van != null && _naar != null
-                                    ? '$_van → $_naar'
-                                    : 'Niet ingesteld',
-                                style: AppText.caption,
-                              ),
+                              if (_van != null && _naar != null)
+                                TransitionTag(transition: '$_van -> $_naar')
+                              else
+                                Text('Niet ingesteld', style: AppText.caption),
                             ],
                           ],
                         ),
@@ -470,40 +472,9 @@ class _TechniqueEditScreenState extends State<TechniqueEditScreen> {
               Text('VIDEO\'S (OPTIONEEL)', style: AppText.overline),
               const SizedBox(height: 10),
               for (var i = 0; i < _videoUrls.length; i++)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColor.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _videoUrls[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.body,
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => _removeVideoUrl(i),
-                        borderRadius: BorderRadius.circular(8),
-                        child: const Padding(
-                          padding: EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.close,
-                            size: 16,
-                            color: AppColor.inkFaint,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                VideoLinkRow(
+                  url: _videoUrls[i],
+                  onRemove: () => _removeVideoUrl(i),
                 ),
               Row(
                 children: [

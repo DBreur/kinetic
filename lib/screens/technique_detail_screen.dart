@@ -329,12 +329,15 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
                   runSpacing: 6,
                   children: [
                     _Badge(text: t.category),
-                    if (t.transition.isNotEmpty) _Badge(text: t.transition),
                   ],
                 ),
-                if (t.groundPositions.isNotEmpty) ...[
+                if (t.groundPositions.isNotEmpty ||
+                    t.transition.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  GroundPositionTags(positions: t.groundPositions),
+                  GroundPositionTags(
+                    transition: t.transition,
+                    positions: t.groundPositions,
+                  ),
                 ],
                 const SizedBox(height: 20),
                 _LearningBlock(

@@ -47,8 +47,72 @@ class LiveSet {
   bool get timerRunning => _timer.isRunning;
   Duration get timeLeft => _timer.remaining;
 
-  LiveSet({this.kg = 0, this.reps = 8, this.seconds});
+  /// "Tot verzuring" — zie [ExerciseSet.toBurn].
+  bool toBurn;
+  String extraTarget;
+  int? extraReps;
+
+  /// Gelukt / niet gelukt (null = niet aangegeven), met waarom.
+  bool? completed;
+  String note;
+
+  LiveSet({
+    this.kg = 0,
+    this.reps = 8,
+    this.seconds,
+    this.toBurn = false,
+    this.extraTarget = '',
+    this.extraReps,
+    this.completed,
+    this.note = '',
+  });
+
+  SetMode get mode => toBurn
+      ? SetMode.burn
+      : seconds != null
+      ? SetMode.time
+      : SetMode.reps;
+
+  /// Nieuwe set met dezelfde opzet (gewicht, reps/tijd/verzuring) — zonder
+  /// uitkomst, voor "+ set" en "vorige keer".
+  factory LiveSet.like(ExerciseSet s) => LiveSet(
+    kg: s.kg,
+    reps: s.reps,
+    seconds: s.seconds,
+    toBurn: s.toBurn,
+    extraTarget: s.extraTarget,
+  );
+
+  /// Volledige kopie inclusief uitkomst (gepland of hersteld na afsluiten).
+  factory LiveSet.from(ExerciseSet s) => LiveSet(
+    kg: s.kg,
+    reps: s.reps,
+    seconds: s.seconds,
+    toBurn: s.toBurn,
+    extraTarget: s.extraTarget,
+    extraReps: s.extraReps,
+    completed: s.completed,
+    note: s.note,
+  )..done = s.done;
+
+  ExerciseSet toExerciseSet() => ExerciseSet(
+    kg: kg,
+    reps: reps,
+    done: done,
+    seconds: seconds,
+    toBurn: toBurn,
+    extraTarget: extraTarget,
+    extraReps: extraReps,
+    completed: completed,
+    note: note,
+  );
+
+  /// Telt mee bij opslaan: afgevinkt, of je hebt er iets over genoteerd
+  /// (ook "niet gelukt, want ..." is het bewaren waard).
+  bool get worthSaving => done || completed != null || note.isNotEmpty;
 }
+
+enum SetMode { reps, time, burn }
 
 class LiveExercise {
   String name;
@@ -90,10 +154,58 @@ class LiveCircuit {
 
   LiveCircuit(this.circuit);
 
-  String get currentExerciseName => circuit.exerciseNames.isEmpty
-      ? ''
-      : circuit.exerciseNames[exerciseIndex];
+  late final List<CircuitStep> steps = circuit.effectiveSteps;
+
+  CircuitStep? get currentStep =>
+      exerciseIndex < steps.length ? steps[exerciseIndex] : null;
+  String get currentExerciseName => currentStep?.name ?? '';
+
+  /// Een herhalingen-stap ("10× push-up") telt niet af — je tikt "Klaar".
+  bool get waitingForTap =>
+      isRunning && phase == CircuitPhase.work && currentStep?.isTimed == false;
   Duration get timeLeft => timer.remaining;
+
+  /// Start de werkfase van de huidige stap: aftellen bij een tijd-stap,
+  /// wachten op "Klaar" bij een herhalingen-stap.
+  void startWork() {
+    phase = CircuitPhase.work;
+    final step = currentStep;
+    if (step != null && step.isTimed) {
+      timer.start(Duration(seconds: step.seconds ?? circuit.workSeconds));
+    } else {
+      timer.cancel();
+    }
+  }
+
+  /// Zet het circuit één fase verder. Geeft `true` als het circuit klaar is.
+  bool advance() {
+    final c = circuit;
+    if (phase == CircuitPhase.work) {
+      final isLastExercise = exerciseIndex == steps.length - 1;
+      final isLastRound = round == c.rounds - 1;
+      if (isLastExercise && isLastRound) {
+        isRunning = false;
+        isDone = true;
+        timer.cancel();
+        return true;
+      }
+      if (c.restSeconds > 0) {
+        phase = CircuitPhase.rest;
+        timer.start(Duration(seconds: c.restSeconds));
+        return false;
+      }
+    }
+    // Rust is om (of er is geen rust ingesteld): door naar de volgende
+    // oefening, of naar de volgende ronde als dit de laatste oefening was.
+    if (exerciseIndex == steps.length - 1) {
+      round += 1;
+      exerciseIndex = 0;
+    } else {
+      exerciseIndex += 1;
+    }
+    startWork();
+    return false;
+  }
 }
 
 String _fmtKg(double kg) => kg % 1 == 0 ? kg.toInt().toString() : kg.toString();
@@ -154,11 +266,7 @@ class StrengthSessionController extends ChangeNotifier
           LiveExercise(
             name: e.name,
             sets: e.sets
-                .map(
-                  (s) =>
-                      LiveSet(kg: s.kg, reps: s.reps, seconds: s.seconds)
-                        ..done = s.done,
-                )
+                .map(LiveSet.from)
                 .toList(),
           ),
         );
@@ -519,7 +627,7 @@ class StrengthSessionController extends ChangeNotifier
         name: name,
         sets: last != null && last.isNotEmpty
             ? last
-                  .map((s) => LiveSet(kg: s.kg, reps: s.reps, seconds: s.seconds))
+                  .map(LiveSet.like)
                   .toList()
             : [LiveSet()],
         lastPerformance: last,
@@ -554,20 +662,18 @@ class StrengthSessionController extends ChangeNotifier
   void addSet(int i) {
     final sets = exercises[i].sets;
     sets.add(
-      LiveSet(
-        kg: sets.isEmpty ? 0 : sets.last.kg,
-        reps: sets.isEmpty ? 8 : sets.last.reps,
-        seconds: sets.isEmpty ? null : sets.last.seconds,
-      ),
+      sets.isEmpty ? LiveSet() : LiveSet.like(sets.last.toExerciseSet()),
     );
     notifyListeners();
   }
 
-  /// Zet een set om tussen reps- en tijd-gebaseerd — het andere veld blijft
-  /// staan maar wordt genegeerd zolang [LiveSet.seconds] niet null is.
-  void setSetMode(int ei, int si, {required bool timeBased}) {
+  /// Zet een set om naar reps, tijd of "tot verzuring" — reps en gewicht
+  /// blijven staan.
+  void setSetMode(int ei, int si, SetMode mode) {
     final set = exercises[ei].sets[si];
-    set.seconds = timeBased ? (set.seconds ?? 30) : null;
+    set.seconds = mode == SetMode.time ? (set.seconds ?? 30) : null;
+    set.toBurn = mode == SetMode.burn;
+    if (!set.toBurn) set.extraReps = null;
     notifyListeners();
   }
 
@@ -625,13 +731,12 @@ class StrengthSessionController extends ChangeNotifier
   /// schakelt daarna zelf automatisch door (zie [_checkCircuitTimers]).
   void startCircuit(int i) {
     final lc = circuits[i];
-    if (lc.circuit.exerciseNames.isEmpty) return;
+    if (lc.steps.isEmpty) return;
     lc.isRunning = true;
     lc.isDone = false;
     lc.round = 0;
     lc.exerciseIndex = 0;
-    lc.phase = CircuitPhase.work;
-    lc.timer.start(Duration(seconds: lc.circuit.workSeconds));
+    lc.startWork();
     notifyListeners();
   }
 
@@ -655,7 +760,10 @@ class StrengthSessionController extends ChangeNotifier
   /// telefoon hoeft te tikken middenin een burpee.
   void _checkCircuitTimers() {
     for (final lc in circuits) {
-      if (lc.isRunning && !lc.isDone && !lc.timer.isRunning) {
+      if (lc.isRunning &&
+          !lc.isDone &&
+          !lc.waitingForTap &&
+          !lc.timer.isRunning) {
         _advanceCircuit(lc);
       }
     }
@@ -663,32 +771,7 @@ class StrengthSessionController extends ChangeNotifier
 
   void _advanceCircuit(LiveCircuit lc) {
     HapticFeedback.mediumImpact();
-    final c = lc.circuit;
-    if (lc.phase == CircuitPhase.work) {
-      final isLastExercise = lc.exerciseIndex == c.exerciseNames.length - 1;
-      final isLastRound = lc.round == c.rounds - 1;
-      if (isLastExercise && isLastRound) {
-        lc.isRunning = false;
-        lc.isDone = true;
-        lc.timer.cancel();
-        return;
-      }
-      if (c.restSeconds > 0) {
-        lc.phase = CircuitPhase.rest;
-        lc.timer.start(Duration(seconds: c.restSeconds));
-        return;
-      }
-    }
-    // Rust is om (of er is geen rust ingesteld): door naar de volgende
-    // oefening, of naar de volgende ronde als dit de laatste oefening was.
-    if (lc.exerciseIndex == c.exerciseNames.length - 1) {
-      lc.round += 1;
-      lc.exerciseIndex = 0;
-    } else {
-      lc.exerciseIndex += 1;
-    }
-    lc.phase = CircuitPhase.work;
-    lc.timer.start(Duration(seconds: c.workSeconds));
+    lc.advance();
   }
 
   /// Toont een korte melding zodra een afgevinkte set het bestaande record
@@ -753,8 +836,7 @@ class StrengthSessionController extends ChangeNotifier
         ExerciseEntry(
           name: e.name,
           sets: [
-            for (final s in e.sets)
-              ExerciseSet(kg: s.kg, reps: s.reps, done: s.done, seconds: s.seconds),
+            for (final s in e.sets) s.toExerciseSet(),
           ],
         ).toJson(),
     ],
@@ -812,21 +894,14 @@ class StrengthSessionController extends ChangeNotifier
       durationMinutes: elapsed.inMinutes,
       glucoseSeries: series,
       exercises: exercises
-          .where((e) => e.sets.any((s) => s.done))
+          .where((e) => e.sets.any((s) => s.worthSaving))
           .map(
             (e) => ExerciseEntry(
               name: e.name,
-              sets: e.sets
-                  .where((s) => s.done)
-                  .map(
-                    (s) => ExerciseSet(
-                      kg: s.kg,
-                      reps: s.reps,
-                      done: true,
-                      seconds: s.seconds,
-                    ),
-                  )
-                  .toList(),
+              sets: [
+                for (final s in e.sets)
+                  if (s.worthSaving) s.toExerciseSet(),
+              ],
             ),
           )
           .toList(),

@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../models/agenda.dart' show normalizeUrl;
 import '../models/exercise.dart';
 import '../models/workout_template.dart';
 import '../repositories/circuit_repository.dart';
@@ -12,6 +13,7 @@ import '../repositories/workout_template_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/kinetic.dart';
+import '../widgets/video_link_row.dart';
 import 'circuit_edit_screen.dart';
 import 'exercise_history_screen.dart';
 import 'workout_template_edit_screen.dart';
@@ -199,10 +201,7 @@ class _TrainingLibraryScreenState extends State<TrainingLibraryScreen> {
         _LibraryRow(
           icon: Icons.loop,
           title: c.name,
-          subtitle:
-              '${c.exerciseNames.length} oefening${c.exerciseNames.length == 1 ? '' : 'en'}'
-              ' · ${c.rounds} ronde${c.rounds == 1 ? '' : 's'}'
-              ' · ${c.workSeconds}s/${c.restSeconds}s',
+          subtitle: c.summary,
           onTap: () => _openCircuitEditor(existing: c),
         ),
       const SizedBox(height: 4),
@@ -556,61 +555,109 @@ Future<Exercise?> showExerciseDialog(
 }) {
   final name = TextEditingController(text: existing?.name ?? '');
   final description = TextEditingController(text: existing?.description ?? '');
+  final newVideo = TextEditingController();
+  final videoUrls = List<String>.of(existing?.videoUrls ?? const []);
   return showDialog<Exercise>(
     context: context,
-    builder: (c) => AlertDialog(
-      backgroundColor: AppColor.surface,
-      title: Text(
-        existing == null ? 'Oefening toevoegen' : 'Oefening aanpassen',
-        style: AppText.cardTitle,
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              style: AppText.body,
-              decoration: const InputDecoration(
-                labelText: 'Naam (bv. Deadlift)',
-              ),
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) {
+        void addVideo({bool askLabel = true}) {
+          final url = normalizeUrl(newVideo.text);
+          if (url.isEmpty) return;
+          setState(() {
+            videoUrls.add(url);
+            newVideo.clear();
+          });
+          if (askLabel) editVideoLabel(c, url);
+        }
+
+        return AlertDialog(
+          backgroundColor: AppColor.surface,
+          title: Text(
+            existing == null ? 'Oefening toevoegen' : 'Oefening aanpassen',
+            style: AppText.cardTitle,
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: name,
+                  style: AppText.body,
+                  decoration: const InputDecoration(
+                    labelText: 'Naam (bv. Deadlift)',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: description,
+                  style: AppText.body,
+                  maxLines: 5,
+                  minLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Beschrijving (optioneel)',
+                    hintText: 'Hoe voer je hem uit, waar let je op?',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text("Video's (optioneel)", style: AppText.caption),
+                const SizedBox(height: 6),
+                for (var i = 0; i < videoUrls.length; i++)
+                  VideoLinkRow(
+                    url: videoUrls[i],
+                    onRemove: () => setState(() => videoUrls.removeAt(i)),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: newVideo,
+                        keyboardType: TextInputType.url,
+                        style: AppText.body,
+                        onSubmitted: (_) => addVideo(),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          hintText: 'Link naar video',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Video toevoegen',
+                      onPressed: () => addVideo(),
+                      icon: const Icon(Icons.add_link, color: AppColor.ice),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: description,
-              style: AppText.body,
-              maxLines: 3,
-              minLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Beschrijving (optioneel)',
-                hintText: 'Hoe voer je hem uit, waar let je op?',
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: const Text('Annuleer'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final n = name.text.trim();
+                if (n.isEmpty) return;
+                // Een link die nog in het veld staat telt ook mee.
+                addVideo(askLabel: false);
+                Navigator.pop(
+                  c,
+                  Exercise(
+                    id: existing?.id ?? '',
+                    name: n,
+                    description: description.text.trim(),
+                    videoUrls: videoUrls,
+                  ),
+                );
+              },
+              child: const Text('Opslaan'),
             ),
           ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(c),
-          child: const Text('Annuleer'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final n = name.text.trim();
-            if (n.isEmpty) return;
-            Navigator.pop(
-              c,
-              Exercise(
-                id: existing?.id ?? '',
-                name: n,
-                description: description.text.trim(),
-              ),
-            );
-          },
-          child: const Text('Opslaan'),
-        ),
-      ],
+        );
+      },
     ),
   );
 }
-

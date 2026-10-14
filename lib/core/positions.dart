@@ -9,18 +9,26 @@ import 'dart:ui';
 import '../models/technique.dart';
 import '../theme/kinetic_theme.dart';
 
-/// De vijf vaste posities op de kaart, in weergave-/canvasvolgorde. Dit zijn
+/// De vaste posities op de kaart, in weergave-/canvasvolgorde. "Striking"
+/// is staand op slagafstand (combat sambo: van slaan naar een takedown). Dit zijn
 /// de enige geldige "van"-kanten van een transitie — je kunt wel ergens
 /// vertrekken vanuit een positie, maar niet vanuit een afgeronde score (zie
 /// [kOutcomes]).
-const kPositions = ['Staand', 'Clinch', 'Grond boven', 'Grond onder', 'Klem'];
+const kPositions = [
+  'Striking',
+  'Staand',
+  'Clinch',
+  'Grond boven',
+  'Grond onder',
+  'Klem',
+];
 
 /// Afgeronde scores — een worp of afwerking die de uitwisseling meteen
 /// beëindigt (bv. een ippon) in plaats van door te gaan naar grondwerk.
 /// Alleen geldig als "naar"-kant van een transitie, nooit als "van".
 const kOutcomes = ['Takedown', 'Submission'];
 
-/// Alle knopen op de kaart: de vijf posities plus de twee afgeronde scores —
+/// Alle knopen op de kaart: de posities plus de twee afgeronde scores —
 /// gebruikt voor het tekenen/hit-testen van de kaart en voor de "naar"-kant
 /// van de transitiekiezer (de "van"-kant gebruikt alleen [kPositions]).
 const kAllNodes = [...kPositions, ...kOutcomes];
@@ -43,16 +51,19 @@ const kGroundPositions = [
 /// Referentiegrootte van het kaartvlak — alles schaalt hiervandaan naar de
 /// werkelijke schermbreedte (zie [positionOffset]/[nodeRect]).
 const double kMapWidth = 340;
-const double kMapHeight = 400;
+const double kMapHeight = 480;
 
 const Map<String, Offset> _basePositions = {
-  'Staand': Offset(70, 50),
-  'Clinch': Offset(270, 50),
-  'Grond boven': Offset(70, 165),
-  'Grond onder': Offset(270, 165),
-  'Klem': Offset(170, 255),
-  'Takedown': Offset(90, 355),
-  'Submission': Offset(250, 355),
+  // Striking (slagafstand) bovenaan, apart, zodat de lijnen naar Staand,
+  // Clinch en Takedown vrij blijven van de andere knopen.
+  'Striking': Offset(170, 45),
+  'Staand': Offset(70, 135),
+  'Clinch': Offset(270, 135),
+  'Grond boven': Offset(70, 245),
+  'Grond onder': Offset(270, 245),
+  'Klem': Offset(170, 335),
+  'Takedown': Offset(90, 435),
+  'Submission': Offset(250, 435),
 };
 
 /// Positie van een knooppunt-middelpunt, geschaald naar [canvasSize] (die
@@ -126,7 +137,9 @@ String effectiveCategory(Technique t) {
   final parsed = parseTransition(t.transition);
   if (parsed == null) return 'Overig';
   if (parsed.to == 'Takedown' || parsed.to == 'Submission') return parsed.to;
-  return (parsed.from == 'Staand' || parsed.from == 'Clinch')
+  return (parsed.from == 'Staand' ||
+          parsed.from == 'Clinch' ||
+          parsed.from == 'Striking')
       ? 'Staand'
       : 'Grondwerk';
 }

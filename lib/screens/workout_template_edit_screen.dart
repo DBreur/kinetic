@@ -51,7 +51,25 @@ class _TemplateEditSet {
   /// Tijd-gebaseerde set (bv. een plank van 45s) i.p.v. reps — `null`
   /// betekent gewoon een reps-gebaseerde set zoals voorheen.
   int? seconds;
-  _TemplateEditSet({this.kg = 0, this.reps = 8, this.seconds});
+
+  /// "Tot verzuring" plus hoeveel erna, bv. "5–10".
+  bool toBurn;
+  String extraTarget;
+  _TemplateEditSet({
+    this.kg = 0,
+    this.reps = 8,
+    this.seconds,
+    this.toBurn = false,
+    this.extraTarget = '',
+  });
+
+  _TemplateEditSet copy() => _TemplateEditSet(
+    kg: kg,
+    reps: reps,
+    seconds: seconds,
+    toBurn: toBurn,
+    extraTarget: extraTarget,
+  );
 }
 
 class _TemplateEditExercise {
@@ -91,6 +109,8 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                     kg: s.kg,
                     reps: s.reps,
                     seconds: s.seconds,
+                    toBurn: s.toBurn,
+                    extraTarget: s.extraTarget,
                   ),
                 )
                 .toList(),
@@ -178,8 +198,7 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                             children: [
                               Text(c.name, style: AppText.bodyStrong),
                               Text(
-                                '${c.exerciseNames.length} oefeningen · '
-                                '${c.rounds} rondes',
+                                c.summary,
                                 style: AppText.caption.copyWith(fontSize: 11),
                               ),
                             ],
@@ -259,8 +278,13 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
             name: e.name,
             sets: e.sets
                 .map(
-                  (s) =>
-                      ExerciseSet(kg: s.kg, reps: s.reps, seconds: s.seconds),
+                  (s) => ExerciseSet(
+                    kg: s.kg,
+                    reps: s.reps,
+                    seconds: s.toBurn ? null : s.seconds,
+                    toBurn: s.toBurn,
+                    extraTarget: s.toBurn ? s.extraTarget : '',
+                  ),
                 )
                 .toList(),
           ),
@@ -411,14 +435,9 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                               setState(() => _exercises.removeAt(ei)),
                           onAddSet: () => setState(
                             () => _exercises[ei].sets.add(
-                              _TemplateEditSet(
-                                kg: _exercises[ei].sets.isEmpty
-                                    ? 0
-                                    : _exercises[ei].sets.last.kg,
-                                reps: _exercises[ei].sets.isEmpty
-                                    ? 8
-                                    : _exercises[ei].sets.last.reps,
-                              ),
+                              _exercises[ei].sets.isEmpty
+                                  ? _TemplateEditSet()
+                                  : _exercises[ei].sets.last.copy(),
                             ),
                           ),
                           onRemoveSet: (si) =>
@@ -496,8 +515,7 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                                 ),
                               ),
                               Text(
-                                '${_circuits[ci].exerciseNames.length} '
-                                'oefeningen · ${_circuits[ci].rounds} rondes',
+                                _circuits[ci].summary,
                                 style: AppText.caption.copyWith(fontSize: 11),
                               ),
                             ],
@@ -619,6 +637,65 @@ class _TemplateExerciseCard extends StatelessWidget {
     );
   }
 
+  /// "Verzuring + 5–10" — tik om aan te passen hoeveel herhalingen er na
+  /// de verzuring nog moeten komen.
+  Widget _burnTarget(BuildContext context, int si) {
+    final target = exercise.sets[si].extraTarget;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () async {
+        final controller = TextEditingController(text: target);
+        final result = await showDialog<String>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text('Na de verzuring', style: AppText.cardTitle),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              style: AppText.body,
+              decoration: const InputDecoration(
+                hintText: 'Aantal herhalingen, bv. 5–10',
+              ),
+              onSubmitted: (v) => Navigator.pop(c, v),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c),
+                child: const Text('Annuleer'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(c, controller.text),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        if (result != null) {
+          onSetChanged(si, (s) => s.extraTarget = result.trim());
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              target.isEmpty ? 'verzuring' : '+$target',
+              style: AppText.cardTitle.copyWith(color: AppColor.amber),
+            ),
+            Text(
+              'na verzuring',
+              style: AppText.caption.copyWith(
+                fontSize: 9,
+                color: AppColor.inkFaint,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -683,7 +760,9 @@ class _TemplateExerciseCard extends StatelessWidget {
                     ),
                   ),
                   Expanded(
-                    child: exercise.sets[si].seconds != null
+                    child: exercise.sets[si].toBurn
+                        ? _burnTarget(context, si)
+                        : exercise.sets[si].seconds != null
                         ? _numberField(
                             value: exercise.sets[si].seconds!.toDouble(),
                             onDown: () => onSetChanged(
@@ -714,19 +793,32 @@ class _TemplateExerciseCard extends StatelessWidget {
                           ),
                   ),
                   InkWell(
-                    onTap: () => onSetChanged(
-                      si,
-                      (s) => s.seconds = s.seconds == null ? 30 : null,
-                    ),
+                    // reps → tijd → tot verzuring → reps
+                    onTap: () => onSetChanged(si, (s) {
+                      if (s.toBurn) {
+                        s.toBurn = false;
+                        s.seconds = null;
+                      } else if (s.seconds != null) {
+                        s.toBurn = true;
+                        s.seconds = null;
+                        if (s.extraTarget.isEmpty) s.extraTarget = '5–10';
+                      } else {
+                        s.seconds = 30;
+                      }
+                    }),
                     borderRadius: BorderRadius.circular(99),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Icon(
-                        exercise.sets[si].seconds != null
-                            ? Icons.repeat
-                            : Icons.timer_outlined,
+                        exercise.sets[si].toBurn
+                            ? Icons.local_fire_department_outlined
+                            : exercise.sets[si].seconds != null
+                            ? Icons.timer_outlined
+                            : Icons.repeat,
                         size: 16,
-                        color: AppColor.inkFaint,
+                        color: exercise.sets[si].toBurn
+                            ? AppColor.amber
+                            : AppColor.inkFaint,
                       ),
                     ),
                   ),
