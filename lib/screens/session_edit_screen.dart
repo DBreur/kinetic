@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
+import '../core/session_times.dart';
 import '../models/combination.dart';
 import '../models/exercise.dart';
 import '../models/technique.dart';
@@ -73,6 +74,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   late final TextEditingController _title;
   late final TextEditingController _note;
   late int _durationMinutes;
+  late DateTime _startedAt;
   late List<TechniqueEntry> _blocks;
   late List<_EditExercise> _exercises;
   late List<NutritionEntry> _nutrition;
@@ -94,6 +96,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
     _title = TextEditingController(text: widget.session.title);
     _note = TextEditingController(text: widget.session.note);
     _durationMinutes = widget.session.durationMinutes;
+    _startedAt = widget.session.startedAt;
     _blocks = widget.session.blocks.map(TechniqueEntry.fromBlock).toList();
     _exercises = widget.session.exercises
         .map(
@@ -208,6 +211,7 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
       final updated = widget.session.copyWith(
         title: trimmedTitle.isEmpty ? widget.session.title : trimmedTitle,
         note: _note.text.trim(),
+        startedAt: _startedAt,
         durationMinutes: _durationMinutes,
         blocks: _blocks.map((t) => t.toBlock()).toList(),
         nutrition: _nutrition,
@@ -377,22 +381,60 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                   color: AppColor.surface,
                   borderRadius: BorderRadius.circular(AppRadius.xl),
                 ),
-                child: NumberStepper(
-                  label: 'DUUR VAN DE TRAINING',
-                  value: _durationMinutes,
-                  suffix: ' min',
-                  onDown: () => setState(
-                    () => _durationMinutes = (_durationMinutes - 5).clamp(
-                      0,
-                      600,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    // Van/tot: van verschuift de training (duur blijft), tot
+                    // past de duur aan; de duur hieronder schuift tot mee.
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _TimeButton(
+                            label: 'Van',
+                            time: _startedAt,
+                            onPicked: (t) => setState(
+                              () => _startedAt = withTime(
+                                _startedAt,
+                                t.hour,
+                                t.minute,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _TimeButton(
+                            label: 'Tot',
+                            time: endFor(_startedAt, _durationMinutes),
+                            onPicked: (t) => setState(
+                              () => _durationMinutes = durationUntil(
+                                _startedAt,
+                                t.hour,
+                                t.minute,
+                              ).clamp(0, 600),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  onUp: () => setState(
-                    () => _durationMinutes = (_durationMinutes + 5).clamp(
-                      0,
-                      600,
+                    NumberStepper(
+                      label: 'DUUR VAN DE TRAINING',
+                      value: _durationMinutes,
+                      suffix: ' min',
+                      onDown: () => setState(
+                        () => _durationMinutes = (_durationMinutes - 5).clamp(
+                          0,
+                          600,
+                        ),
+                      ),
+                      onUp: () => setState(
+                        () => _durationMinutes = (_durationMinutes + 5).clamp(
+                          0,
+                          600,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
               if (isSambo) ...[
@@ -1005,4 +1047,38 @@ class _AddExerciseInline extends StatelessWidget {
     onPick: onPick,
     onCancel: onCancel,
   );
+}
+
+/// "Van 19:00" / "Tot 20:30" — tik om een tijd te kiezen.
+class _TimeButton extends StatelessWidget {
+  const _TimeButton({
+    required this.label,
+    required this.time,
+    required this.onPicked,
+  });
+
+  final String label;
+  final DateTime time;
+  final ValueChanged<TimeOfDay> onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    final hh = time.hour.toString().padLeft(2, '0');
+    final mm = time.minute.toString().padLeft(2, '0');
+    return OutlinedButton.icon(
+      onPressed: () async {
+        final t = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.fromDateTime(time),
+          helpText: label,
+        );
+        if (t != null) onPicked(t);
+      },
+      icon: Icon(
+        label == 'Van' ? Icons.play_arrow_outlined : Icons.flag_outlined,
+        size: 18,
+      ),
+      label: Text('$label $hh:$mm'),
+    );
+  }
 }

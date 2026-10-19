@@ -46,6 +46,7 @@ class SessionRepository {
         .update({
           'title': session.title,
           'note': session.note,
+          'started_at': session.startedAt.toUtc().toIso8601String(),
           'duration_minutes': session.durationMinutes,
           'blocks': session.blocks.map((b) => b.toJson()).toList(),
           'exercises': session.exercises.map((e) => e.toJson()).toList(),

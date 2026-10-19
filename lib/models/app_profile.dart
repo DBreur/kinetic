@@ -1,3 +1,4 @@
+import 'agenda.dart' show normalizeReminders;
 import 'dashboard_config.dart';
 import 'meal_reminder.dart';
 import 'bolus_period.dart';
@@ -118,6 +119,16 @@ class AppProfile {
   /// Indeling van het dashboard (zie DashboardConfig).
   final DashboardConfig dashboard;
 
+  /// Herinneringen voor technieken die je bij een training wilt oefenen.
+  final bool techniqueRemindersEnabled;
+
+  /// Standaard voorgestelde herinneringen (minuten vóór de start, 0 = bij
+  /// de start) als je technieken aan een training koppelt.
+  final List<int> techniqueReminderDefaults;
+
+  /// Met geluid (anders stil).
+  final bool techniqueReminderSound;
+
   /// Vaste eetmomenten met een dagelijkse herinnering (apart aan/uit), en
   /// hoeveel minuten vóór het eetmoment die melding komt.
   final bool mealRemindersEnabled;
@@ -193,6 +204,9 @@ class AppProfile {
     this.hideSystemBars = false,
     this.videoLabels = const {},
     this.dashboard = DashboardConfig.standard,
+    this.techniqueRemindersEnabled = true,
+    this.techniqueReminderDefaults = const [60, 0],
+    this.techniqueReminderSound = false,
     this.mealRemindersEnabled = false,
     this.mealReminders = const [],
     this.mealReminderOffset = 0,
@@ -268,6 +282,16 @@ class AppProfile {
       dashboard: DashboardConfig.fromJson(
         (json['dashboard'] as Map?)?.cast<String, dynamic>(),
       ),
+      techniqueRemindersEnabled:
+          (json['technique_reminders_enabled'] as bool?) ?? true,
+      techniqueReminderDefaults: json['technique_reminder_defaults'] is List
+          ? normalizeReminders([
+              for (final m in json['technique_reminder_defaults'] as List)
+                if (m is num) m.toInt(),
+            ])
+          : const [60, 0],
+      techniqueReminderSound:
+          (json['technique_reminder_sound'] as bool?) ?? false,
       mealRemindersEnabled: (json['meal_reminders_enabled'] as bool?) ?? false,
       mealReminders: ((json['meal_reminders'] as List?) ?? [])
           .map(MealReminder.fromJson)
@@ -331,6 +355,9 @@ class AppProfile {
     'hide_system_bars': hideSystemBars,
     'video_labels': videoLabels,
     'dashboard': dashboard.toJson(),
+    'technique_reminders_enabled': techniqueRemindersEnabled,
+    'technique_reminder_defaults': techniqueReminderDefaults,
+    'technique_reminder_sound': techniqueReminderSound,
     'meal_reminders_enabled': mealRemindersEnabled,
     'meal_reminders': mealReminders.map((m) => m.toJson()).toList(),
     'meal_reminder_offset': mealReminderOffset,
@@ -375,6 +402,9 @@ class AppProfile {
     bool? hideSystemBars,
     Map<String, String>? videoLabels,
     DashboardConfig? dashboard,
+    bool? techniqueRemindersEnabled,
+    List<int>? techniqueReminderDefaults,
+    bool? techniqueReminderSound,
     bool? mealRemindersEnabled,
     List<MealReminder>? mealReminders,
     int? mealReminderOffset,
@@ -423,6 +453,12 @@ class AppProfile {
       hideSystemBars: hideSystemBars ?? this.hideSystemBars,
       videoLabels: videoLabels ?? this.videoLabels,
       dashboard: dashboard ?? this.dashboard,
+      techniqueRemindersEnabled:
+          techniqueRemindersEnabled ?? this.techniqueRemindersEnabled,
+      techniqueReminderDefaults:
+          techniqueReminderDefaults ?? this.techniqueReminderDefaults,
+      techniqueReminderSound:
+          techniqueReminderSound ?? this.techniqueReminderSound,
       mealRemindersEnabled: mealRemindersEnabled ?? this.mealRemindersEnabled,
       mealReminders: mealReminders ?? this.mealReminders,
       mealReminderOffset: mealReminderOffset ?? this.mealReminderOffset,

@@ -6,20 +6,9 @@
 
 import '../models/exercise.dart';
 
-const kExerciseLibrary = [
-  'Deadlift',
-  'Squat',
-  'Bankdrukken',
-  'Overhead press',
-  'Pull-up',
-  'Barbell row',
-  'Romanian deadlift',
-  'Bulgarian split squat',
-  'Dips',
-  'Farmer walk',
-  'Nek-brug',
-  'Plank',
-];
+/// Leeg: alleen je eigen oefeningen staan in de lijst. Zet hier namen neer
+/// als je toch een vaste startlijst wilt.
+const kExerciseLibrary = <String>[];
 
 /// De spiergroepen die je aan een oefening kunt hangen — ook de vlakken van
 /// het spierfiguurtje (zie widgets/muscle_figure.dart).
@@ -41,20 +30,7 @@ const kMuscleGroups = [
 ];
 
 /// Standaard spiergroepen voor de vaste lijst — tot je ze zelf aanpast.
-const kLibraryMuscleGroups = <String, List<String>>{
-  'Deadlift': ['Onderrug', 'Billen', 'Hamstrings', 'Bovenrug', 'Onderarmen'],
-  'Squat': ['Quadriceps', 'Billen', 'Onderrug'],
-  'Bankdrukken': ['Borst', 'Triceps', 'Schouders'],
-  'Overhead press': ['Schouders', 'Triceps', 'Bovenrug'],
-  'Pull-up': ['Lats', 'Biceps', 'Onderarmen'],
-  'Barbell row': ['Lats', 'Bovenrug', 'Biceps'],
-  'Romanian deadlift': ['Hamstrings', 'Billen', 'Onderrug'],
-  'Bulgarian split squat': ['Quadriceps', 'Billen'],
-  'Dips': ['Triceps', 'Borst', 'Schouders'],
-  'Farmer walk': ['Onderarmen', 'Bovenrug', 'Buik'],
-  'Nek-brug': ['Nek'],
-  'Plank': ['Buik'],
-};
+const kLibraryMuscleGroups = <String, List<String>>{};
 
 /// Alle oefeningen om uit te kiezen: je eigen oefeningen plus de vaste lijst
 /// (die nog geen eigen versie heeft), A–Z. Een vaste oefening zonder eigen

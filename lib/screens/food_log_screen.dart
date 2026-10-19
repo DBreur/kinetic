@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
@@ -20,7 +21,6 @@ import '../models/food_preset.dart';
 import '../models/glucose.dart';
 import '../repositories/food_log_repository.dart';
 import '../services/food_wait_reminder_service.dart';
-import '../services/glucose_provider.dart';
 import '../services/meal_reminder_service.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
@@ -103,27 +103,24 @@ class FoodLogScreenState extends State<FoodLogScreen> {
     final profile = widget.controller.profile!;
     final fromSensor = profile.glucoseSource != GlucoseSource.finger;
     final latest = widget.controller.cachedGlucose?.reading;
-    // Nieuw eetmoment met sensor en geen recente waarde: op de achtergrond
-    // een verse meting ophalen. Het blad gaat meteen open en vult hem in
-    // zodra hij binnen is (eerder wachtten we hierop — dat voelde als
-    // vastlopen).
+    // Nieuw eetmoment: altijd even de nieuwste meting ophalen (via de
+    // app-brede ophaler). Het blad gaat meteen open met de laatst bekende
+    // waarde en wordt bijgewerkt zodra er een nieuwere binnen is — tenzij je
+    // zelf al iets hebt ingevuld.
     Future<GlucoseReading?>? fresh;
-    if (existing == null &&
-        fromSensor &&
-        (latest == null || !isPrefillableReading(latest, true))) {
+    if (existing == null) {
       fresh = () async {
         try {
-          final provider = await resolveGlucoseProvider(profile);
-          final snapshot = await provider?.fetch().timeout(
+          await widget.controller.refreshGlucose().timeout(
             const Duration(seconds: 8),
           );
-          if (snapshot?.reading != null) {
-            widget.controller.cachedGlucose = snapshot;
-          }
-          return snapshot?.reading;
         } catch (_) {
-          return null;
+          // Time-out of geen verbinding: dan blijft de bekende waarde staan.
         }
+        final now = widget.controller.cachedGlucose?.reading;
+        if (now == null) return null;
+        if (latest != null && !now.at.isAfter(latest.at)) return null;
+        return now;
       }();
     }
     final result = await showFoodLogEntrySheet(
@@ -134,6 +131,7 @@ class FoodLogScreenState extends State<FoodLogScreen> {
       usage: presetUsage(_entries, now: DateTime.now()),
       latestReading: latest,
       freshReading: fresh,
+      liveGlucose: widget.controller.glucose,
       readingFromSensor: fromSensor,
     );
     if (result == null) return;
@@ -817,6 +815,7 @@ Future<FoodLogEntryResult?> showFoodLogEntrySheet(
   Map<String, int> usage = const {},
   GlucoseReading? latestReading,
   Future<GlucoseReading?>? freshReading,
+  ValueListenable<GlucoseSnapshot?>? liveGlucose,
   bool readingFromSensor = true,
 }) {
   return showModalBottomSheet<FoodLogEntryResult>(
@@ -844,6 +843,7 @@ Future<FoodLogEntryResult?> showFoodLogEntrySheet(
         usage: usage,
         latestReading: latestReading,
         freshReading: freshReading,
+        liveGlucose: liveGlucose,
         readingFromSensor: readingFromSensor,
       ),
     ),
@@ -858,6 +858,7 @@ class _FoodLogSheet extends StatefulWidget {
     this.usage = const {},
     this.latestReading,
     this.freshReading,
+    this.liveGlucose,
     this.readingFromSensor = true,
   });
 
@@ -873,6 +874,10 @@ class _FoodLogSheet extends StatefulWidget {
   /// Verse meting die nog binnenkomt — wordt ingevuld zodra hij er is,
   /// tenzij je intussen zelf iets hebt getypt.
   final Future<GlucoseReading?>? freshReading;
+
+  /// De app-brede live glucose: zolang het blad open staat, wordt een
+  /// nieuwere meting meteen overgenomen (tenzij je zelf iets typte).
+  final ValueListenable<GlucoseSnapshot?>? liveGlucose;
   final bool readingFromSensor;
 
   @override
@@ -963,16 +968,11 @@ class _FoodLogSheetState extends State<_FoodLogSheet> {
       _prefillReading = r;
     }
     if (e == null) {
-      widget.freshReading?.then((fresh) {
-        if (!mounted || fresh == null) return;
-        if (!isPrefillableReading(fresh, widget.readingFromSensor)) return;
-        // Niet overschrijven wat je zelf hebt ingevuld.
-        if (_mmolController.text.trim().isNotEmpty && !_mmolPrefilled) return;
-        setState(() {
-          _mmolController.text = mmolText(fresh.mmol);
-          _mmolPrefilled = true;
-          _prefillReading = fresh;
-        });
+      widget.freshReading?.then(_offerReading);
+      widget.liveGlucose?.addListener(_onLiveGlucose);
+      // "x min geleden" bijhouden zolang het blad open is.
+      _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+        if (mounted && _mmolPrefilled) setState(() {});
       });
     }
     _insulinController.text = e?.insulinUnits != null
@@ -1002,8 +1002,30 @@ class _FoodLogSheetState extends State<_FoodLogSheet> {
       ? minutes.toInt().toString()
       : minutes.toStringAsFixed(1).replaceAll('.', ',');
 
+  Timer? _ticker;
+
+  void _onLiveGlucose() =>
+      _offerReading(widget.liveGlucose?.value?.reading);
+
+  /// Een (nieuwere) meting invullen — niet als je zelf iets hebt getypt, en
+  /// alleen als hij nieuwer is dan wat er al staat.
+  void _offerReading(GlucoseReading? reading) {
+    if (!mounted || reading == null) return;
+    if (!isPrefillableReading(reading, widget.readingFromSensor)) return;
+    if (_mmolController.text.trim().isNotEmpty && !_mmolPrefilled) return;
+    final current = _prefillReading;
+    if (current != null && !reading.at.isAfter(current.at)) return;
+    setState(() {
+      _mmolController.text = mmolText(reading.mmol);
+      _mmolPrefilled = true;
+      _prefillReading = reading;
+    });
+  }
+
   @override
   void dispose() {
+    widget.liveGlucose?.removeListener(_onLiveGlucose);
+    _ticker?.cancel();
     _descController.dispose();
     _carbsController.dispose();
     _mmolController.dispose();

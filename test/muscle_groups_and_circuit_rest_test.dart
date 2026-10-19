@@ -11,36 +11,38 @@ void main() {
     const custom = [
       Exercise(id: '1', name: 'zercher squat', muscleGroups: ['Quadriceps']),
       Exercise(id: '2', name: 'Plank', muscleGroups: ['Buik', 'Schouders']),
+      Exercise(id: '3', name: 'Deadlift', muscleGroups: ['Onderrug']),
+      Exercise(id: '4', name: 'Bulgarian split squat', muscleGroups: [
+        'Quadriceps',
+        'Billen',
+      ]),
     ];
 
-    test('eigen + vaste oefeningen, A–Z, eigen versie wint', () {
-      final all = allExercises(custom);
-      final names = all.map((e) => e.name).toList();
-      expect(names.first, 'Bankdrukken');
-      expect(names.last, 'zercher squat');
-      expect(names.where((n) => n == 'Plank'), hasLength(1));
-      final plank = all.firstWhere((e) => e.name == 'Plank');
-      expect(plank.id, '2');
-      expect(plank.muscleGroups, ['Buik', 'Schouders']);
-      final squat = all.firstWhere((e) => e.name == 'Squat');
-      expect(squat.isSaved, isFalse);
-      expect(squat.muscleGroups, contains('Quadriceps'));
+    test('alleen eigen oefeningen (geen vaste lijst meer), A–Z', () {
+      expect(kExerciseLibrary, isEmpty);
+      final names = allExercises(custom).map((e) => e.name).toList();
+      expect(names, [
+        'Bulgarian split squat',
+        'Deadlift',
+        'Plank',
+        'zercher squat',
+      ]);
     });
 
     test('filteren op spiergroepen (een van) en Z–A', () {
       final result = filterExercises(
         allExercises(custom),
-        groups: {'Quadriceps'},
+        groups: {'Quadriceps', 'Onderrug'},
         ascending: false,
       );
       expect(result.map((e) => e.name), [
         'zercher squat',
-        'Squat',
+        'Deadlift',
         'Bulgarian split squat',
       ]);
       expect(
-        filterExercises(allExercises(custom), query: 'DEAD').map((e) => e.name),
-        ['Deadlift', 'Romanian deadlift'],
+        filterExercises(allExercises(custom), query: 'SQUAT').map((e) => e.name),
+        ['Bulgarian split squat', 'zercher squat'],
       );
     });
 

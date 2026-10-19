@@ -333,6 +333,8 @@ class MatSessionController extends ChangeNotifier
     );
     final latest = snapshot.reading;
     if (latest == null || _disposed) return;
+    // Ook de rest van de app (topbalk, Eten) de nieuwste waarde geven.
+    appController.offerGlucoseReading(latest);
     // Alleen echt nieuwe metingen toevoegen — en metingen die gemist zijn
     // terwijl de app stil lag (scherm uit, gepauzeerd) alsnog aanvullen.
     final fresh = newSessionPoints(series, [
@@ -568,6 +570,15 @@ class MatSessionController extends ChangeNotifier
             learningStartedAt: t.learningStartedAt ?? DateTime.now(),
           ),
         );
+      }
+      // "Oefenen bij de eerstvolgende training": die training is nu geweest.
+      try {
+        await techniqueRepo.clearPracticeNext([
+          for (final t in knownTechniques)
+            if (t.practiceNext) t.id,
+        ]);
+      } catch (_) {
+        // Niet erg: dan staat hij er de volgende keer nog.
       }
       return true;
     } catch (_) {

@@ -1,6 +1,8 @@
 // agenda_notification_service.dart — meldingen uit de Agenda:
 //   • geplande training: één melding op het ingestelde aantal minuten vóór
 //     de start;
+//   • technieken oefenen: per training de herinneringen die je instelde
+//     (minuten vóór de start, nooit erna), stil of met geluid;
 //   • wedstrijd: elke dag op het gekozen tijdstip een aftel-melding met
 //     motivatie (zie core/competition_plan.dart), tot en met de wedstrijddag.
 //
@@ -27,8 +29,19 @@ class AgendaNotificationService {
 
   static const _trainingChannelId = 'kinetic_planned_training';
   static const _competitionChannelId = 'kinetic_competition_countdown';
+  static const _techniqueSoundChannelId = 'kinetic_technique_reminder_sound';
+  static const _techniqueSilentChannelId = 'kinetic_technique_reminder_silent';
   static const _firstTrainingId = 40000;
   static const _firstStartId = 45000;
+  static const _firstTechniqueId = 46000;
+
+  /// Herinneringen tijdens een live sessie zonder planning (eigen bereik,
+  /// buiten de agenda-ruimte die [sync] steeds leegmaakt).
+  static const _firstSessionTechniqueId = 73000;
+  static const _maxSessionTechniqueReminders = 20;
+
+  /// Per training maximaal zoveel techniek-herinneringen (id-ruimte).
+  static const maxTechniqueRemindersPerTraining = 20;
   static const _firstCompetitionId = 50000;
   static const _lastId = 69999;
 
@@ -72,6 +85,29 @@ class AgendaNotificationService {
       );
       await _android?.createNotificationChannel(
         const AndroidNotificationChannel(
+          _techniqueSoundChannelId,
+          'Technieken oefenen',
+          description: 'Herinnering welke techniek je bij een training oefent.',
+          importance: Importance.high,
+          playSound: true,
+          sound: RawResourceAndroidNotificationSound('uchivo_alarm'),
+          enableVibration: true,
+        ),
+      );
+      await _android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _techniqueSilentChannelId,
+          'Technieken oefenen (stil)',
+          description:
+              'Herinnering welke techniek je bij een training oefent — '
+              'zonder geluid.',
+          importance: Importance.high,
+          playSound: false,
+          enableVibration: true,
+        ),
+      );
+      await _android?.createNotificationChannel(
+        const AndroidNotificationChannel(
           _competitionChannelId,
           'Wedstrijd-aftelling',
           description:
@@ -91,19 +127,22 @@ class AgendaNotificationService {
     required List<PlannedTraining> trainings,
     required List<Competition> competitions,
     DateTime? now,
+    TechniqueReminderInput? techniques,
   }) async {
     final current = now ?? DateTime.now();
     final plan = planAgendaNotifications(
       trainings: trainings,
       competitions: competitions,
       now: current,
+      techniques: techniques,
     );
     // Niets veranderd sinds de vorige keer? Dan niets opnieuw inplannen —
     // Vandaag en Agenda roepen dit bij elk laden aan, en alles wissen en
     // opnieuw plannen kost Android merkbaar tijd (de app hapert dan).
     final signature = [
       for (final p in plan)
-        '${p.id}|${p.at.millisecondsSinceEpoch}|${p.title}|${p.body}|${p.payload}',
+        '${p.id}|${p.at.millisecondsSinceEpoch}|${p.title}|${p.body}|'
+            '${p.payload}|${p.techniqueSound}',
     ].join('|#|');
     if (signature == _lastSignature) return;
     await _ensureInit();
@@ -129,11 +168,18 @@ class AgendaNotificationService {
 
   Future<void> _schedule(ScheduledAgendaNotification s) async {
     final isTraining = s.id < _firstCompetitionId;
+    final technique = s.techniqueSound;
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
         color: kNotificationColor,
-        isTraining ? _trainingChannelId : _competitionChannelId,
-        isTraining ? 'Geplande trainingen' : 'Wedstrijd-aftelling',
+        technique == null
+            ? (isTraining ? _trainingChannelId : _competitionChannelId)
+            : (technique ? _techniqueSoundChannelId : _techniqueSilentChannelId),
+        technique == null
+            ? (isTraining ? 'Geplande trainingen' : 'Wedstrijd-aftelling')
+            : (technique
+                  ? 'Technieken oefenen'
+                  : 'Technieken oefenen (stil)'),
         importance: isTraining ? Importance.high : Importance.defaultImportance,
         priority: isTraining ? Priority.high : Priority.defaultPriority,
         styleInformation: BigTextStyleInformation(s.body),
@@ -176,6 +222,44 @@ class AgendaNotificationService {
     }
   }
 
+  /// Herinneringen tijdens een gestarte training zonder planning: elke
+  /// [afterStartMinutes] na [start] een melding met de technieken.
+  Future<void> scheduleSessionTechniqueReminders({
+    required DateTime start,
+    required List<String> names,
+    required List<int> afterStartMinutes,
+    required bool withSound,
+  }) async {
+    await cancelSessionTechniqueReminders();
+    if (names.isEmpty) return;
+    final now = DateTime.now();
+    var i = 0;
+    for (final m in afterStartMinutes) {
+      if (i >= _maxSessionTechniqueReminders) break;
+      final at = start.add(Duration(minutes: m));
+      if (!at.isAfter(now)) continue;
+      await _schedule(
+        ScheduledAgendaNotification(
+          _firstSessionTechniqueId + i,
+          at,
+          'Nu oefenen: ${names.join(', ')}',
+          'Je training is $m min bezig.',
+          techniqueSound: withSound,
+        ),
+      );
+      i++;
+    }
+  }
+
+  Future<void> cancelSessionTechniqueReminders() async {
+    await _ensureInit();
+    for (var i = 0; i < _maxSessionTechniqueReminders; i++) {
+      try {
+        await _plugin.cancel(id: _firstSessionTechniqueId + i);
+      } catch (_) {}
+    }
+  }
+
   /// Vraagt toestemming voor exacte alarmen (Android 12-13), alleen op het
   /// moment dat je zelf een trainingsmelding instelt.
   Future<void> requestExactAlarmPermissionIfNeeded() async {
@@ -198,6 +282,9 @@ class ScheduledAgendaNotification {
   /// Toont de knop "Start training".
   final bool startAction;
 
+  /// Alleen bij een techniek-herinnering: met geluid (true) of stil (false).
+  final bool? techniqueSound;
+
   const ScheduledAgendaNotification(
     this.id,
     this.at,
@@ -205,6 +292,32 @@ class ScheduledAgendaNotification {
     this.body, {
     this.payload,
     this.startAction = false,
+    this.techniqueSound,
+  });
+}
+
+/// Wat de planner nodig heeft voor techniek-herinneringen.
+class TechniqueReminderInput {
+  /// Id → naam van je technieken.
+  final Map<String, String> names;
+
+  /// Technieken met "oefenen bij de eerstvolgende training" — die komen bij
+  /// de eerstvolgende geplande sambo-training.
+  final List<String> practiceNextIds;
+
+  final bool enabled;
+  final bool withSound;
+
+  /// Herinneringen voor de eerstvolgende training als die er zelf geen
+  /// heeft (minuten vóór de start).
+  final List<int> defaultReminders;
+
+  const TechniqueReminderInput({
+    required this.names,
+    this.practiceNextIds = const [],
+    this.enabled = true,
+    this.withSound = false,
+    this.defaultReminders = const [60, 0],
   });
 }
 
@@ -214,8 +327,12 @@ List<ScheduledAgendaNotification> planAgendaNotifications({
   required List<PlannedTraining> trainings,
   required List<Competition> competitions,
   required DateTime now,
+  TechniqueReminderInput? techniques,
 }) {
   final result = <ScheduledAgendaNotification>[];
+  if (techniques != null && techniques.enabled) {
+    result.addAll(_planTechniqueReminders(trainings, now, techniques));
+  }
 
   final upcomingTrainings =
       trainings.where((t) => t.remindAt?.isAfter(now) ?? false).toList()
@@ -303,6 +420,70 @@ List<ScheduledAgendaNotification> planAgendaNotifications({
         ),
       );
       slot++;
+    }
+  }
+  return result;
+}
+
+/// Techniek-herinneringen: per komende training de ingestelde momenten
+/// (minuten vóór de start; nooit erna). "Eerstvolgende training"-technieken
+/// gaan mee met de eerstvolgende geplande sambo-training.
+List<ScheduledAgendaNotification> _planTechniqueReminders(
+  List<PlannedTraining> trainings,
+  DateTime now,
+  TechniqueReminderInput input,
+) {
+  final result = <ScheduledAgendaNotification>[];
+  final upcoming =
+      trainings.where((t) => t.startsAt.isAfter(now)).toList()
+        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+  final nextSambo = upcoming.indexWhere((t) => t.kind.isSambo);
+  final nextIndex = nextSambo >= 0 ? nextSambo : (upcoming.isEmpty ? -1 : 0);
+  for (var i = 0;
+      i < upcoming.length && i < AgendaNotificationService.maxTrainings;
+      i++) {
+    final t = upcoming[i];
+    final isNext = i == nextIndex && input.practiceNextIds.isNotEmpty;
+    final names = <String>[
+      for (final id in {
+        ...t.techniqueIds,
+        if (isNext) ...input.practiceNextIds,
+      })
+        ?input.names[id],
+    ];
+    if (names.isEmpty) continue;
+    final reminders = t.techniqueReminders.isNotEmpty
+        ? t.techniqueReminders
+        : (isNext ? normalizeReminders(input.defaultReminders) : const <int>[]);
+    final hh = t.startsAt.hour.toString().padLeft(2, '0');
+    final mm = t.startsAt.minute.toString().padLeft(2, '0');
+    for (var j = 0;
+        j < reminders.length &&
+            j < AgendaNotificationService.maxTechniqueRemindersPerTraining;
+        j++) {
+      final minutes = reminders[j];
+      final at = t.startsAt.subtract(Duration(minutes: minutes));
+      if (!at.isAfter(now)) continue;
+      // Tijdens de training: nooit na de eindtijd (als die bekend is).
+      if (t.endsAt case final end? when at.isAfter(end)) continue;
+      result.add(
+        ScheduledAgendaNotification(
+          AgendaNotificationService._firstTechniqueId +
+              i * AgendaNotificationService.maxTechniqueRemindersPerTraining +
+              j,
+          at,
+          minutes <= 0
+              ? 'Nu oefenen: ${names.join(', ')}'
+              : 'Oefenen bij ${t.displayTitle} ($hh:$mm)',
+          minutes == 0
+              ? '${t.displayTitle} begint — vergeet je technieken niet.'
+              : minutes < 0
+              ? '${t.displayTitle} is ${-minutes} min bezig.'
+              : names.join(', '),
+          payload: PlannedStartRequest.payloadFor(t),
+          techniqueSound: input.withSound,
+        ),
+      );
     }
   }
   return result;

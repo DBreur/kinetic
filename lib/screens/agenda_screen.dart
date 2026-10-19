@@ -8,8 +8,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/competition_plan.dart';
 import '../models/agenda.dart';
+import '../core/session_times.dart';
+import '../repositories/technique_repository.dart';
+import '../models/technique.dart';
 import '../repositories/agenda_repository.dart';
 import '../services/agenda_notification_service.dart';
+import '../services/technique_reminder_input.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/kinetic.dart';
@@ -72,6 +76,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       await AgendaNotificationService.instance.sync(
         trainings: _trainings,
         competitions: _competitions,
+        techniques: await loadTechniqueReminderInput(widget.controller),
       );
     } catch (_) {
       // Lijst blijft leeg/oud; pull-to-refresh probeert het opnieuw.
@@ -87,12 +92,26 @@ class _AgendaScreenState extends State<AgendaScreen> {
   Future<void> _editTraining([PlannedTraining? existing]) async {
     final userId = widget.controller.user?.id;
     if (userId == null) return;
+    var techniques = const <Technique>[];
+    try {
+      techniques = await TechniqueRepository(
+        widget.controller.client!,
+      ).listForUser(userId);
+    } catch (_) {
+      // Zonder lijst kun je nog steeds plannen, alleen geen technieken kiezen.
+    }
+    if (!mounted) return;
+    final profile = widget.controller.profile;
     final result = await showModalBottomSheet<_SheetResult<PlannedTraining>>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _TrainingSheet(
         existing: existing,
         competition: nextCompetition(_competitions, DateTime.now()),
+        techniques: techniques,
+        defaultTechniqueReminders: profile?.techniqueRemindersEnabled == false
+            ? const []
+            : (profile?.techniqueReminderDefaults ?? const [60, 0]),
       ),
     );
     if (result == null) return;
@@ -100,7 +119,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
       if (result.deleted) {
         await _repo.deleteTraining(existing!.id);
       } else {
-        if (result.value!.remindMinutesBefore != null) {
+        if (result.value!.remindMinutesBefore != null ||
+            result.value!.techniqueReminders.isNotEmpty) {
           await AgendaNotificationService.instance
               .requestExactAlarmPermissionIfNeeded();
         }
@@ -571,6 +591,11 @@ class _TrainingRow extends StatelessWidget {
                               DateFormat('HH:mm').format(t.startsAt),
                               style: AppText.cardTitle,
                             ),
+                            if (t.endsAt case final end?)
+                              Text(
+                                'tot ${DateFormat('HH:mm').format(end)}',
+                                style: AppText.caption,
+                              ),
                             if (showDate)
                               Text(
                                 DateFormat('d MMM', 'nl_NL').format(t.startsAt),
@@ -588,6 +613,27 @@ class _TrainingRow extends StatelessWidget {
                             Text(t.displayTitle, style: AppText.bodyStrong),
                             if (t.location.isNotEmpty)
                               Text(t.location, style: AppText.caption),
+                            if (t.techniqueIds.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.sports_martial_arts_outlined,
+                                      size: 13,
+                                      color: AppColor.coralSoft,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${t.techniqueIds.length} '
+                                      '${t.techniqueIds.length == 1 ? 'techniek' : 'technieken'} oefenen',
+                                      style: AppText.caption.copyWith(
+                                        color: AppColor.coralSoft,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             if (conflict)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
@@ -601,7 +647,8 @@ class _TrainingRow extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (t.remindMinutesBefore != null)
+                      if (t.remindMinutesBefore != null ||
+                          t.techniqueReminders.isNotEmpty)
                         const Icon(
                           Icons.notifications_active_outlined,
                           size: 18,
@@ -1190,10 +1237,21 @@ class _DateTimeRow extends StatelessWidget {
 }
 
 class _TrainingSheet extends StatefulWidget {
-  const _TrainingSheet({this.existing, this.competition});
+  const _TrainingSheet({
+    this.existing,
+    this.competition,
+    this.techniques = const [],
+    this.defaultTechniqueReminders = const [60, 0],
+  });
 
   final PlannedTraining? existing;
   final Competition? competition;
+
+  /// Je technieken, om te kiezen welke je bij deze training wilt oefenen.
+  final List<Technique> techniques;
+
+  /// Voorgestelde herinneringen zodra je de eerste techniek kiest.
+  final List<int> defaultTechniqueReminders;
 
   @override
   State<_TrainingSheet> createState() => _TrainingSheetState();
@@ -1203,6 +1261,9 @@ class _TrainingSheetState extends State<_TrainingSheet> {
   late DateTime _at;
   late TrainingKind _kind;
   late int? _remind;
+  late int? _duration;
+  late List<String> _techniqueIds;
+  late List<int> _techniqueReminders;
   late final TextEditingController _title;
   late final TextEditingController _location;
   late final TextEditingController _note;
@@ -1219,6 +1280,9 @@ class _TrainingSheetState extends State<_TrainingSheet> {
             ? TrainingKind.combatSambo
             : TrainingKind.sportSambo);
     _remind = e == null ? 60 : e.remindMinutesBefore;
+    _duration = e == null ? 90 : e.durationMinutes;
+    _techniqueIds = [...?e?.techniqueIds];
+    _techniqueReminders = [...?e?.techniqueReminders];
     _title = TextEditingController(text: e?.title ?? '');
     _location = TextEditingController(text: e?.location ?? '');
     _note = TextEditingController(text: e?.note ?? '');
@@ -1240,6 +1304,12 @@ class _TrainingSheetState extends State<_TrainingSheet> {
       children: [
         _fieldLabel('Wanneer'),
         _DateTimeRow(value: _at, onChanged: (v) => setState(() => _at = v)),
+        const SizedBox(height: 8),
+        _EndTimeRow(
+          start: _at,
+          duration: _duration,
+          onChanged: (d) => setState(() => _duration = d),
+        ),
         _fieldLabel('Soort'),
         Wrap(
           spacing: 6,
@@ -1296,6 +1366,29 @@ class _TrainingSheetState extends State<_TrainingSheet> {
               ),
           ],
         ),
+        _fieldLabel('Technieken oefenen (optioneel)'),
+        _TechniquePicker(
+          all: widget.techniques,
+          selected: _techniqueIds,
+          onChanged: (ids) => setState(() {
+            // Eerste techniek: de standaardherinneringen voorstellen.
+            if (_techniqueIds.isEmpty &&
+                ids.isNotEmpty &&
+                _techniqueReminders.isEmpty) {
+              _techniqueReminders = [...widget.defaultTechniqueReminders];
+            }
+            _techniqueIds = ids;
+          }),
+        ),
+        if (_techniqueIds.isNotEmpty) ...[
+          _fieldLabel('Herinneringen voor deze technieken'),
+          _ReminderEditor(
+            start: _at,
+            duration: _duration,
+            reminders: _techniqueReminders,
+            onChanged: (r) => setState(() => _techniqueReminders = r),
+          ),
+        ],
         _fieldLabel('Notitie (optioneel)'),
         TextField(
           controller: _note,
@@ -1333,11 +1426,336 @@ class _TrainingSheetState extends State<_TrainingSheet> {
                       location: _location.text,
                       note: _note.text,
                       remindMinutesBefore: _remind,
+                      durationMinutes: _duration,
+                      techniqueIds: _techniqueIds,
+                      techniqueReminders: _techniqueIds.isEmpty
+                          ? const []
+                          : normalizeReminders([
+                              for (final m in _techniqueReminders)
+                                if (m >= 0 ||
+                                    -m <=
+                                        (_duration ?? kMaxMinutesAfterStart))
+                                  m,
+                            ]),
                     ),
                   ),
                 ),
                 child: const Text('Opslaan'),
               ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// "Tot 20:30 · 1u30" — eindtijd en duur van een geplande training. Tot
+/// aanpassen past de duur aan; de duur aanpassen schuift de tot-tijd op.
+class _EndTimeRow extends StatelessWidget {
+  const _EndTimeRow({
+    required this.start,
+    required this.duration,
+    required this.onChanged,
+  });
+
+  final DateTime start;
+  final int? duration;
+  final ValueChanged<int?> onChanged;
+
+  static String _durationLabel(int m) {
+    if (m < 60) return '$m min';
+    final h = m ~/ 60;
+    final rest = m % 60;
+    return rest == 0 ? '${h}u' : '${h}u${rest.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = duration;
+    if (d == null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () => onChanged(90),
+          icon: const Icon(Icons.more_time, size: 18),
+          label: const Text('Eindtijd toevoegen'),
+        ),
+      );
+    }
+    final end = endFor(start, d);
+    Future<void> pickEnd() async {
+      final t = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(end),
+        helpText: 'Tot',
+      );
+      if (t != null) onChanged(durationUntil(start, t.hour, t.minute));
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: OutlinedButton.icon(
+            onPressed: pickEnd,
+            icon: const Icon(Icons.flag_outlined, size: 18),
+            label: Text('Tot ${DateFormat('HH:mm').format(end)}'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: '15 min korter',
+          onPressed: d >= 15 ? () => onChanged(d - 15) : null,
+          icon: const Icon(Icons.remove),
+        ),
+        Text(_durationLabel(d), style: AppText.bodyStrong),
+        IconButton(
+          tooltip: '15 min langer',
+          onPressed: d + 15 <= 1440 ? () => onChanged(d + 15) : null,
+          icon: const Icon(Icons.add),
+        ),
+        IconButton(
+          tooltip: 'Geen eindtijd',
+          onPressed: () => onChanged(null),
+          icon: const Icon(Icons.close, size: 18, color: AppColor.inkFaint),
+        ),
+      ],
+    );
+  }
+}
+
+/// Technieken kiezen voor een training: gekozen technieken als chips (tik
+/// op × om weg te halen), en een knop die een doorzoekbare lijst opent.
+class _TechniquePicker extends StatelessWidget {
+  const _TechniquePicker({
+    required this.all,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<Technique> all;
+  final List<String> selected;
+  final ValueChanged<List<String>> onChanged;
+
+  Future<void> _open(BuildContext context) async {
+    final result = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _TechniqueChoiceSheet(all: all, selected: selected),
+    );
+    if (result != null) onChanged(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final byId = {for (final t in all) t.id: t};
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final id in selected)
+          if (byId[id] case final t?)
+            InputChip(
+              avatar: const Icon(Icons.sports_martial_arts_outlined, size: 16),
+              label: Text(t.name),
+              onDeleted: () =>
+                  onChanged([for (final s in selected) if (s != id) s]),
+            ),
+        ActionChip(
+          avatar: const Icon(Icons.add, size: 16),
+          label: Text(selected.isEmpty ? 'Techniek kiezen' : 'Aanpassen'),
+          onPressed: all.isEmpty ? null : () => _open(context),
+        ),
+        if (all.isEmpty)
+          Text('Je hebt nog geen technieken.', style: AppText.caption),
+      ],
+    );
+  }
+}
+
+class _TechniqueChoiceSheet extends StatefulWidget {
+  const _TechniqueChoiceSheet({required this.all, required this.selected});
+
+  final List<Technique> all;
+  final List<String> selected;
+
+  @override
+  State<_TechniqueChoiceSheet> createState() => _TechniqueChoiceSheetState();
+}
+
+class _TechniqueChoiceSheetState extends State<_TechniqueChoiceSheet> {
+  late final Set<String> _chosen = {...widget.selected};
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.trim().toLowerCase();
+    final list =
+        widget.all
+            .where((t) => q.isEmpty || t.name.toLowerCase().contains(q))
+            .toList()
+          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final insets = MediaQuery.of(context);
+    return SizedBox(
+      height: insets.size.height * .75,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          12 + insets.viewInsets.bottom + insets.padding.bottom,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Technieken oefenen', style: AppText.title),
+            const SizedBox(height: 10),
+            TextField(
+              style: AppText.body,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: const InputDecoration(
+                isDense: true,
+                prefixIcon: Icon(Icons.search, size: 18),
+                hintText: 'Zoek een techniek',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final t in list)
+                    CheckboxListTile(
+                      value: _chosen.contains(t.id),
+                      dense: true,
+                      title: Text(t.name, style: AppText.body),
+                      subtitle: t.learningStatus == LearningStatus.none
+                          ? null
+                          : Text(
+                              t.learningStatus.label,
+                              style: AppText.caption,
+                            ),
+                      onChanged: (v) => setState(() {
+                        if (v == true) {
+                          _chosen.add(t.id);
+                        } else {
+                          _chosen.remove(t.id);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              // Volgorde van de lijst aanhouden.
+              onPressed: () => Navigator.pop(context, [
+                for (final t in widget.all)
+                  if (_chosen.contains(t.id)) t.id,
+              ]),
+              child: Text('Klaar (${_chosen.length})'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Meerdere herinneringen: vooraf, bij de start of tijdens de training
+/// (negatieve minuten). Toevoegen via vaste keuzes of een eigen tijd — nooit
+/// na de eindtijd.
+class _ReminderEditor extends StatelessWidget {
+  const _ReminderEditor({
+    required this.start,
+    required this.duration,
+    required this.reminders,
+    required this.onChanged,
+  });
+
+  final DateTime start;
+
+  /// Duur van de training (null = geen eindtijd).
+  final int? duration;
+  final List<int> reminders;
+  final ValueChanged<List<int>> onChanged;
+
+  static const _quick = [1440, 120, 60, 30, 15, 0, -15, -30, -45, -60];
+
+  /// Past dit moment binnen de training (niet na de eindtijd)?
+  bool _fits(int minutesBefore) =>
+      minutesBefore >= 0 ||
+      -minutesBefore <= (duration ?? kMaxMinutesAfterStart);
+
+  void _add(int minutes) => onChanged(normalizeReminders([...reminders, minutes]));
+
+  Future<void> _addCustom(BuildContext context) async {
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(
+        start.subtract(const Duration(minutes: 45)),
+      ),
+      helpText: 'Herinnering om',
+    );
+    if (t == null || !context.mounted) return;
+    final at = DateTime(start.year, start.month, start.day, t.hour, t.minute);
+    final minutesBefore = start.difference(at).inMinutes;
+    if (!_fits(minutesBefore)) {
+      final end = duration == null ? null : endFor(start, duration!);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            end == null
+                ? 'Dat is te lang na de start van de training.'
+                : 'Een herinnering mag niet na de eindtijd '
+                      '(${DateFormat('HH:mm').format(end)}) vallen.',
+          ),
+        ),
+      );
+      return;
+    }
+    _add(minutesBefore);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (reminders.isEmpty)
+          Text('Geen herinneringen.', style: AppText.caption)
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final m in reminders)
+                InputChip(
+                  avatar: const Icon(Icons.notifications_outlined, size: 16),
+                  label: Text(
+                    '${DateFormat('HH:mm').format(start.subtract(Duration(minutes: m)))}'
+                    ' · ${reminderLabel(m)}',
+                  ),
+                  onDeleted: () =>
+                      onChanged([for (final r in reminders) if (r != m) r]),
+                ),
+            ],
+          ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final m in _quick)
+              if (!reminders.contains(m) && _fits(m))
+                ActionChip(
+                  label: Text('+ ${reminderLabel(m)}'),
+                  onPressed: () => _add(m),
+                ),
+            ActionChip(
+              avatar: const Icon(Icons.schedule, size: 16),
+              label: const Text('Eigen tijd'),
+              onPressed: () => _addCustom(context),
             ),
           ],
         ),

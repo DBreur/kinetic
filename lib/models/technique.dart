@@ -117,6 +117,10 @@ class Technique {
   /// lukt vaak vanuit meer dan één positie.
   final List<String> groundPositions;
 
+  /// "Oefenen bij de eerstvolgende training" — ook als die niet gepland is.
+  /// Wordt gewist zodra er een training met deze techniek is opgeslagen.
+  final bool practiceNext;
+
   const Technique({
     required this.id,
     required this.name,
@@ -130,6 +134,7 @@ class Technique {
     this.learningStatus = LearningStatus.none,
     this.plannedFor,
     this.groundPositions = const [],
+    this.practiceNext = false,
     this.learningGoal = '',
     this.learningStartedAt,
     this.createdAt,
@@ -165,6 +170,7 @@ class Technique {
     groundPositions: ((json['ground_positions'] as List?) ?? [])
         .map((e) => e as String)
         .toList(),
+    practiceNext: (json['practice_next'] as bool?) ?? false,
   );
 
   Map<String, dynamic> toInsertJson(String userId) => {
@@ -200,6 +206,7 @@ class Technique {
     DateTime? learningStartedAt,
     bool clearLearningStartedAt = false,
     List<String>? groundPositions,
+    bool? practiceNext,
   }) => Technique(
     id: id,
     name: name ?? this.name,
@@ -213,6 +220,7 @@ class Technique {
     learningStatus: learningStatus ?? this.learningStatus,
     plannedFor: clearPlannedFor ? null : (plannedFor ?? this.plannedFor),
     groundPositions: groundPositions ?? this.groundPositions,
+    practiceNext: practiceNext ?? this.practiceNext,
     learningGoal: learningGoal ?? this.learningGoal,
     learningStartedAt: clearLearningStartedAt
         ? null

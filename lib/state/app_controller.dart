@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,7 +9,9 @@ import '../core/error_messages.dart';
 import '../models/app_profile.dart';
 import '../models/glucose.dart';
 import '../models/glucose_entry.dart';
+import '../repositories/glucose_entry_repository.dart';
 import '../repositories/profile_repository.dart';
+import '../services/glucose_provider.dart';
 import '../services/video_labels.dart';
 import '../widgets/glucose_alarm.dart';
 import '../widgets/muscle_figure.dart';
@@ -111,7 +115,109 @@ class AppController extends ChangeNotifier {
   /// Zelfde waarde als [cachedGlucose], maar luisterbaar — voor de
   /// glucosepil in de Kinetic-topbalk.
   final ValueNotifier<GlucoseSnapshot?> glucose = ValueNotifier(null);
-  List<ManualGlucoseEntry> cachedFingerEntries = const [];
+
+  /// Recente vingerprikken (nieuwste eerst), luisterbaar.
+  final ValueNotifier<List<ManualGlucoseEntry>> fingerEntries = ValueNotifier(
+    const [],
+  );
+  List<ManualGlucoseEntry> get cachedFingerEntries => fingerEntries.value;
+  set cachedFingerEntries(List<ManualGlucoseEntry> next) =>
+      fingerEntries.value = next;
+
+  // ── Live glucose voor de hele app ──
+  // Eén ophaler (elke minuut, en meteen bij terugkomen in de app), zodat
+  // elk scherm — topbalk, Vandaag, Eten — dezelfde, verse waarde ziet. Was
+  // eerder alleen actief zolang het tabblad Vandaag open stond.
+  Timer? _glucosePoller;
+  Future<void>? _glucoseInFlight;
+  bool _glucoseAgain = false;
+  static const glucosePollInterval = Duration(minutes: 1);
+
+  bool get isPollingGlucose => _glucosePoller != null;
+
+  /// Start het elke-minuut-ophalen (en haalt meteen op).
+  void startGlucosePolling() {
+    _glucosePoller ??= Timer.periodic(
+      glucosePollInterval,
+      (_) => refreshGlucose(),
+    );
+    refreshGlucose();
+  }
+
+  void stopGlucosePolling() {
+    _glucosePoller?.cancel();
+    _glucosePoller = null;
+  }
+
+  /// Haalt de nieuwste glucose op uit de gekozen bron (sensor of
+  /// vingerprikken). Loopt er al een ophaalactie, dan wordt die gedeeld en
+  /// daarna nog één keer opnieuw gehaald — zo mist een net ingevoerde
+  /// vingerprik nooit.
+  Future<void> refreshGlucose() {
+    final running = _glucoseInFlight;
+    if (running != null) {
+      _glucoseAgain = true;
+      return running;
+    }
+    final future = _refreshGlucoseLoop();
+    _glucoseInFlight = future;
+    return future.whenComplete(() => _glucoseInFlight = null);
+  }
+
+  Future<void> _refreshGlucoseLoop() async {
+    do {
+      _glucoseAgain = false;
+      try {
+        await _fetchGlucoseOnce();
+      } catch (_) {
+        // Oude waarde blijft staan; volgende ronde probeert het opnieuw.
+      }
+    } while (_glucoseAgain);
+  }
+
+  Future<void> _fetchGlucoseOnce() async {
+    final p = _profile;
+    if (p == null) return;
+    if (p.glucoseSource == GlucoseSource.finger) {
+      final userId = user?.id;
+      final client = _client;
+      if (userId == null || client == null) return;
+      final entries = await GlucoseEntryRepository(
+        client,
+      ).recentForUser(userId);
+      cachedFingerEntries = entries;
+      cachedGlucose = snapshotFromFingerEntries(entries);
+      return;
+    }
+    final provider = await resolveGlucoseProvider(p);
+    if (provider == null) {
+      cachedGlucose = const GlucoseSnapshot.unconfigured();
+      return;
+    }
+    final current = cachedGlucose;
+    if (current != null) {
+      cachedGlucose = current.copyWith(
+        isLoading: true,
+        message: current.message,
+      );
+    }
+    cachedGlucose = await provider.fetch();
+  }
+
+  /// Een nieuwere meting van elders (bv. een lopende training) — alleen
+  /// overnemen als hij echt nieuwer is.
+  void offerGlucoseReading(GlucoseReading reading) {
+    final current = cachedGlucose?.reading;
+    if (current != null && !reading.at.isAfter(current.at)) return;
+    final snapshot = cachedGlucose;
+    cachedGlucose = GlucoseSnapshot(
+      reading: reading,
+      history: [
+        ...?snapshot?.history.where((p) => p.at.isBefore(reading.at)),
+        GlucosePoint(reading.at, reading.mmol),
+      ],
+    );
+  }
 
   /// Waar zolang een sambo- of krachtsessie loopt (ook op de achtergrond,
   /// bv. geminimaliseerd naar een ander tabblad) — bepaalt in
@@ -402,12 +508,23 @@ class AppController extends ChangeNotifier {
     });
   }
 
+  static String _glucoseSourceKey(AppProfile? p) => p == null
+      ? ''
+      : '${p.glucoseSource.name}|${p.nightscoutUrl}|${p.nightscoutToken}|'
+            '${p.dexcomUsername}|${p.dexcomServer}';
+
   Future<void> saveProfile(AppProfile next) async {
     busy = true;
     authError = null;
     notifyListeners();
     try {
+      final before = _profile;
       profile = await _profiles!.upsert(next);
+      // Bron of koppeling veranderd (of Dexcom-wachtwoord net bewaard):
+      // meteen opnieuw ophalen in plaats van tot de volgende minuut wachten.
+      if (isPollingGlucose && _glucoseSourceKey(before) != _glucoseSourceKey(profile)) {
+        refreshGlucose();
+      }
       state = profile!.onboardingCompleted
           ? AppBootState.ready
           : AppBootState.needsOnboarding;

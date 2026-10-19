@@ -22,6 +22,8 @@ import '../services/live_session_store.dart';
 import '../services/meal_reminder_service.dart';
 import '../services/notification_router.dart';
 import '../services/system_bars.dart';
+import '../services/technique_reminder_input.dart';
+import '../services/agenda_notification_service.dart';
 import '../state/app_controller.dart';
 import '../state/live_session_controller.dart';
 import '../state/mat_session_controller.dart';
@@ -76,6 +78,8 @@ class _ShellScreenState extends State<ShellScreen>
     widget.controller.addListener(_syncBackgroundWatcher);
     _syncBackgroundWatcher();
     NotificationRouter.pendingStart.addListener(_onStartRequest);
+    // Live glucose voor de hele app, op elk tabblad.
+    widget.controller.startGlucosePolling();
     _persistTimer = Timer.periodic(
       const Duration(seconds: 15),
       (_) => _persistLive(),
@@ -116,7 +120,11 @@ class _ShellScreenState extends State<ShellScreen>
     if (kind == TrainingKind.kracht) {
       await _startOrResumeStrength(initialReading: reading, title: title);
     } else {
-      await _startOrResumeMat(initialReading: reading, title: title);
+      await _startOrResumeMat(
+        initialReading: reading,
+        title: title,
+        fromPlanned: true,
+      );
     }
   }
 
@@ -130,11 +138,19 @@ class _ShellScreenState extends State<ShellScreen>
       // gemiste metingen aanvullen) in een lopende training.
       _liveMat?.refreshReading();
       _liveStrength?.refreshReading();
+      // En de glucose van de hele app meteen bijwerken, niet pas over een
+      // minuut.
+      widget.controller.startGlucosePolling();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
       // Naar de achtergrond: nu bewaren, want de app kan zo worden gesloten.
       _persistLive();
+      // Niet ophalen op de achtergrond (de achtergrondbewaking doet de
+      // alarmen); bij terugkomst start het weer.
+      if (state == AppLifecycleState.paused) {
+        widget.controller.stopGlucosePolling();
+      }
     }
   }
 
@@ -193,6 +209,7 @@ class _ShellScreenState extends State<ShellScreen>
     WidgetsBinding.instance.removeObserver(this);
     NotificationRouter.pendingStart.removeListener(_onStartRequest);
     _persistTimer?.cancel();
+    widget.controller.stopGlucosePolling();
     widget.controller.removeListener(_syncBackgroundWatcher);
     super.dispose();
   }
@@ -213,14 +230,39 @@ class _ShellScreenState extends State<ShellScreen>
     );
   }
 
+  /// Technieken voor "de eerstvolgende training" + de standaardmomenten na
+  /// de start (bv. 15 en 30 min) → meldingen vanaf nu.
+  Future<void> _scheduleSessionTechniqueReminders() async {
+    final input = await loadTechniqueReminderInput(widget.controller);
+    if (input == null || !input.enabled) return;
+    final names = [
+      for (final id in input.practiceNextIds) ?input.names[id],
+    ];
+    final after = [
+      for (final m in input.defaultReminders)
+        if (m < 0) -m,
+    ]..sort();
+    if (names.isEmpty || after.isEmpty) return;
+    await AgendaNotificationService.instance.scheduleSessionTechniqueReminders(
+      start: DateTime.now(),
+      names: names,
+      afterStartMinutes: after,
+      withSound: input.withSound,
+    );
+  }
+
   /// Start een nieuwe sambo-sessie, of heropent de lopende als er al één
   /// actief is (dan wordt [initialReading] genegeerd).
   Future<bool?> _startOrResumeMat({
     required GlucoseReading? initialReading,
     String title = 'Combat sambo',
+    bool fromPlanned = false,
   }) async {
     final existing = _liveMat;
     if (existing != null) return _openMat(existing);
+    // Zonder planning: herinneringen "tijdens de training" tellen vanaf nu
+    // (bij een geplande training staan ze al vanaf de geplande start).
+    if (!fromPlanned) unawaited(_scheduleSessionTechniqueReminders());
     final profile = widget.controller.profile;
     final provider = profile == null ? null : await resolveGlucoseProvider(profile);
     final ctrl = MatSessionController(
@@ -247,6 +289,9 @@ class _ShellScreenState extends State<ShellScreen>
       setState(() => _liveMat = null);
       ctrl.dispose();
       await LiveSessionStore.clear();
+      unawaited(
+        AgendaNotificationService.instance.cancelSessionTechniqueReminders(),
+      );
     }
     return result;
   }

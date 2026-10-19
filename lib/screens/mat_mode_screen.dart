@@ -227,8 +227,9 @@ class _MatModeScreenState extends State<MatModeScreen> {
     return urls;
   }
 
-  /// Technieken die vandaag gepland staan, of al bezig zijn — een herinnering
-  /// bovenaan de sessie, los van wat je er al wel/niet aan hebt toegevoegd.
+  /// Technieken die vandaag gepland staan, die je bij "de eerstvolgende
+  /// training" wilde oefenen, of al bezig zijn — een herinnering bovenaan de
+  /// sessie, los van wat je er al wel/niet aan hebt toegevoegd.
   List<Technique> _todaysPlanning() {
     final now = DateTime.now();
     bool isToday(DateTime d) =>
@@ -236,6 +237,7 @@ class _MatModeScreenState extends State<MatModeScreen> {
     return _c.knownTechniques
         .where(
           (t) =>
+              t.practiceNext ||
               (t.plannedFor != null && isToday(t.plannedFor!)) ||
               t.learningStatus == LearningStatus.learning,
         )

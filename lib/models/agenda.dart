@@ -12,8 +12,10 @@ enum TrainingKind {
   final String dbName;
   final String label;
 
-  static TrainingKind fromName(String? name) => TrainingKind.values
-      .firstWhere((k) => k.dbName == name, orElse: () => TrainingKind.overig);
+  static TrainingKind fromName(String? name) => TrainingKind.values.firstWhere(
+    (k) => k.dbName == name,
+    orElse: () => TrainingKind.overig,
+  );
 
   bool get isSambo =>
       this == TrainingKind.sportSambo || this == TrainingKind.combatSambo;
@@ -30,6 +32,17 @@ class PlannedTraining {
   /// Minuten vóór de start voor een melding; null = geen melding.
   final int? remindMinutesBefore;
 
+  /// Duur in minuten (eind = start + duur); null = geen eindtijd opgegeven.
+  final int? durationMinutes;
+
+  /// Technieken die je bij deze training wilt oefenen (ids).
+  final List<String> techniqueIds;
+
+  /// Herinneringen voor die technieken, in minuten vóór de start (0 = bij de
+  /// start, negatief = tijdens de training, bv. -15 = 15 min na de start —
+  /// nooit na de eindtijd).
+  final List<int> techniqueReminders;
+
   const PlannedTraining({
     required this.id,
     required this.startsAt,
@@ -38,7 +51,14 @@ class PlannedTraining {
     this.location = '',
     this.note = '',
     this.remindMinutesBefore,
+    this.durationMinutes,
+    this.techniqueIds = const [],
+    this.techniqueReminders = const [],
   });
+
+  DateTime? get endsAt => durationMinutes == null
+      ? null
+      : startsAt.add(Duration(minutes: durationMinutes!));
 
   /// Titel om te tonen — zelf ingevuld, anders de soort.
   String get displayTitle => title.trim().isEmpty ? kind.label : title.trim();
@@ -56,6 +76,15 @@ class PlannedTraining {
         location: (json['location'] as String?) ?? '',
         note: (json['note'] as String?) ?? '',
         remindMinutesBefore: (json['remind_minutes_before'] as num?)?.toInt(),
+        durationMinutes: (json['duration_minutes'] as num?)?.toInt(),
+        techniqueIds: [
+          for (final id in (json['technique_ids'] as List?) ?? const [])
+            if (id is String) id,
+        ],
+        techniqueReminders: normalizeReminders([
+          for (final m in (json['technique_reminders'] as List?) ?? const [])
+            if (m is num) m.toInt(),
+        ]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -65,6 +94,9 @@ class PlannedTraining {
     'location': location.trim(),
     'note': note.trim(),
     'remind_minutes_before': remindMinutesBefore,
+    'duration_minutes': durationMinutes,
+    'technique_ids': techniqueIds,
+    'technique_reminders': normalizeReminders(techniqueReminders),
   };
 
   PlannedTraining copyWith({
@@ -75,6 +107,10 @@ class PlannedTraining {
     String? note,
     int? remindMinutesBefore,
     bool clearReminder = false,
+    int? durationMinutes,
+    bool clearDuration = false,
+    List<String>? techniqueIds,
+    List<int>? techniqueReminders,
   }) => PlannedTraining(
     id: id,
     startsAt: startsAt ?? this.startsAt,
@@ -85,7 +121,39 @@ class PlannedTraining {
     remindMinutesBefore: clearReminder
         ? null
         : (remindMinutesBefore ?? this.remindMinutesBefore),
+    durationMinutes: clearDuration
+        ? null
+        : (durationMinutes ?? this.durationMinutes),
+    techniqueIds: techniqueIds ?? this.techniqueIds,
+    techniqueReminders: techniqueReminders ?? this.techniqueReminders,
   );
+}
+
+/// Uiterlijk zoveel minuten ná de start (als er geen eindtijd is).
+const kMaxMinutesAfterStart = 12 * 60;
+
+/// Herinneringen netjes: binnen het venster (tot [kMaxMinutesAfterStart] na
+/// de start), geen dubbele, vroegste eerst.
+List<int> normalizeReminders(List<int> minutesBefore) => ({
+  for (final m in minutesBefore)
+    if (m >= -kMaxMinutesAfterStart) m,
+}.toList())..sort((a, b) => b.compareTo(a));
+
+String _durationText(int m) {
+  if (m % 1440 == 0) {
+    final d = m ~/ 1440;
+    return '$d ${d == 1 ? 'dag' : 'dagen'}';
+  }
+  if (m % 60 == 0) return '${m ~/ 60} uur';
+  if (m > 60) return '${m ~/ 60} uur ${m % 60} min';
+  return '$m min';
+}
+
+/// "1 uur vooraf", "15 min vooraf", "bij de start", "30 min na de start".
+String reminderLabel(int minutesBefore) {
+  if (minutesBefore == 0) return 'bij de start';
+  if (minutesBefore < 0) return '${_durationText(-minutesBefore)} na de start';
+  return '${_durationText(minutesBefore)} vooraf';
 }
 
 /// Vecht je onder of boven een gewichtsgrens (of geen klasse)?

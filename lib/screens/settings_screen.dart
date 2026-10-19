@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/formatters.dart';
+import '../models/agenda.dart' show normalizeReminders, reminderLabel;
 import '../models/dashboard_config.dart';
 import '../models/app_profile.dart';
 import '../models/bolus_period.dart';
@@ -52,6 +53,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _weekStart;
   late bool _hideSystemBars;
   late DashboardConfig _dashboard;
+  late bool _techRemindersEnabled;
+  late Set<int> _techReminderDefaults;
+  late bool _techReminderSound;
   late bool _foodWaitReminderSound;
   late bool _mealRemindersEnabled;
   late List<MealReminder> _mealReminders;
@@ -97,6 +101,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _weekStart = profile.weekStart;
     _hideSystemBars = profile.hideSystemBars;
     _dashboard = profile.dashboard;
+    _techRemindersEnabled = profile.techniqueRemindersEnabled;
+    _techReminderDefaults = {...profile.techniqueReminderDefaults};
+    _techReminderSound = profile.techniqueReminderSound;
     _foodWaitReminderSound = profile.foodWaitReminderSound;
     _mealRemindersEnabled = profile.mealRemindersEnabled;
     _mealReminders = List.of(profile.mealReminders);
@@ -408,6 +415,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         weekStart: _weekStart,
         hideSystemBars: _hideSystemBars,
         dashboard: _dashboard,
+        techniqueRemindersEnabled: _techRemindersEnabled,
+        techniqueReminderDefaults: normalizeReminders([
+          ..._techReminderDefaults,
+        ]),
+        techniqueReminderSound: _techReminderSound,
         foodWaitReminderSound: _foodWaitReminderSound,
         mealRemindersEnabled: _mealRemindersEnabled,
         mealReminders: _mealReminders,
@@ -1139,6 +1151,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
             _Section(
+              label: 'Techniek-herinneringen',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _techRemindersEnabled,
+                    onChanged: (v) =>
+                        setState(() => _techRemindersEnabled = v),
+                    title: Text(
+                      'Herinneren welke techniek ik oefen',
+                      style: AppText.bodyStrong,
+                    ),
+                    subtitle: Text(
+                      'Koppel technieken aan een geplande training (in de '
+                      'Agenda of bij de techniek). Per training kun je de '
+                      'momenten zelf aanpassen, ook tijdens de training.',
+                      style: AppText.caption,
+                    ),
+                  ),
+                  if (_techRemindersEnabled) ...[
+                    const SizedBox(height: 6),
+                    Text('Standaard melden', style: AppText.bodyStrong),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Vooraf, bij de start en/of tijdens de training — zo '
+                      'staat het klaar bij een nieuwe training met '
+                      'technieken. "Na de start" werkt ook als je zonder '
+                      'planning een training start.',
+                      style: AppText.caption,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final m in const [1440, 120, 60, 30, 15, 0, -15, -30])
+                          FilterChip(
+                            label: Text(reminderLabel(m)),
+                            selected: _techReminderDefaults.contains(m),
+                            showCheckmark: false,
+                            onSelected: (v) => setState(() {
+                              if (v) {
+                                _techReminderDefaults.add(m);
+                              } else {
+                                _techReminderDefaults.remove(m);
+                              }
+                            }),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _techReminderSound,
+                      onChanged: (v) => setState(() => _techReminderSound = v),
+                      title: Text('Met geluid', style: AppText.bodyStrong),
+                      subtitle: Text(
+                        _techReminderSound
+                            ? 'Melding met alarmgeluid.'
+                            : 'Stille melding (alleen trillen en in de balk).',
+                        style: AppText.caption,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _Section(
               label: 'Dashboard',
               child: DashboardEditor(
                 config: _dashboard,
@@ -1257,6 +1339,7 @@ class _Section extends StatelessWidget {
     'Bovengrens (hyper)': Icons.trending_up,
     'Bronnen': Icons.sensors,
     'Vingerprik-herinnering': Icons.water_drop_outlined,
+    'Techniek-herinneringen': Icons.sports_martial_arts_outlined,
     'Sessie': Icons.timer_outlined,
     'Voeding tijdens training': Icons.local_dining_outlined,
     'Eetlogboek': Icons.restaurant_outlined,

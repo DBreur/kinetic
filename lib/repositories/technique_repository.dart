@@ -7,6 +7,9 @@ class TechniqueRepository {
 
   final SupabaseClient _client;
 
+  /// Voor andere repositories die bij dezelfde verbinding horen.
+  SupabaseClient get client => _client;
+
   Future<List<Technique>> listForUser(String userId) async {
     final rows = await _client
         .from('techniques')
@@ -52,6 +55,24 @@ class TechniqueRepository {
         .select()
         .single();
     return Technique.fromJson(row);
+  }
+
+  /// Zet of wist "oefenen bij de eerstvolgende training".
+  Future<void> setPracticeNext(String id, bool value) async {
+    await _client
+        .from('techniques')
+        .update({'practice_next': value})
+        .eq('id', id);
+  }
+
+  /// Wist "oefenen bij de eerstvolgende training" voor deze technieken
+  /// (na een opgeslagen training).
+  Future<void> clearPracticeNext(List<String> ids) async {
+    if (ids.isEmpty) return;
+    await _client
+        .from('techniques')
+        .update({'practice_next': false})
+        .inFilter('id', ids);
   }
 
   Future<void> delete(String id) async {

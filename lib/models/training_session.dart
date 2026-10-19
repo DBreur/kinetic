@@ -420,6 +420,7 @@ class TrainingSession {
   };
 
   TrainingSession copyWith({
+    DateTime? startedAt,
     String? title,
     String? note,
     int? durationMinutes,
@@ -431,7 +432,7 @@ class TrainingSession {
     id: id,
     kind: kind,
     title: title ?? this.title,
-    startedAt: startedAt,
+    startedAt: startedAt ?? this.startedAt,
     durationMinutes: durationMinutes ?? this.durationMinutes,
     note: note ?? this.note,
     glucoseSeries: glucoseSeries,

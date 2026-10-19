@@ -565,6 +565,8 @@ class StrengthSessionController extends ChangeNotifier
     );
     final latest = snapshot.reading;
     if (latest == null || _disposed) return;
+    // Ook de rest van de app (topbalk, Eten) de nieuwste waarde geven.
+    appController.offerGlucoseReading(latest);
     // Alleen echt nieuwe metingen toevoegen — en metingen die gemist zijn
     // terwijl de app stil lag (scherm uit, gepauzeerd) alsnog aanvullen.
     final fresh = newSessionPoints(series, [

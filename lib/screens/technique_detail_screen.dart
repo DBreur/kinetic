@@ -13,11 +13,13 @@ import 'package:flutter/material.dart';
 
 import '../core/formatters.dart';
 import '../models/technique.dart';
+import '../repositories/agenda_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/block_widgets.dart' show StarRow, NoteField;
 import '../widgets/ground_position_tags.dart';
 import '../widgets/inline_video_player.dart';
+import '../widgets/practice_at_training.dart';
 import 'technique_edit_screen.dart';
 
 /// Eén keer dat deze techniek voorkwam — hetzij een losse update, hetzij
@@ -346,6 +348,17 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
                   onStatusChanged: _setLearningStatus,
                   onPickDate: _pickPlannedDate,
                   onGoalChanged: _onGoalChanged,
+                ),
+                const SizedBox(height: 12),
+                PracticeAtTrainingCard(
+                  technique: t,
+                  techniqueRepository: widget.repository,
+                  agendaRepository: AgendaRepository(widget.repository.client),
+                  userId: widget.userId,
+                  onTechniqueChanged: (next) => setState(() {
+                    _technique = next;
+                    _changed = true;
+                  }),
                 ),
                 if (t.description.isNotEmpty) ...[
                   const SizedBox(height: 16),

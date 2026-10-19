@@ -28,7 +28,7 @@ import '../repositories/session_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../repositories/workout_template_repository.dart';
 import '../services/agenda_notification_service.dart';
-import '../services/glucose_provider.dart';
+import '../services/technique_reminder_input.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/kinetic.dart';
@@ -127,9 +127,13 @@ class _NowScreenState extends State<NowScreen> {
   Competition? _nextCompetition;
   List<PlannedTraining> _trainingsToday = const [];
   Timer? _clock;
-  Timer? _poller;
-  late GlucoseSnapshot _glucose;
-  late List<ManualGlucoseEntry> _fingerEntries;
+
+  /// De app-brede glucose (zie AppController.refreshGlucose) — dit scherm
+  /// haalt zelf niets meer op, het luistert alleen.
+  GlucoseSnapshot get _glucose =>
+      widget.controller.glucose.value ?? const GlucoseSnapshot.loading();
+  List<ManualGlucoseEntry> get _fingerEntries =>
+      widget.controller.fingerEntries.value;
   List<TrainingSession> _recent = [];
   TrainingStreak _streak = const TrainingStreak(
     consecutiveDays: 0,
@@ -149,18 +153,15 @@ class _NowScreenState extends State<NowScreen> {
   @override
   void initState() {
     super.initState();
-    // Begin met de laatst bekende waarde (zie AppController.cachedGlucose) in
-    // plaats van "laden", zodat de kaart niet even leeg/spinnend flitst elke
-    // keer dat dit scherm opnieuw wordt opgebouwd (bv. bij het wisselen van
-    // tabblad) — verversen gebeurt hieronder gewoon op de achtergrond.
-    _glucose =
-        widget.controller.cachedGlucose ?? const GlucoseSnapshot.loading();
-    _fingerEntries = widget.controller.cachedFingerEntries;
     _sessionRepo = SessionRepository(widget.controller.client!);
     _glucoseEntryRepo = GlucoseEntryRepository(widget.controller.client!);
     _foodLogRepo = FoodLogRepository(widget.controller.client!);
     _techniqueRepo = TechniqueRepository(widget.controller.client!);
-    _refreshCurrentSource();
+    widget.controller.glucose.addListener(_onGlucose);
+    widget.controller.fingerEntries.addListener(_onGlucose);
+    // Normaal haalt de shell elke minuut op; zonder shell (bv. los getest)
+    // hier één keer zelf.
+    if (!widget.controller.isPollingGlucose) _refreshCurrentSource();
     _loadRecentSessions();
     _loadTodayFoodLog();
     _loadPlannedTechniqueCount();
@@ -168,89 +169,22 @@ class _NowScreenState extends State<NowScreen> {
     _clock = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
     });
-    _poller = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => _refreshCurrentSource(),
-    );
-    widget.controller.addListener(_refreshCurrentSource);
+  }
+
+  void _onGlucose() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_refreshCurrentSource);
+    widget.controller.glucose.removeListener(_onGlucose);
+    widget.controller.fingerEntries.removeListener(_onGlucose);
     _clock?.cancel();
-    _poller?.cancel();
     super.dispose();
   }
 
-  /// Ververst op basis van de op dit moment gekozen bron — zodat schakelen
-  /// tussen CGM en vingerprik in de instellingen hier meteen doorwerkt.
-  Future<void> _refreshCurrentSource() async {
-    if (_isFinger) {
-      await _loadFingerEntries();
-    } else {
-      await _refreshGlucose();
-    }
-  }
-
-  Future<void> _refreshGlucose() async {
-    final profile = widget.controller.profile;
-    if (profile == null) return;
-    final provider = await resolveGlucoseProvider(profile);
-    if (provider == null) {
-      const unconfigured = GlucoseSnapshot.unconfigured();
-      widget.controller.cachedGlucose = unconfigured;
-      if (mounted) setState(() => _glucose = unconfigured);
-      return;
-    }
-    if (mounted) {
-      setState(
-        () => _glucose = _glucose.copyWith(
-          isLoading: true,
-          message: _glucose.message,
-        ),
-      );
-    }
-    final next = await provider.fetch();
-    widget.controller.cachedGlucose = next;
-    if (mounted) setState(() => _glucose = next);
-  }
-
-  Future<void> _loadFingerEntries() async {
-    final userId = widget.controller.user?.id;
-    if (userId == null) return;
-    try {
-      final entries = await _glucoseEntryRepo.recentForUser(userId);
-      widget.controller.cachedFingerEntries = entries;
-      widget.controller.cachedGlucose = _snapshotFromFinger(entries);
-      if (mounted) {
-        setState(() {
-          _fingerEntries = entries;
-          _glucose = _snapshotFromFinger(entries);
-        });
-      }
-    } catch (_) {
-      // Lijst blijft leeg/oud; pull-to-refresh laat het opnieuw proberen.
-    }
-  }
-
-  GlucoseSnapshot _snapshotFromFinger(List<ManualGlucoseEntry> entries) {
-    if (entries.isEmpty) {
-      return const GlucoseSnapshot(
-        reading: null,
-        history: [],
-        message: 'Voer je eerste vingerprik in.',
-      );
-    }
-    final latest = entries.first;
-    final trend = entries.length > 1
-        ? trendFromDelta(latest.mmol - entries[1].mmol)
-        : Trend.flat;
-    return GlucoseSnapshot(
-      reading: GlucoseReading(latest.mmol, trend, latest.at),
-      history: entries.reversed.map((e) => GlucosePoint(e.at, e.mmol)).toList(),
-    );
-  }
+  /// Ververst de app-brede glucose (pull-to-refresh, na een vingerprik).
+  Future<void> _refreshCurrentSource() => widget.controller.refreshGlucose();
 
   Future<void> _recordManualReading() async {
     final value = await showManualGlucoseDialog(context);
@@ -259,7 +193,7 @@ class _NowScreenState extends State<NowScreen> {
     if (userId == null) return;
     try {
       await _glucoseEntryRepo.create(userId, value, DateTime.now());
-      await _loadFingerEntries();
+      await _refreshCurrentSource();
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -280,7 +214,7 @@ class _NowScreenState extends State<NowScreen> {
       } else if (result.mmol != null) {
         await _glucoseEntryRepo.update(entry.id, result.mmol!);
       }
-      await _loadFingerEntries();
+      await _refreshCurrentSource();
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -393,6 +327,7 @@ class _NowScreenState extends State<NowScreen> {
       await AgendaNotificationService.instance.sync(
         trainings: trainings,
         competitions: competitions,
+        techniques: await loadTechniqueReminderInput(widget.controller),
       );
     } catch (_) {
       // Agenda is aanvullend; Vandaag werkt ook zonder.
