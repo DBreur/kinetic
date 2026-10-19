@@ -4,6 +4,14 @@ Both sections offer two equivalent options: pass the values inline, or load them
 
 ## Installing (release APK)
 
+**Recommended: bump the version and build in one step**
+
+```powershell
+.\build_apk.ps1                # 1.0.0+1 -> 1.0.0+2 (build number only)
+.\build_apk.ps1 -Bump patch    # 1.0.0+1 -> 1.0.1+2 (also: minor, major)
+.\build_apk.ps1 -Clean         # runs flutter clean first
+```
+
 **PowerShell (Windows): inline values**
 
 ```powershell

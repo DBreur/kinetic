@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $pubspec = Join-Path $PSScriptRoot 'pubspec.yaml'
 $content = [IO.File]::ReadAllText($pubspec)
 
-$match = [regex]::Match($content, '(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)\s*$')
+$match = [regex]::Match($content, '(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)[ \t]*(?=\r?$)')
 if (-not $match.Success) { throw 'No "version: x.y.z+n" line found in pubspec.yaml' }
 
 $major = [int]$match.Groups[1].Value
