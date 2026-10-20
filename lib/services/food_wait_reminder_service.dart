@@ -3,10 +3,12 @@
 // finger_reminder_service.dart (herhalend, inexact) is dit een precieze
 // eenmalige planning op een vast moment in de nabije toekomst.
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'notification_router.dart';
 import 'notification_style.dart';
+
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -21,8 +23,16 @@ class FoodWaitReminderService {
   // plaats van het systeemstandaard-meldingsgeluid — een nieuwe kanaal-ID is
   // nodig omdat bestaande installaties het oude, geluidloos-ingestelde
   // kanaal anders nooit zouden bijwerken.
-  static const _soundChannelId = 'uchivo_food_wait_reminder_v2';
-  static const _silentChannelId = 'uchivo_food_wait_reminder_silent_v2';
+  // v3: het geluidsbestand zat niet in de release-build (zie
+  // res/raw/keep.xml), dus het v2-kanaal verwees naar niets.
+  static const _soundChannelId = 'uchivo_food_wait_reminder_v3';
+  static const _silentChannelId = 'uchivo_food_wait_reminder_silent_v3';
+  static const _staleChannelIds = [
+    'uchivo_food_wait_reminder',
+    'uchivo_food_wait_reminder_silent',
+    'uchivo_food_wait_reminder_v2',
+    'uchivo_food_wait_reminder_silent_v2',
+  ];
   static const _notificationId = 3001;
 
   final FlutterLocalNotificationsPlugin _plugin =
@@ -41,7 +51,6 @@ class FoodWaitReminderService {
       _timeZonesInitialized = true;
     }
     if (_initialized) return;
-    _initialized = true;
     try {
       const androidInit = AndroidInitializationSettings(
         '@mipmap/ic_notification',
@@ -50,6 +59,7 @@ class FoodWaitReminderService {
         settings: const InitializationSettings(android: androidInit),
         onDidReceiveNotificationResponse: NotificationRouter.handle,
       );
+      await deleteStaleChannels(_android, _staleChannelIds);
       await _android?.createNotificationChannel(
         const AndroidNotificationChannel(
           _soundChannelId,
@@ -73,9 +83,11 @@ class FoodWaitReminderService {
           enableVibration: true,
         ),
       );
+      _initialized = true;
       await _android?.requestNotificationsPermission();
-    } catch (_) {
+    } catch (e) {
       // Geen blokkerende fout — het eetlogboek blijft gewoon opgeslagen.
+      debugPrint('Eet-herinnering initialiseren mislukt: $e');
     }
   }
 
@@ -109,7 +121,9 @@ class FoodWaitReminderService {
     await _ensureInit();
     try {
       final channelId = withSound ? _soundChannelId : _silentChannelId;
-      final channelName = withSound ? 'Tijd om te eten' : 'Tijd om te eten (stil)';
+      final channelName = withSound
+          ? 'Tijd om te eten'
+          : 'Tijd om te eten (stil)';
       await _plugin.zonedSchedule(
         id: _notificationId,
         title: 'Tijd om te eten',
@@ -131,8 +145,9 @@ class FoodWaitReminderService {
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
-    } catch (_) {
+    } catch (e) {
       // Geen blokkerende fout — het eetlogboek blijft gewoon opgeslagen.
+      debugPrint('Eet-herinnering inplannen mislukt: $e');
     }
   }
 }

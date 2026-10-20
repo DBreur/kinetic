@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- uchivo_alarm wordt alleen bij naam vanuit Dart aangesproken
+     (RawResourceAndroidNotificationSound), dus de resource-shrinker ziet 'm
+     als ongebruikt en gooit 'm uit de release-APK. Dan trillen de
+     alarmkanalen alleen, zonder geluid. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/uchivo_alarm" />

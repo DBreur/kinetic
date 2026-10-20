@@ -1,5 +1,6 @@
 {
   "SUPABASE_URL": "https://<project-ref>.supabase.co",
   "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_...",
-  "NIGHTSCOUT_URL": "https://<jouw-nightscout>"
+  "NIGHTSCOUT_URL": "https://<jouw-nightscout>",
+  "SPOTIFY_CLIENT_ID": "<client-id van developer.spotify.com>"
 }

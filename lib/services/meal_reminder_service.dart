@@ -5,6 +5,7 @@
 //   • eenmalig ("Herinner me om 18:30") vanaf de Eten-pagina.
 // Eigen id-bereik (70000–72000), los van de andere meldingen.
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -19,7 +20,12 @@ class MealReminderService {
   MealReminderService._();
   static final MealReminderService instance = MealReminderService._();
 
-  static const _channelId = 'kinetic_meal_reminder';
+  // v2: eigen geluid (uchivo_alarm) — het oude kanaal gebruikte het
+  // standaard meldingsgeluid, dat stil blijft als de telefoon op trillen
+  // staat. Twee kanalen omdat geluid per kanaal vastligt; welke volgt de
+  // instelling 'Geluid bij eet-herinneringen' (foodWaitReminderSound).
+  static const _soundChannelId = 'kinetic_meal_reminder_v2';
+  static const _silentChannelId = 'kinetic_meal_reminder_silent_v2';
   static const _firstDailyId = 70000;
   static const _lastDailyId = 71999;
   static const _oneOffId = 72000;
@@ -30,6 +36,7 @@ class MealReminderService {
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   String? _lastSignature;
+  bool _withSound = true;
 
   AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
       .resolvePlatformSpecificImplementation<
@@ -38,7 +45,6 @@ class MealReminderService {
 
   Future<void> _ensureInit() async {
     if (_initialized) return;
-    _initialized = true;
     tz_data.initializeTimeZones();
     try {
       await _plugin.initialize(
@@ -47,32 +53,51 @@ class MealReminderService {
         ),
         onDidReceiveNotificationResponse: NotificationRouter.handle,
       );
+      await deleteStaleChannels(_android, const ['kinetic_meal_reminder']);
       await _android?.createNotificationChannel(
         const AndroidNotificationChannel(
-          _channelId,
+          _soundChannelId,
           'Eet-herinneringen',
-          description: 'Herinnering voor je vaste eetmomenten.',
+          description: 'Herinnering voor je eetmomenten, met geluid.',
           importance: Importance.high,
+          playSound: true,
+          sound: RawResourceAndroidNotificationSound('uchivo_alarm'),
+          enableVibration: true,
         ),
       );
-    } catch (_) {
+      await _android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _silentChannelId,
+          'Eet-herinneringen (stil)',
+          description: 'Herinnering voor je eetmomenten, zonder geluid.',
+          importance: Importance.high,
+          playSound: false,
+          enableVibration: true,
+        ),
+      );
+      _initialized = true;
+    } catch (e) {
       // Geen meldingen beschikbaar (tests/desktop).
+      debugPrint('Eet-herinneringen initialiseren mislukt: $e');
     }
   }
 
-  NotificationDetails get _details => const NotificationDetails(
+  NotificationDetails get _details => NotificationDetails(
     android: AndroidNotificationDetails(
-      _channelId,
-      'Eet-herinneringen',
+      _withSound ? _soundChannelId : _silentChannelId,
+      _withSound ? 'Eet-herinneringen' : 'Eet-herinneringen (stil)',
       color: kNotificationColor,
       importance: Importance.high,
       priority: Priority.high,
+      playSound: _withSound,
+      enableVibration: true,
     ),
   );
 
   /// Vaste eetmomenten opnieuw inplannen (of allemaal weghalen als ze uit
   /// staan). Doet niets als er sinds de vorige keer niets veranderd is.
   Future<void> syncDaily(AppProfile? profile, {DateTime? now}) async {
+    _withSound = profile?.foodWaitReminderSound ?? true;
     final plan = planMealNotifications(
       enabled: profile?.mealRemindersEnabled ?? false,
       meals: profile?.mealReminders ?? const [],
@@ -80,6 +105,7 @@ class MealReminderService {
       now: now ?? DateTime.now(),
     );
     final signature = [
+      '$_withSound',
       for (final p in plan) '${p.id}|${p.at.millisecondsSinceEpoch}|${p.title}',
     ].join(';');
     if (signature == _lastSignature) return;
@@ -102,14 +128,16 @@ class MealReminderService {
         );
       }
       _lastSignature = signature;
-    } catch (_) {
+    } catch (e) {
       // Niet blokkerend.
+      debugPrint('Eet-herinneringen inplannen mislukt: $e');
     }
   }
 
   /// Eenmalige herinnering op [at] ("Herinner me om …").
-  Future<void> scheduleOneOff(DateTime at) async {
+  Future<void> scheduleOneOff(DateTime at, {bool withSound = true}) async {
     if (!at.isAfter(DateTime.now())) return;
+    _withSound = withSound;
     await _ensureInit();
     try {
       await _android?.requestExactAlarmsPermission();
@@ -127,7 +155,9 @@ class MealReminderService {
     } catch (_) {
       try {
         await plan(AndroidScheduleMode.inexactAllowWhileIdle);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Eenmalige eet-herinnering inplannen mislukt: $e');
+      }
     }
     try {
       final prefs = await SharedPreferences.getInstance();

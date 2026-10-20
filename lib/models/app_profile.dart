@@ -32,6 +32,23 @@ enum AlarmMode {
   };
 }
 
+/// Waar de Spotify-knop staat tijdens een training.
+enum SpotifyButtonPlacement {
+  both,
+  strength,
+  mat,
+  off;
+
+  bool get onStrength => this == both || this == strength;
+  bool get onMat => this == both || this == mat;
+
+  static SpotifyButtonPlacement fromName(String? name) =>
+      SpotifyButtonPlacement.values.firstWhere(
+        (v) => v.name == name,
+        orElse: () => SpotifyButtonPlacement.both,
+      );
+}
+
 /// Onder welke glucosebron je de vingerprik-herinnering wilt krijgen —
 /// bv. alleen als je zelf prikt, ook als je een sensor gebruikt, of altijd.
 enum FingerReminderScope {
@@ -158,6 +175,31 @@ class AppProfile {
   /// insuline) geluid mag maken. Uitzetten laat 'm alleen trillen/tonen.
   final bool foodWaitReminderSound;
 
+  /// Hoe lang een hypo/hyper-alarm stil blijft na "Sluimeren" (of
+  /// "Ingenomen") — in minuten.
+  final int alarmSnoozeMinutes;
+
+  /// Standaard rust na een set (of na een blok) bij krachttraining, in
+  /// seconden — per oefening of blok te overschrijven.
+  final int defaultRestSeconds;
+
+  /// Om de hoeveel dagen je wilt wegen (0 = geen herinnering).
+  final int weighInIntervalDays;
+
+  /// Tijdstip van de weeg-herinnering, "HH:mm".
+  final String weighInReminderTime;
+
+  /// Waar de Spotify-knop staat tijdens een training.
+  final SpotifyButtonPlacement spotifyButton;
+
+  /// Alarm tijdens een training (sambo of kracht), los van het dagelijkse
+  /// alarm. Null = hetzelfde als [alarmMode].
+  final AlarmMode? trainingAlarmMode;
+
+  /// Aftellen vóór elke oefening in een circuit (halters afstellen), in
+  /// seconden. 0 = geen voorbereiding.
+  final int circuitPrepSeconds;
+
   /// Bolus-calculator: zet de live voedings-/correctie-insuline-voorstellen
   /// in het eetlogboek aan of uit.
   final bool bolusCalculatorEnabled;
@@ -216,6 +258,13 @@ class AppProfile {
     this.showPauseButton = true,
     this.foodPresets = const [],
     this.foodWaitReminderSound = true,
+    this.alarmSnoozeMinutes = 15,
+    this.defaultRestSeconds = 90,
+    this.weighInIntervalDays = 7,
+    this.weighInReminderTime = '08:00',
+    this.spotifyButton = SpotifyButtonPlacement.both,
+    this.trainingAlarmMode,
+    this.circuitPrepSeconds = 10,
     this.bolusCalculatorEnabled = false,
     this.bolusPeriods = const [],
     this.correctionFactor = 2.0,
@@ -245,7 +294,9 @@ class AppProfile {
       glucoseSource: switch (json['glucose_source'] as String?) {
         'finger' => GlucoseSource.finger,
         'dexcomShare' => GlucoseSource.dexcomShare,
-        _ => GlucoseSource.nightscout, // ook de oude waarde 'cgm' valt hierop terug
+        _ =>
+          GlucoseSource
+              .nightscout, // ook de oude waarde 'cgm' valt hierop terug
       },
       trainingLimit: ((json['training_limit'] as num?) ?? 5.0).toDouble(),
       dailyLowBelow: ((json['daily_low_below'] as num?) ?? 3.9).toDouble(),
@@ -275,8 +326,7 @@ class AppProfile {
       weekStart: (json['week_start'] as num?)?.toInt() ?? 1,
       hideSystemBars: (json['hide_system_bars'] as bool?) ?? false,
       videoLabels: {
-        for (final e
-            in ((json['video_labels'] as Map?) ?? const {}).entries)
+        for (final e in ((json['video_labels'] as Map?) ?? const {}).entries)
           if (e.value is String) '${e.key}': e.value as String,
       },
       dashboard: DashboardConfig.fromJson(
@@ -310,21 +360,33 @@ class AppProfile {
           .toList(),
       foodWaitReminderSound:
           (json['food_wait_reminder_sound'] as bool?) ?? true,
+      alarmSnoozeMinutes: (json['alarm_snooze_minutes'] as num?)?.toInt() ?? 15,
+      defaultRestSeconds: (json['default_rest_seconds'] as num?)?.toInt() ?? 90,
+      weighInIntervalDays:
+          (json['weigh_in_interval_days'] as num?)?.toInt() ?? 7,
+      weighInReminderTime:
+          (json['weigh_in_reminder_time'] as String?) ?? '08:00',
+      spotifyButton: SpotifyButtonPlacement.fromName(
+        json['spotify_button'] as String?,
+      ),
+      trainingAlarmMode: json['training_alarm_mode'] == null
+          ? null
+          : AlarmMode.fromName(json['training_alarm_mode'] as String?),
+      circuitPrepSeconds:
+          (json['circuit_prep_seconds'] as num?)?.toInt() ?? 10,
       bolusCalculatorEnabled:
           (json['bolus_calculator_enabled'] as bool?) ?? false,
       bolusPeriods: ((json['bolus_periods'] as List?) ?? [])
           .map((e) => BolusPeriod.fromJson(e as Map<String, dynamic>))
           .toList(),
-      correctionFactor:
-          ((json['correction_factor'] as num?) ?? 2.0).toDouble(),
-      correctionTargetDay:
-          ((json['correction_target_day'] as num?) ?? 8.0).toDouble(),
-      correctionTargetNight:
-          ((json['correction_target_night'] as num?) ?? 10.0).toDouble(),
+      correctionFactor: ((json['correction_factor'] as num?) ?? 2.0).toDouble(),
+      correctionTargetDay: ((json['correction_target_day'] as num?) ?? 8.0)
+          .toDouble(),
+      correctionTargetNight: ((json['correction_target_night'] as num?) ?? 10.0)
+          .toDouble(),
       correctionNightStart:
           (json['correction_night_start'] as String?) ?? '19:00',
-      correctionNightEnd:
-          (json['correction_night_end'] as String?) ?? '05:00',
+      correctionNightEnd: (json['correction_night_end'] as String?) ?? '05:00',
     );
   }
 
@@ -367,6 +429,13 @@ class AppProfile {
     'show_pause_button': showPauseButton,
     'food_checklist': foodPresets.map((p) => p.toJson()).toList(),
     'food_wait_reminder_sound': foodWaitReminderSound,
+    'alarm_snooze_minutes': alarmSnoozeMinutes,
+    'default_rest_seconds': defaultRestSeconds,
+    'weigh_in_interval_days': weighInIntervalDays,
+    'weigh_in_reminder_time': weighInReminderTime,
+    'spotify_button': spotifyButton.name,
+    'training_alarm_mode': trainingAlarmMode?.name,
+    'circuit_prep_seconds': circuitPrepSeconds,
     'bolus_calculator_enabled': bolusCalculatorEnabled,
     'bolus_periods': bolusPeriods.map((p) => p.toJson()).toList(),
     'correction_factor': correctionFactor,
@@ -416,6 +485,14 @@ class AppProfile {
     bool? showPauseButton,
     List<FoodPreset>? foodPresets,
     bool? foodWaitReminderSound,
+    int? alarmSnoozeMinutes,
+    int? defaultRestSeconds,
+    int? weighInIntervalDays,
+    String? weighInReminderTime,
+    SpotifyButtonPlacement? spotifyButton,
+    AlarmMode? trainingAlarmMode,
+    bool clearTrainingAlarmMode = false,
+    int? circuitPrepSeconds,
     bool? bolusCalculatorEnabled,
     List<BolusPeriod>? bolusPeriods,
     double? correctionFactor,
@@ -469,6 +546,15 @@ class AppProfile {
       foodPresets: foodPresets ?? this.foodPresets,
       foodWaitReminderSound:
           foodWaitReminderSound ?? this.foodWaitReminderSound,
+      alarmSnoozeMinutes: alarmSnoozeMinutes ?? this.alarmSnoozeMinutes,
+      defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
+      weighInIntervalDays: weighInIntervalDays ?? this.weighInIntervalDays,
+      weighInReminderTime: weighInReminderTime ?? this.weighInReminderTime,
+      spotifyButton: spotifyButton ?? this.spotifyButton,
+      trainingAlarmMode: clearTrainingAlarmMode
+          ? null
+          : (trainingAlarmMode ?? this.trainingAlarmMode),
+      circuitPrepSeconds: circuitPrepSeconds ?? this.circuitPrepSeconds,
       bolusCalculatorEnabled:
           bolusCalculatorEnabled ?? this.bolusCalculatorEnabled,
       bolusPeriods: bolusPeriods ?? this.bolusPeriods,
@@ -476,8 +562,7 @@ class AppProfile {
       correctionTargetDay: correctionTargetDay ?? this.correctionTargetDay,
       correctionTargetNight:
           correctionTargetNight ?? this.correctionTargetNight,
-      correctionNightStart:
-          correctionNightStart ?? this.correctionNightStart,
+      correctionNightStart: correctionNightStart ?? this.correctionNightStart,
       correctionNightEnd: correctionNightEnd ?? this.correctionNightEnd,
     );
   }

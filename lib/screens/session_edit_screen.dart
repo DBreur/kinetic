@@ -18,6 +18,7 @@ import '../repositories/session_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/number_input.dart';
 import '../widgets/exercise_picker.dart';
 import '../widgets/block_widgets.dart';
 import '../widgets/nutrition_log.dart';
@@ -51,23 +52,39 @@ class _EditSet {
   double kg;
   int reps;
 
-  /// De oorspronkelijke set, zodat tijd, verzuring en gelukt/reden bij
-  /// opslaan blijven staan — hier pas je alleen kg en reps aan.
-  final ExerciseSet? base;
-  _EditSet({this.kg = 0, this.reps = 8, this.base});
+  /// Tijd-set (bv. plank): seconden in plaats van reps.
+  int? seconds;
 
-  ExerciseSet toSet() =>
-      (base ?? const ExerciseSet(kg: 0, reps: 0)).copyWith(
-        kg: kg,
-        reps: reps,
-        done: true,
-      );
+  /// De oorspronkelijke set, zodat verzuring en gelukt/reden bij opslaan
+  /// blijven staan — hier pas je kg en reps (of de tijd) aan.
+  final ExerciseSet? base;
+  _EditSet({this.kg = 0, this.reps = 8, this.seconds, this.base});
+
+  /// "Tot verzuring": geen reps om aan te passen.
+  bool get toBurn => base?.toBurn ?? false;
+
+  ExerciseSet toSet() => (base ?? const ExerciseSet(kg: 0, reps: 0)).copyWith(
+    kg: kg,
+    reps: reps,
+    seconds: seconds,
+    clearSeconds: seconds == null,
+    done: true,
+  );
 }
 
 class _EditExercise {
   String name;
   List<_EditSet> sets;
-  _EditExercise({required this.name, required this.sets});
+
+  /// Blok en rust blijven zoals ze in de training stonden.
+  final int? block;
+  final int? restSeconds;
+  _EditExercise({
+    required this.name,
+    required this.sets,
+    this.block,
+    this.restSeconds,
+  });
 }
 
 class _SessionEditScreenState extends State<SessionEditScreen> {
@@ -102,8 +119,17 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         .map(
           (e) => _EditExercise(
             name: e.name,
+            block: e.block,
+            restSeconds: e.restSeconds,
             sets: e.sets
-                .map((s) => _EditSet(kg: s.kg, reps: s.reps, base: s))
+                .map(
+                  (s) => _EditSet(
+                    kg: s.kg,
+                    reps: s.reps,
+                    seconds: s.seconds,
+                    base: s,
+                  ),
+                )
                 .toList(),
           ),
         )
@@ -220,6 +246,8 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
               (e) => ExerciseEntry(
                 name: e.name,
                 sets: e.sets.map((s) => s.toSet()).toList(),
+                block: e.block,
+                restSeconds: e.restSeconds,
               ),
             )
             .toList(),
@@ -247,14 +275,20 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
           );
         }
         final knownExerciseNames = _knownExercises
-            .map((e) => e.name.toLowerCase())
+            .map((e) => e.name.trim().toLowerCase())
             .toSet();
-        final newExerciseNames = _exercises
-            .map((e) => e.name)
-            .where((name) => !knownExerciseNames.contains(name.toLowerCase()))
-            .toSet();
+        final newExerciseNames = {
+          for (final e in _exercises)
+            if (!knownExerciseNames.contains(e.name.trim().toLowerCase()))
+              e.name.trim(),
+        };
         for (final name in newExerciseNames) {
-          await _exerciseRepo.create(Exercise(id: '', name: name), userId);
+          try {
+            await _exerciseRepo.create(Exercise(id: '', name: name), userId);
+          } catch (_) {
+            // Bestaat al (de database staat geen dubbele namen toe) — de
+            // training zelf is gewoon opgeslagen.
+          }
         }
       }
       if (mounted) {
@@ -488,6 +522,17 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                           reps: _exercises[ei].sets.isEmpty
                               ? 8
                               : _exercises[ei].sets.last.reps,
+                          // Zelfde soort set als de vorige (tijd/verzuring).
+                          seconds: _exercises[ei].sets.isEmpty
+                              ? null
+                              : _exercises[ei].sets.last.seconds,
+                          base: _exercises[ei].sets.isEmpty
+                              ? null
+                              : _exercises[ei].sets.last.base?.copyWith(
+                                  completed: null,
+                                  clearCompleted: true,
+                                  note: '',
+                                ),
                         ),
                       ),
                     ),
@@ -911,29 +956,64 @@ class _EditExerciseCard extends StatelessWidget {
                       value: exercise.sets[si].kg,
                       onDown: () => onSetChanged(
                         si,
-                        (s) => s.kg = (s.kg - 2.5).clamp(0, 500),
+                        (s) => s.kg = (s.kg - 0.5).clamp(0, 500),
                       ),
                       onUp: () => onSetChanged(
                         si,
-                        (s) => s.kg = (s.kg + 2.5).clamp(0, 500),
+                        (s) => s.kg = (s.kg + 0.5).clamp(0, 500),
                       ),
                       label: 'kg',
+                      onTyped: (v) => onSetChanged(si, (s) => s.kg = v),
                     ),
                   ),
                   Expanded(
-                    child: _numberField(
-                      value: exercise.sets[si].reps.toDouble(),
-                      onDown: () => onSetChanged(
-                        si,
-                        (s) => s.reps = (s.reps - 1).clamp(1, 100),
-                      ),
-                      onUp: () => onSetChanged(
-                        si,
-                        (s) => s.reps = (s.reps + 1).clamp(1, 100),
-                      ),
-                      label: 'reps',
-                      asInt: true,
-                    ),
+                    child: exercise.sets[si].toBurn
+                        ? Center(
+                            child: Text(
+                              exercise.sets[si].base?.summary
+                                      .split(' · ')
+                                      .last ??
+                                  'verzuring',
+                              style: AppText.caption.copyWith(
+                                color: AppColor.amber,
+                              ),
+                            ),
+                          )
+                        : exercise.sets[si].seconds != null
+                        ? _numberField(
+                            value: exercise.sets[si].seconds!.toDouble(),
+                            onDown: () => onSetChanged(
+                              si,
+                              (s) => s.seconds = (s.seconds! - 5).clamp(5, 600),
+                            ),
+                            onUp: () => onSetChanged(
+                              si,
+                              (s) => s.seconds = (s.seconds! + 5).clamp(5, 600),
+                            ),
+                            label: 's',
+                            asInt: true,
+                            onTyped: (v) => onSetChanged(
+                              si,
+                              (s) => s.seconds = v.round().clamp(5, 600),
+                            ),
+                          )
+                        : _numberField(
+                            value: exercise.sets[si].reps.toDouble(),
+                            onDown: () => onSetChanged(
+                              si,
+                              (s) => s.reps = (s.reps - 1).clamp(1, 100),
+                            ),
+                            onUp: () => onSetChanged(
+                              si,
+                              (s) => s.reps = (s.reps + 1).clamp(1, 100),
+                            ),
+                            label: 'reps',
+                            asInt: true,
+                            onTyped: (v) => onSetChanged(
+                              si,
+                              (s) => s.reps = v.round().clamp(1, 100),
+                            ),
+                          ),
                   ),
                   InkWell(
                     onTap: () => onRemoveSet(si),
@@ -981,6 +1061,7 @@ class _EditExerciseCard extends StatelessWidget {
     required VoidCallback onUp,
     required String label,
     bool asInt = false,
+    ValueChanged<double>? onTyped,
   }) {
     final text = asInt
         ? value.toInt().toString()
@@ -1001,12 +1082,35 @@ class _EditExerciseCard extends StatelessWidget {
             child: const Text('−'),
           ),
         ),
-        SizedBox(
-          width: 44,
-          child: Text(
-            '$text $label',
-            textAlign: TextAlign.center,
-            style: AppText.caption,
+        // Tik op het getal om het zelf te typen.
+        Builder(
+          builder: (context) => InkWell(
+            onTap: onTyped == null
+                ? null
+                : () async {
+                    final v = await showNumberInput(
+                      context,
+                      title: switch (label) {
+                        'kg' => 'Gewicht',
+                        's' => 'Seconden',
+                        _ => 'Herhalingen',
+                      },
+                      initial: value,
+                      decimal: !asInt,
+                      suffix: label,
+                      max: label == 's' ? 600 : (asInt ? 100 : 500),
+                    );
+                    if (v != null) onTyped(v);
+                  },
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: SizedBox(
+              width: 44,
+              child: Text(
+                '$text $label',
+                textAlign: TextAlign.center,
+                style: AppText.caption,
+              ),
+            ),
           ),
         ),
         InkWell(

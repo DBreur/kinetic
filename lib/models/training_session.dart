@@ -333,18 +333,36 @@ class ExerciseEntry {
   final String name;
   final List<ExerciseSet> sets;
 
-  const ExerciseEntry({required this.name, required this.sets});
+  /// Blok (superset): opeenvolgende oefeningen met hetzelfde nummer doe je
+  /// per ronde achter elkaar, met pas daarna rust. Null = losse oefening.
+  /// Zie core/rest_blocks.dart.
+  final int? block;
+
+  /// Rust in seconden na een set (los) of na een ronde (blok). Null = de
+  /// standaard uit de instellingen.
+  final int? restSeconds;
+
+  const ExerciseEntry({
+    required this.name,
+    required this.sets,
+    this.block,
+    this.restSeconds,
+  });
 
   factory ExerciseEntry.fromJson(Map<String, dynamic> json) => ExerciseEntry(
     name: json['name'] as String,
     sets: (json['sets'] as List)
         .map((e) => ExerciseSet.fromJson(e as Map<String, dynamic>))
         .toList(),
+    block: (json['block'] as num?)?.toInt(),
+    restSeconds: (json['rest'] as num?)?.toInt(),
   );
 
   Map<String, dynamic> toJson() => {
     'name': name,
     'sets': sets.map((s) => s.toJson()).toList(),
+    if (block != null) 'block': block,
+    if (restSeconds != null) 'rest': restSeconds,
   };
 }
 

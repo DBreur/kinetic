@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../models/agenda.dart' show normalizeUrl;
 import '../services/video_labels.dart';
 import '../theme/kinetic_theme.dart';
 
@@ -133,6 +134,76 @@ class VideoLinkRow extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Lijst video-links met een veld om er een toe te voegen — voor editors
+/// waar video's een onderdeel zijn (bv. een stap in een circuit).
+class VideoLinksEditor extends StatefulWidget {
+  const VideoLinksEditor({
+    super.key,
+    required this.urls,
+    required this.onChanged,
+  });
+
+  final List<String> urls;
+  final ValueChanged<List<String>> onChanged;
+
+  @override
+  State<VideoLinksEditor> createState() => _VideoLinksEditorState();
+}
+
+class _VideoLinksEditorState extends State<VideoLinksEditor> {
+  final _input = TextEditingController();
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  void _add() {
+    final url = normalizeUrl(_input.text);
+    if (url.isEmpty) return;
+    _input.clear();
+    widget.onChanged([...widget.urls, url]);
+    editVideoLabel(context, url);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < widget.urls.length; i++)
+          VideoLinkRow(
+            url: widget.urls[i],
+            onRemove: () =>
+                widget.onChanged([...widget.urls]..removeAt(i)),
+          ),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _input,
+                keyboardType: TextInputType.url,
+                style: AppText.body,
+                onSubmitted: (_) => _add(),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: 'Link naar video (YouTube, Instagram, …)',
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Video toevoegen',
+              onPressed: _add,
+              icon: const Icon(Icons.add_link, color: AppColor.ice),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

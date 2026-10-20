@@ -20,6 +20,8 @@ import '../models/training_session.dart';
 import '../state/mat_session_controller.dart';
 import '../services/system_bars.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/glucose_alarm.dart' show SnoozeBanner;
+import '../widgets/spotify_panel.dart';
 import '../widgets/kinetic.dart';
 import '../widgets/block_widgets.dart';
 import '../widgets/manual_glucose.dart';
@@ -272,6 +274,12 @@ class _MatModeScreenState extends State<MatModeScreen> {
       animation: _c,
       builder: (context, _) => Scaffold(
         backgroundColor: AppColor.bg,
+        // Spotify rechtsonder — niet in de glucosebalk, daar schoof hij de
+        // sessietijd onder de camera.
+        floatingActionButton:
+            (_c.appController.profile?.spotifyButton.onMat ?? true)
+            ? const SpotifyFab()
+            : null,
         // Bovenkant niet inspringen: de glucosebalk loopt zelf door tot de
         // rand (ook achter de camera-uitsparing) en zet zijn inhoud eronder.
         body: SafeArea(
@@ -291,6 +299,10 @@ class _MatModeScreenState extends State<MatModeScreen> {
                     onEnterReading: _c.isFinger
                         ? () => _c.recordManualReading(context)
                         : null,
+                  ),
+                  SnoozeBanner(
+                    guard: _c.appController.alarmGuard,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   ),
                   Expanded(
                     child: _c.mode == 'list' ? _buildList() : _buildFocus(),

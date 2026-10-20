@@ -68,7 +68,7 @@ void main() {
 
       // "Ingenomen — timer 15 min" indrukken sluit de sheet en start de
       // snooze.
-      await tester.tap(find.text('Ingenomen — timer 15 min'));
+      await tester.tap(find.text('Sluimeren 15 min'));
       await tester.pumpAndSettle();
       expect(find.byType(GlucoseAlertSheet), findsNothing);
 
@@ -102,7 +102,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GlucoseAlertSheet), findsOneWidget);
 
-      await tester.tap(find.text('Ingenomen — timer 15 min'));
+      await tester.tap(find.text('Sluimeren 15 min'));
       await tester.pumpAndSettle();
       expect(find.byType(GlucoseAlertSheet), findsNothing);
 
@@ -132,7 +132,7 @@ void main() {
       lowBelow: 3.9,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Ingenomen — timer 15 min'));
+    await tester.tap(find.text('Sluimeren 15 min'));
     await tester.pumpAndSettle();
 
     // Boven de grens: behandeling geslaagd.
@@ -153,6 +153,106 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(GlucoseAlertSheet), findsOneWidget);
+
+    guard.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Sluimeren bij hyper: geen nieuw alarm zolang hij hoog blijft, '
+      'na herstel ook niet meer', (tester) async {
+    final guard = GlucoseAlarmGuard(notifier: _FakeNotifier());
+    final ctx = await pumpHost(tester);
+    AlarmSnooze? reported;
+    guard.onSnoozeChanged = (s) => reported = s;
+
+    guard.check(
+      () => ctx,
+      GlucoseReading(12.0, Trend.up, DateTime.now()),
+      lowBelow: 3.9,
+      highAbove: 10.0,
+      snoozeMinutes: 20,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsOneWidget);
+
+    await tester.tap(find.text('Sluimeren 20 min'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsNothing);
+    expect(reported?.isHigh, isTrue);
+
+    // Nog steeds hoog: stil.
+    guard.check(
+      () => ctx,
+      GlucoseReading(13.0, Trend.up, DateTime.now()),
+      lowBelow: 3.9,
+      highAbove: 10.0,
+      snoozeMinutes: 20,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsNothing);
+
+    // Weer binnen de grenzen: sluimeren vervalt.
+    guard.check(
+      () => ctx,
+      GlucoseReading(8.0, Trend.down, DateTime.now()),
+      lowBelow: 3.9,
+      highAbove: 10.0,
+      snoozeMinutes: 20,
+    );
+    await tester.pumpAndSettle();
+    expect(guard.snooze.value, isNull);
+    expect(reported, isNull);
+
+    guard.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wegvegen telt als sluimeren', (tester) async {
+    final guard = GlucoseAlarmGuard(notifier: _FakeNotifier());
+    final ctx = await pumpHost(tester);
+
+    guard.check(
+      () => ctx,
+      GlucoseReading(3.5, Trend.flat, DateTime.now()),
+      lowBelow: 3.9,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsOneWidget);
+
+    // Buiten het paneel tikken sluit hem.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsNothing);
+    expect(guard.snooze.value, isNotNull);
+
+    guard.check(
+      () => ctx,
+      GlucoseReading(3.5, Trend.flat, DateTime.now()),
+      lowBelow: 3.9,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsNothing);
+
+    guard.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sluimeren via de melding sluit het paneel', (tester) async {
+    final guard = GlucoseAlarmGuard(notifier: _FakeNotifier());
+    final ctx = await pumpHost(tester);
+
+    guard.check(
+      () => ctx,
+      GlucoseReading(3.5, Trend.flat, DateTime.now()),
+      lowBelow: 3.9,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsOneWidget);
+
+    guard.snoozeFromNotification(isHigh: false, mmol: 3.5);
+    await tester.pumpAndSettle();
+    expect(find.byType(GlucoseAlertSheet), findsNothing);
+    expect(guard.snooze.value?.isHigh, isFalse);
 
     guard.dispose();
     expect(tester.takeException(), isNull);

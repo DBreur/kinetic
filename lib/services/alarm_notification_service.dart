@@ -4,6 +4,9 @@
 // sluit).
 //
 // Kanalen:
+// (v3: de eerdere kanalen verwezen naar een geluidsbestand dat de release-
+// build had weggegooid — zie res/raw/keep.xml — en trilden dus alleen.)
+//
 //   uchivo_glucose_alarm        — geluid + trilling, via het alarmvolume
 //                                 (breekt de stille modus/DND)
 //   uchivo_glucose_alarm_normal — geluid + trilling, via het gewone
@@ -19,6 +22,7 @@
 
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'notification_router.dart';
@@ -46,8 +50,12 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
   AlarmNotificationService._();
   static final AlarmNotificationService instance = AlarmNotificationService._();
 
-  static const soundChannelId = 'uchivo_glucose_alarm';
-  static const normalSoundChannelId = 'uchivo_glucose_alarm_normal';
+  static const soundChannelId = 'uchivo_glucose_alarm_v3';
+  static const normalSoundChannelId = 'uchivo_glucose_alarm_normal_v3';
+  static const _staleChannelIds = [
+    'uchivo_glucose_alarm',
+    'uchivo_glucose_alarm_normal',
+  ];
   static const silentChannelId = 'uchivo_glucose_alarm_silent';
   static const infoChannelId = 'uchivo_glucose_info';
 
@@ -74,7 +82,6 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
   /// platform) blijft de sheet gewoon werken.
   Future<void> init() async {
     if (_initialized) return;
-    _initialized = true;
 
     try {
       const androidInit = AndroidInitializationSettings(
@@ -86,7 +93,11 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
       );
 
       final android = _android;
-      if (android == null) return;
+      if (android == null) {
+        _initialized = true;
+        return;
+      }
+      await deleteStaleChannels(android, _staleChannelIds);
 
       await android.createNotificationChannel(
         const AndroidNotificationChannel(
@@ -137,10 +148,13 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
         ),
       );
 
+      _initialized = true;
       await android.requestNotificationsPermission();
       await android.requestFullScreenIntentPermission();
-    } catch (_) {
+    } catch (e) {
       // Zie docstring — de in-app alarmsheet blijft de bron van waarheid.
+      // Niet als geïnitialiseerd gemarkeerd: de volgende keer opnieuw.
+      debugPrint('Alarmmeldingen initialiseren mislukt: $e');
     }
   }
 
@@ -182,15 +196,26 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
         // FLAG_INSISTENT: het geluid/de trilling herhaalt tot de notificatie
         // wordt geannuleerd (getikt, of de sheet zelf gaat dicht).
         additionalFlags: Int32List.fromList(<int>[4]),
+        actions: const [
+          // Opent de app (daar loopt de sluimer-timer) en sluit de melding.
+          AndroidNotificationAction(
+            kSnoozeAlarmActionId,
+            'Sluimeren',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+        ],
       );
       await _plugin.show(
         id: _alarmNotificationId,
         title: title,
         body: '$value mmol/L — tik om te openen',
         notificationDetails: NotificationDetails(android: details),
+        payload: AlarmSnoozeRequest.payloadFor(isHigh: isHigh, mmol: mmol),
       );
-    } catch (_) {
+    } catch (e) {
       // Zie docstring bij init().
+      debugPrint('Alarmmelding mislukt: $e');
     }
   }
 
@@ -198,8 +223,9 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
   Future<void> cancelAlarm() async {
     try {
       await _plugin.cancel(id: _alarmNotificationId);
-    } catch (_) {
+    } catch (e) {
       // Zie docstring bij init().
+      debugPrint('Alarmmelding mislukt: $e');
     }
   }
 
@@ -226,8 +252,9 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
         body: 'Huidige waarde: $value mmol/L',
         notificationDetails: NotificationDetails(android: details),
       );
-    } catch (_) {
+    } catch (e) {
       // Zie docstring bij init().
+      debugPrint('Alarmmelding mislukt: $e');
     }
   }
 
@@ -252,8 +279,9 @@ class AlarmNotificationService implements GlucoseAlarmNotifier {
             'een vingerprik.',
         notificationDetails: NotificationDetails(android: details),
       );
-    } catch (_) {
+    } catch (e) {
       // Zie docstring bij init().
+      debugPrint('Alarmmelding mislukt: $e');
     }
   }
 }

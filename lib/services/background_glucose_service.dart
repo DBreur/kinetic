@@ -21,6 +21,7 @@ import '../services/dexcom_share_service.dart';
 import '../services/glucose_provider.dart';
 import '../services/nightscout_service.dart';
 import '../state/app_controller.dart';
+import '../widgets/glucose_alarm.dart' show AlarmSnooze;
 import 'notification_style.dart';
 
 const _kGlucoseSourceKey = 'bg_glucose_source';
@@ -32,6 +33,13 @@ const _kDailyLowBelowKey = 'bg_daily_low_below';
 const _kDailyLowEnabledKey = 'bg_daily_low_enabled';
 const _kAlarmModeKey = 'bg_alarm_mode';
 const _kBreakSilentModeKey = 'bg_break_silent_mode';
+const _kHyperLimitKey = 'bg_hyper_limit';
+const _kHyperEnabledKey = 'bg_hyper_enabled';
+// Sluimeren vanuit de app: tot dit moment (ms sinds epoch, 0 = niet) geen
+// alarm aan dezelfde kant, tenzij een hypo nog 0,5 mmol/L verder zakt.
+const _kSnoozeUntilKey = 'bg_snooze_until';
+const _kSnoozeHighKey = 'bg_snooze_high';
+const _kSnoozeValueKey = 'bg_snooze_value';
 
 /// Startpunt van de achtergrondtaak — draait in een eigen isolate. Moet een
 /// top-level functie zijn met deze pragma, anders vindt Android hem niet
@@ -106,6 +114,13 @@ class _GlucoseWatchTaskHandler extends TaskHandler {
         await FlutterForegroundTask.getData<bool>(key: _kBreakSilentModeKey) ??
         true;
 
+    final hyperLimit = await FlutterForegroundTask.getData<double>(
+      key: _kHyperLimitKey,
+    );
+    final hyperEnabled =
+        await FlutterForegroundTask.getData<bool>(key: _kHyperEnabledKey) ??
+        false;
+
     final snapshot = await provider.fetch();
     final reading = snapshot.reading;
     if (reading == null) return;
@@ -130,14 +145,39 @@ class _GlucoseWatchTaskHandler extends TaskHandler {
     }
     _staleWarned = false;
 
-    if (reading.mmol <= dailyLowBelow) {
-      await AlarmNotificationService.instance.showAlarm(
-        withSound: withSound,
-        breakSilentMode: breakSilentMode,
-        isHigh: false,
-        mmol: reading.mmol,
-      );
+    final isLow = reading.mmol <= dailyLowBelow;
+    final isHigh =
+        !isLow &&
+        hyperEnabled &&
+        hyperLimit != null &&
+        reading.mmol >= hyperLimit;
+    if (!isLow && !isHigh) {
+      // Weer binnen de grenzen: een lopende sluimering vervalt.
+      await FlutterForegroundTask.saveData(key: _kSnoozeUntilKey, value: 0);
+      return;
     }
+    if (await _isSnoozed(reading.mmol, high: isHigh)) return;
+    await AlarmNotificationService.instance.showAlarm(
+      withSound: withSound,
+      breakSilentMode: breakSilentMode,
+      isHigh: isHigh,
+      mmol: reading.mmol,
+    );
+  }
+
+  Future<bool> _isSnoozed(double mmol, {required bool high}) async {
+    final until =
+        await FlutterForegroundTask.getData<int>(key: _kSnoozeUntilKey) ?? 0;
+    if (DateTime.now().millisecondsSinceEpoch >= until) return false;
+    final snoozeHigh =
+        await FlutterForegroundTask.getData<bool>(key: _kSnoozeHighKey) ??
+        false;
+    if (snoozeHigh != high) return false;
+    if (high) return true;
+    final value =
+        await FlutterForegroundTask.getData<double>(key: _kSnoozeValueKey) ??
+        mmol;
+    return mmol > value - 0.5;
   }
 
   String _fmt(double v) => v.toStringAsFixed(1).replaceAll('.', ',');
@@ -227,6 +267,36 @@ class BackgroundGlucoseWatcher {
       key: _kAlarmModeKey,
       value: profile.alarmMode.name,
     );
+    await FlutterForegroundTask.saveData(
+      key: _kHyperLimitKey,
+      value: profile.hyperLimit,
+    );
+    await FlutterForegroundTask.saveData(
+      key: _kHyperEnabledKey,
+      value: profile.hyperAlarmEnabled,
+    );
+  }
+
+  /// Geeft een sluimering uit de app door aan de achtergrondtaak (null =
+  /// gestopt), zodat die niet elke 5 minuten opnieuw alarmeert.
+  Future<void> saveSnooze(AlarmSnooze? snooze) async {
+    try {
+      await FlutterForegroundTask.saveData(
+        key: _kSnoozeUntilKey,
+        value: snooze?.until.millisecondsSinceEpoch ?? 0,
+      );
+      if (snooze == null) return;
+      await FlutterForegroundTask.saveData(
+        key: _kSnoozeHighKey,
+        value: snooze.isHigh,
+      );
+      await FlutterForegroundTask.saveData(
+        key: _kSnoozeValueKey,
+        value: snooze.value,
+      );
+    } catch (_) {
+      // Geen achtergronddienst (tests/desktop) — niet erg.
+    }
   }
 
   /// Start of stopt de service zodat die alleen draait wanneer

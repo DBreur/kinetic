@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../core/rest_blocks.dart';
 import '../models/exercise.dart';
 import '../models/workout_template.dart';
 import '../repositories/circuit_repository.dart';
@@ -15,7 +16,10 @@ import '../repositories/exercise_repository.dart';
 import '../repositories/workout_template_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/number_input.dart';
+import '../widgets/exercise_blocks.dart';
 import '../widgets/exercise_picker.dart';
+import '../widgets/info_sheet.dart';
 import '../widgets/block_widgets.dart' show AddBlockButton;
 
 /// Resultaat van het schema-aanpasscherm: het opgeslagen schema, of een
@@ -72,10 +76,19 @@ class _TemplateEditSet {
   );
 }
 
-class _TemplateEditExercise {
+class _TemplateEditExercise implements BlockMember {
   String name;
   List<_TemplateEditSet> sets;
-  _TemplateEditExercise({required this.name, required this.sets});
+  @override
+  int? block;
+  @override
+  int? restSeconds;
+  _TemplateEditExercise({
+    required this.name,
+    required this.sets,
+    this.block,
+    this.restSeconds,
+  });
 }
 
 class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
@@ -103,6 +116,8 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
         .map(
           (e) => _TemplateEditExercise(
             name: e.name,
+            block: e.block,
+            restSeconds: e.restSeconds,
             sets: e.sets
                 .map(
                   (s) => _TemplateEditSet(
@@ -216,6 +231,65 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
     setState(() => _circuits.add(chosen));
   }
 
+  Exercise? _known(String name) {
+    for (final e in _knownExercises) {
+      if (e.name.trim().toLowerCase() == name.trim().toLowerCase()) return e;
+    }
+    return null;
+  }
+
+  /// Uitleg en video's van een oefening, met video toevoegen — bewaard bij
+  /// de oefening in je oefeningen (aangemaakt als hij er nog niet is).
+  void _showExerciseInfo(String name) {
+    final known = _known(name);
+    showInfoSheet(
+      context,
+      title: name,
+      description: known?.description ?? '',
+      videoUrls: known?.videoUrls ?? const [],
+      onAddVideo: (url) => _addExerciseVideo(name, url),
+    );
+  }
+
+  Future<void> _addExerciseVideo(String name, String url) async {
+    final userId = widget.controller.user?.id;
+    if (userId == null) return;
+    try {
+      var existing = _known(name);
+      if (existing == null) {
+        try {
+          existing = await _exerciseRepo.create(
+            Exercise(id: '', name: name.trim()),
+            userId,
+          );
+        } catch (_) {
+          // Bestaat al (nog niet geladen): lijst ophalen en die gebruiken.
+          await _loadKnownExercises();
+          existing = _known(name);
+          if (existing == null) rethrow;
+        }
+      }
+      if (existing.videoUrls.contains(url)) return;
+      final saved = await _exerciseRepo.updateContent(
+        existing.copyWith(videoUrls: [...existing.videoUrls, url]),
+      );
+      if (!mounted) return;
+      setState(() {
+        _knownExercises = [
+          for (final e in _knownExercises)
+            if (e.id != saved.id) e,
+          saved,
+        ];
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video opslaan is niet gelukt.')),
+        );
+      }
+    }
+  }
+
   Future<void> _loadKnownExercises() async {
     final userId = widget.controller.user?.id;
     if (userId == null) return;
@@ -250,7 +324,45 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
     setState(() {
       final moved = _exercises.removeAt(oldIndex);
       _exercises.insert(newIndex, moved);
+      normalizeBlocksIn(_exercises);
     });
+  }
+
+  int get _defaultRest => widget.controller.profile?.defaultRestSeconds ?? 90;
+
+  int _roundsInBlock(int ei) {
+    final r = blockRange([for (final e in _exercises) e.block], ei);
+    var rounds = 0;
+    for (var i = r.start; i < r.end; i++) {
+      final n = _exercises[i].sets.length;
+      if (n > rounds) rounds = n;
+    }
+    return rounds;
+  }
+
+  Future<void> _editRest(int ei) async {
+    final r = blockRange([for (final e in _exercises) e.block], ei);
+    final choice = await showRestPicker(
+      context,
+      current: _exercises[ei].restSeconds,
+      defaultRest: _defaultRest,
+      title: r.end - r.start > 1
+          ? 'Rust na elke ronde van het blok'
+          : 'Rust na elke set · ${_exercises[ei].name}',
+    );
+    if (choice == null || !mounted) return;
+    setState(() => setBlockRestIn(_exercises, ei, choice.seconds));
+  }
+
+  void _onBlockAction(int ei, ExerciseBlockAction action) {
+    switch (action) {
+      case ExerciseBlockAction.link:
+        setState(() => linkWithPreviousIn(_exercises, ei));
+      case ExerciseBlockAction.unlink:
+        setState(() => unlinkIn(_exercises, ei));
+      case ExerciseBlockAction.rest:
+        _editRest(ei);
+    }
   }
 
   Future<void> _save() async {
@@ -276,6 +388,8 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
         .map(
           (e) => ExerciseEntry(
             name: e.name,
+            block: e.block,
+            restSeconds: e.restSeconds,
             sets: e.sets
                 .map(
                   (s) => ExerciseSet(
@@ -369,6 +483,7 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final blocks = blockInfos([for (final e in _exercises) e.block]);
     return Scaffold(
       backgroundColor: AppColor.bg,
       appBar: AppBar(
@@ -417,6 +532,12 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
               ),
               const SizedBox(height: 22),
               Text('OEFENINGEN', style: AppText.overline),
+              const SizedBox(height: 4),
+              Text(
+                'Tip: koppel oefeningen via ⋮ tot een blok — je doet ze dan '
+                'per ronde achter elkaar, met pas daarna rust.',
+                style: AppText.caption.copyWith(color: AppColor.inkFaint),
+              ),
               const SizedBox(height: 10),
               if (_exercises.isNotEmpty)
                 ReorderableListView(
@@ -426,37 +547,74 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                   onReorderItem: _reorderExercise,
                   children: [
                     for (var ei = 0; ei < _exercises.length; ei++)
-                      Padding(
+                      Column(
                         key: ValueKey(_exercises[ei]),
-                        padding: EdgeInsets.zero,
-                        child: _TemplateExerciseCard(
-                          exercise: _exercises[ei],
-                          onRemove: () =>
-                              setState(() => _exercises.removeAt(ei)),
-                          onAddSet: () => setState(
-                            () => _exercises[ei].sets.add(
-                              _exercises[ei].sets.isEmpty
-                                  ? _TemplateEditSet()
-                                  : _exercises[ei].sets.last.copy(),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (blocks[ei].inBlock && blocks[ei].isFirst)
+                            BlockHeader(
+                              info: blocks[ei],
+                              rounds: _roundsInBlock(ei),
+                              restSeconds: restAfterIn(
+                                _exercises,
+                                ei,
+                                _defaultRest,
+                              ),
+                              onEditRest: () => _editRest(ei),
                             ),
-                          ),
-                          onRemoveSet: (si) =>
-                              setState(() => _exercises[ei].sets.removeAt(si)),
-                          onSetChanged: (si, patch) => setState(() {
-                            patch(_exercises[ei].sets[si]);
-                          }),
-                          dragHandle: ReorderableDragStartListener(
-                            index: ei,
-                            child: const Padding(
-                              padding: EdgeInsets.all(4),
-                              child: Icon(
-                                Icons.drag_handle,
-                                size: 18,
-                                color: AppColor.inkFaint,
+                          BlockFrame(
+                            info: blocks[ei],
+                            child: _TemplateExerciseCard(
+                              exercise: _exercises[ei],
+                              hasVideos:
+                                  _known(_exercises[ei].name)
+                                      ?.videoUrls
+                                      .isNotEmpty ??
+                                  false,
+                              onInfo: () =>
+                                  _showExerciseInfo(_exercises[ei].name),
+                              menu: ExerciseBlockMenu(
+                                canLink: ei > 0,
+                                inBlock: blocks[ei].inBlock,
+                                onSelected: (a) => _onBlockAction(ei, a),
+                              ),
+                              restHint:
+                                  blocks[ei].inBlock ||
+                                      _exercises[ei].restSeconds == null
+                                  ? null
+                                  : '${formatRest(_exercises[ei].restSeconds!)} '
+                                        'rust na elke set',
+                              onRemove: () => setState(() {
+                                _exercises.removeAt(ei);
+                                normalizeBlocksIn(_exercises);
+                              }),
+                              onAddSet: () => setState(
+                                () => _exercises[ei].sets.add(
+                                  _exercises[ei].sets.isEmpty
+                                      ? _TemplateEditSet()
+                                      : _exercises[ei].sets.last.copy(),
+                                ),
+                              ),
+                              onRemoveSet: (si) => setState(
+                                () => _exercises[ei].sets.removeAt(si),
+                              ),
+                              onSetChanged: (si, patch) => setState(() {
+                                patch(_exercises[ei].sets[si]);
+                              }),
+                              dragHandle: ReorderableDragStartListener(
+                                index: ei,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.drag_handle,
+                                    size: 18,
+                                    color: AppColor.inkFaint,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                   ],
                 ),
@@ -522,8 +680,7 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                           ),
                         ),
                         InkWell(
-                          onTap: () =>
-                              setState(() => _circuits.removeAt(ci)),
+                          onTap: () => setState(() => _circuits.removeAt(ci)),
                           borderRadius: BorderRadius.circular(7),
                           child: const Padding(
                             padding: EdgeInsets.all(4),
@@ -538,10 +695,7 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                     ),
                   ),
                 ),
-              AddBlockButton(
-                label: 'Circuit toevoegen',
-                onTap: _pickCircuit,
-              ),
+              AddBlockButton(label: 'Circuit toevoegen', onTap: _pickCircuit),
             ],
           ),
           Positioned(
@@ -576,9 +730,17 @@ class _TemplateExerciseCard extends StatelessWidget {
     required this.onRemoveSet,
     required this.onSetChanged,
     this.dragHandle,
+    this.menu,
+    this.restHint,
+    this.onInfo,
+    this.hasVideos = false,
   });
 
   final _TemplateEditExercise exercise;
+  final Widget? menu;
+  final VoidCallback? onInfo;
+  final bool hasVideos;
+  final String? restHint;
   final VoidCallback onRemove;
   final VoidCallback onAddSet;
   final ValueChanged<int> onRemoveSet;
@@ -592,6 +754,7 @@ class _TemplateExerciseCard extends StatelessWidget {
     required VoidCallback onUp,
     required String label,
     bool asInt = false,
+    ValueChanged<double>? onTyped,
   }) {
     final text = asInt
         ? value.toInt().toString()
@@ -612,12 +775,35 @@ class _TemplateExerciseCard extends StatelessWidget {
             child: const Text('−'),
           ),
         ),
-        SizedBox(
-          width: 48,
-          child: Text(
-            '$text $label',
-            textAlign: TextAlign.center,
-            style: AppText.caption,
+        // Tik op het getal om het zelf te typen.
+        Builder(
+          builder: (context) => InkWell(
+            onTap: onTyped == null
+                ? null
+                : () async {
+                    final v = await showNumberInput(
+                      context,
+                      title: switch (label) {
+                        'kg' => 'Gewicht',
+                        's' => 'Seconden',
+                        _ => 'Herhalingen',
+                      },
+                      initial: value,
+                      decimal: !asInt,
+                      suffix: label,
+                      max: label == 's' ? 600 : (asInt ? 100 : 500),
+                    );
+                    if (v != null) onTyped(v);
+                  },
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: SizedBox(
+              width: 48,
+              child: Text(
+                '$text $label',
+                textAlign: TextAlign.center,
+                style: AppText.caption,
+              ),
+            ),
           ),
         ),
         InkWell(
@@ -712,6 +898,22 @@ class _TemplateExerciseCard extends StatelessWidget {
             children: [
               ?dragHandle,
               Expanded(child: Text(exercise.name, style: AppText.cardTitle)),
+              if (onInfo != null)
+                InkWell(
+                  onTap: onInfo,
+                  borderRadius: BorderRadius.circular(99),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      hasVideos
+                          ? Icons.play_circle_outline
+                          : Icons.info_outline,
+                      size: 16,
+                      color: hasVideos ? AppColor.ice : AppColor.inkFaint,
+                    ),
+                  ),
+                ),
+              ?menu,
               InkWell(
                 onTap: onRemove,
                 borderRadius: BorderRadius.circular(7),
@@ -731,6 +933,16 @@ class _TemplateExerciseCard extends StatelessWidget {
               ),
             ],
           ),
+          if (restHint != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              restHint!,
+              style: AppText.caption.copyWith(
+                fontSize: 11,
+                color: AppColor.tealBright,
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           for (var si = 0; si < exercise.sets.length; si++)
             Padding(
@@ -750,13 +962,14 @@ class _TemplateExerciseCard extends StatelessWidget {
                       value: exercise.sets[si].kg,
                       onDown: () => onSetChanged(
                         si,
-                        (s) => s.kg = (s.kg - 2.5).clamp(0, 500),
+                        (s) => s.kg = (s.kg - 0.5).clamp(0, 500),
                       ),
                       onUp: () => onSetChanged(
                         si,
-                        (s) => s.kg = (s.kg + 2.5).clamp(0, 500),
+                        (s) => s.kg = (s.kg + 0.5).clamp(0, 500),
                       ),
                       label: 'kg',
+                      onTyped: (v) => onSetChanged(si, (s) => s.kg = v),
                     ),
                   ),
                   Expanded(
@@ -767,16 +980,18 @@ class _TemplateExerciseCard extends StatelessWidget {
                             value: exercise.sets[si].seconds!.toDouble(),
                             onDown: () => onSetChanged(
                               si,
-                              (s) =>
-                                  s.seconds = (s.seconds! - 5).clamp(5, 600),
+                              (s) => s.seconds = (s.seconds! - 5).clamp(5, 600),
                             ),
                             onUp: () => onSetChanged(
                               si,
-                              (s) =>
-                                  s.seconds = (s.seconds! + 5).clamp(5, 600),
+                              (s) => s.seconds = (s.seconds! + 5).clamp(5, 600),
                             ),
                             label: 's',
                             asInt: true,
+                            onTyped: (v) => onSetChanged(
+                              si,
+                              (s) => s.seconds = v.round().clamp(5, 600),
+                            ),
                           )
                         : _numberField(
                             value: exercise.sets[si].reps.toDouble(),
@@ -790,6 +1005,10 @@ class _TemplateExerciseCard extends StatelessWidget {
                             ),
                             label: 'reps',
                             asInt: true,
+                            onTyped: (v) => onSetChanged(
+                              si,
+                              (s) => s.reps = v.round().clamp(1, 100),
+                            ),
                           ),
                   ),
                   InkWell(

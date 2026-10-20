@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/rest_blocks.dart';
 import '../core/formatters.dart';
 import '../models/agenda.dart' show normalizeReminders, reminderLabel;
 import '../models/dashboard_config.dart';
@@ -40,6 +41,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late FingerReminderScope _fingerReminderScope;
   late int _fingerReminderIntervalMinutes;
   late bool _showPauseButton;
+  late int _alarmSnoozeMinutes;
+  late int _defaultRestSeconds;
+  late SpotifyButtonPlacement _spotifyButton;
+  AlarmMode? _trainingAlarmMode;
+  late int _circuitPrepSeconds;
   late final TextEditingController _nightscoutUrl;
   late final TextEditingController _nightscoutToken;
   late final TextEditingController _dexcomUsername;
@@ -86,6 +92,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _fingerReminderScope = profile.fingerReminderScope;
     _fingerReminderIntervalMinutes = profile.fingerReminderIntervalMinutes;
     _showPauseButton = profile.showPauseButton;
+    _alarmSnoozeMinutes = profile.alarmSnoozeMinutes;
+    _defaultRestSeconds = profile.defaultRestSeconds;
+    _spotifyButton = profile.spotifyButton;
+    _trainingAlarmMode = profile.trainingAlarmMode;
+    _circuitPrepSeconds = profile.circuitPrepSeconds;
     _nightscoutUrl = TextEditingController(text: profile.nightscoutUrl);
     _nightscoutToken = TextEditingController(text: profile.nightscoutToken);
     _dexcomUsername = TextEditingController(text: profile.dexcomUsername);
@@ -260,7 +271,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-
   Future<void> _addBolusPeriod() async {
     final result = await showBolusPeriodDialog(context);
     if (result == null) return;
@@ -330,9 +340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () => Navigator.pop(
                 c,
                 MealReminder(
-                  label: label.text.trim().isEmpty
-                      ? 'Eten'
-                      : label.text.trim(),
+                  label: label.text.trim().isEmpty ? 'Eten' : label.text.trim(),
                   time:
                       '${time.hour.toString().padLeft(2, '0')}:'
                       '${time.minute.toString().padLeft(2, '0')}',
@@ -411,6 +419,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         dexcomServer: _dexcomServer,
         carbPresets: _carbPresets,
         showPauseButton: _showPauseButton,
+        alarmSnoozeMinutes: _alarmSnoozeMinutes,
+        defaultRestSeconds: _defaultRestSeconds,
+        spotifyButton: _spotifyButton,
+        trainingAlarmMode: _trainingAlarmMode,
+        clearTrainingAlarmMode: _trainingAlarmMode == null,
+        circuitPrepSeconds: _circuitPrepSeconds,
         foodPresets: _foodPresets,
         weekStart: _weekStart,
         hideSystemBars: _hideSystemBars,
@@ -453,11 +467,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 'KINETIC',
-                style: AppText.cardTitle.copyWith(height: 1, letterSpacing: 1.6),
+                style: AppText.cardTitle.copyWith(
+                  height: 1,
+                  letterSpacing: 1.6,
+                ),
               ),
               const SizedBox(height: 3),
               const KLabel('Instellingen & alarmen'),
             ],
+          ),
+        ),
+        // Opslaan altijd in beeld, niet weggestopt in een ingeklapte groep.
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.controller.authError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      widget.controller.authError!,
+                      style: AppText.caption.copyWith(
+                        color: AppColor.redBright,
+                      ),
+                    ),
+                  ),
+                FilledButton(
+                  onPressed: widget.controller.busy ? null : _save,
+                  child: Text(
+                    widget.controller.busy
+                        ? 'Opslaan...'
+                        : 'Wijzigingen opslaan',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         body: ListView(
@@ -503,6 +550,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               selected: _alarmMode == mode,
                               onSelected: _alarmsAvailable
                                   ? (_) => _onAlarmModeChanged(mode)
+                                  : null,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text('TIJDENS TRAINING', style: AppText.overline),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final mode in <AlarmMode?>[
+                            null,
+                            ...AlarmMode.values,
+                          ])
+                            ChoiceChip(
+                              label: Text(
+                                mode == null
+                                    ? 'Zoals hierboven'
+                                    : _alarmModeLabel(mode),
+                              ),
+                              selected: _trainingAlarmMode == mode,
+                              onSelected: _alarmsAvailable
+                                  ? (_) => setState(
+                                      () => _trainingAlarmMode = mode,
+                                    )
                                   : null,
                             ),
                         ],
@@ -578,6 +651,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onChanged: (value) =>
                             setState(() => _trainingLimit = value),
                       ),
+                      const Divider(),
+                      _InfoRow(
+                        title: 'Sluimertijd',
+                        subtitle:
+                            'Zo lang blijft het alarm stil na "Sluimeren" of '
+                            '"Ingenomen". Herstelt je waarde intussen, dan '
+                            'gaat het niet meer af.',
+                        value: '$_alarmSnoozeMinutes min',
+                      ),
+                      Slider(
+                        value: _alarmSnoozeMinutes.toDouble(),
+                        min: 5,
+                        max: 60,
+                        divisions: 11,
+                        activeColor: AppColor.teal,
+                        inactiveColor: AppColor.line,
+                        onChanged: (value) =>
+                            setState(() => _alarmSnoozeMinutes = value.round()),
+                      ),
                       const SizedBox(height: 6),
                       OutlinedButton.icon(
                         onPressed: _alarmMode == AlarmMode.off
@@ -591,7 +683,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Bovengrens (hyper)',
               child: Column(
@@ -631,7 +723,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Bronnen',
               child: Column(
@@ -749,7 +841,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Vingerprik-herinnering',
               child: Column(
@@ -812,26 +904,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Sessie',
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _InfoRow(
-                      title: 'Pauzeknop tonen',
-                      subtitle: 'Tijdens een live training/sparren',
-                      value: '',
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _InfoRow(
+                          title: 'Pauzeknop tonen',
+                          subtitle: 'Tijdens een live training/sparren',
+                          value: '',
+                        ),
+                      ),
+                      Switch(
+                        value: _showPauseButton,
+                        onChanged: (v) => setState(() => _showPauseButton = v),
+                      ),
+                    ],
                   ),
-                  Switch(
-                    value: _showPauseButton,
-                    onChanged: (v) => setState(() => _showPauseButton = v),
+                  const Divider(),
+                  _InfoRow(
+                    title: 'Standaard rust (kracht)',
+                    subtitle:
+                        'Na elke set, of na een blok. Per oefening of blok '
+                        'aan te passen.',
+                    value: formatRest(_defaultRestSeconds),
+                  ),
+                  Slider(
+                    value: _defaultRestSeconds.toDouble(),
+                    min: 15,
+                    max: 300,
+                    divisions: 19,
+                    activeColor: AppColor.teal,
+                    inactiveColor: AppColor.line,
+                    onChanged: (value) =>
+                        setState(() => _defaultRestSeconds = value.round()),
+                  ),
+                  const Divider(),
+                  _InfoRow(
+                    title: 'Voorbereiden',
+                    subtitle:
+                        'Aftellen vóór elke circuitoefening en tijd-set '
+                        '(bv. plank), om je halters af te stellen.',
+                    value: _circuitPrepSeconds == 0
+                        ? 'Uit'
+                        : '$_circuitPrepSeconds s',
+                  ),
+                  Slider(
+                    value: _circuitPrepSeconds.toDouble(),
+                    min: 0,
+                    max: 60,
+                    divisions: 12,
+                    activeColor: AppColor.teal,
+                    inactiveColor: AppColor.line,
+                    onChanged: (value) =>
+                        setState(() => _circuitPrepSeconds = value.round()),
+                  ),
+                  const Divider(),
+                  _InfoRow(
+                    title: 'Spotify-knop',
+                    subtitle: 'Bij welke trainingen de knop zichtbaar is.',
+                    value: '',
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final (option, label) in const [
+                        (SpotifyButtonPlacement.both, 'Kracht en sambo'),
+                        (SpotifyButtonPlacement.strength, 'Alleen kracht'),
+                        (SpotifyButtonPlacement.mat, 'Alleen sambo'),
+                        (SpotifyButtonPlacement.off, 'Verbergen'),
+                      ])
+                        ChoiceChip(
+                          label: Text(label),
+                          selected: _spotifyButton == option,
+                          onSelected: (_) =>
+                              setState(() => _spotifyButton = option),
+                        ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Voeding tijdens training',
               child: Column(
@@ -888,7 +1048,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Eetlogboek',
               child: Column(
@@ -935,10 +1095,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Expanded(
                         child: _InfoRow(
-                          title: 'Geluid bij "tijd om te eten"',
+                          title: 'Geluid bij eet-herinneringen',
                           subtitle:
-                              'Melding na de ingestelde wachttijd na '
-                              'insuline.',
+                              '"Tijd om te eten" na de wachttijd na '
+                              'insuline, en je eetmomenten.',
                           value: '',
                         ),
                       ),
@@ -1019,7 +1179,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Bolus-calculator',
               child: Column(
@@ -1149,7 +1309,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Techniek-herinneringen',
               child: Column(
@@ -1158,8 +1318,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _techRemindersEnabled,
-                    onChanged: (v) =>
-                        setState(() => _techRemindersEnabled = v),
+                    onChanged: (v) => setState(() => _techRemindersEnabled = v),
                     title: Text(
                       'Herinneren welke techniek ik oefen',
                       style: AppText.bodyStrong,
@@ -1187,7 +1346,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        for (final m in const [1440, 120, 60, 30, 15, 0, -15, -30])
+                        for (final m in const [
+                          1440,
+                          120,
+                          60,
+                          30,
+                          15,
+                          0,
+                          -15,
+                          -30,
+                        ])
                           FilterChip(
                             label: Text(reminderLabel(m)),
                             selected: _techReminderDefaults.contains(m),
@@ -1219,7 +1387,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Dashboard',
               child: DashboardEditor(
@@ -1227,14 +1395,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (c) => setState(() => _dashboard = c),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Weergave',
               child: SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _hideSystemBars,
                 onChanged: (v) => setState(() => _hideSystemBars = v),
-                title: Text('Systeemknoppen verbergen', style: AppText.bodyStrong),
+                title: Text(
+                  'Systeemknoppen verbergen',
+                  style: AppText.bodyStrong,
+                ),
                 subtitle: Text(
                   'Verbergt de navigatieknoppen en statusbalk van je telefoon '
                   'in de hele app. Veeg vanaf de rand om ze even terug te '
@@ -1243,7 +1414,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Agenda',
               child: Column(
@@ -1275,7 +1446,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             _Section(
               label: 'Account',
               child: Column(
@@ -1285,25 +1456,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     user?.email ?? 'Onbekend account',
                     style: AppText.bodyStrong,
                   ),
-                  if (widget.controller.authError != null) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      widget.controller.authError!,
-                      style: AppText.caption.copyWith(
-                        color: AppColor.redBright,
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: widget.controller.busy ? null : _save,
-                    child: Text(
-                      widget.controller.busy
-                          ? 'Opslaan...'
-                          : 'Wijzigingen opslaan',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   OutlinedButton(
                     onPressed: widget.controller.busy
                         ? null
@@ -1328,7 +1481,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class _Section extends StatelessWidget {
+/// Eén instellingengroep: een compacte, tikbare kopregel; de inhoud klapt
+/// pas open als je erop tikt — zo blijft de pagina overzichtelijk.
+class _Section extends StatefulWidget {
   const _Section({required this.label, required this.child});
 
   final String label;
@@ -1347,47 +1502,89 @@ class _Section extends StatelessWidget {
     'Oefeningen': Icons.fitness_center,
     "Trainingsschema's": Icons.view_list_outlined,
     'Circuits': Icons.loop,
+    'Dashboard': Icons.dashboard_outlined,
     'Weergave': Icons.fullscreen,
     'Agenda': Icons.event_outlined,
     'Account': Icons.person_outline,
   };
 
+  /// Korte omschrijving onder de titel, zodat je ziet wat erin zit zonder
+  /// open te klappen.
+  static const _hints = <String, String>{
+    'Alarm': 'Geluid, tijdens training, grenzen, sluimeren',
+    'Bovengrens (hyper)': 'Alarm bij een hoge waarde',
+    'Bronnen': 'Dexcom, Nightscout of vingerprik',
+    'Vingerprik-herinnering': 'Herinnering om te prikken',
+    'Techniek-herinneringen': 'Technieken oefenen bij trainingen',
+    'Sessie': 'Pauzeknop, rust, voorbereiden, Spotify',
+    'Voeding tijdens training': 'Snelle keuzes tijdens een sessie',
+    'Eetlogboek': 'Presets, wachttijd en eet-herinneringen',
+    'Bolus-calculator': "Ratio's en correctie",
+    'Dashboard': 'Wat er op Vandaag staat',
+    'Weergave': 'Systeembalken',
+    'Agenda': 'Eerste dag van de week',
+    'Account': 'Uitloggen',
+  };
+
+  @override
+  State<_Section> createState() => _SectionState();
+}
+
+class _SectionState extends State<_Section> {
+  bool _open = false;
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2),
-          child: Row(
-            children: [
-              Icon(
-                _icons[label] ?? Icons.tune,
-                size: 20,
-                color: AppColor.ice,
+    final hint = _Section._hints[widget.label];
+    // Material (geen gekleurde Container): dan zijn tik-effecten van
+    // schakelaars en lijstregels in de sectie gewoon zichtbaar.
+    return Material(
+      color: AppColor.surface,
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _open = !_open),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+              child: Row(
+                children: [
+                  Icon(
+                    _Section._icons[widget.label] ?? Icons.tune,
+                    size: 20,
+                    color: AppColor.ice,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.label, style: AppText.bodyStrong),
+                        if (hint != null)
+                          Text(
+                            hint,
+                            style: AppText.caption.copyWith(fontSize: 11),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _open ? Icons.expand_less : Icons.expand_more,
+                    color: AppColor.inkFaint,
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label.toUpperCase(),
-                  style: AppText.cardTitle.copyWith(letterSpacing: .6),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        // Material (geen gekleurde Container): dan zijn tik-effecten van
-        // schakelaars en lijstregels in de sectie gewoon zichtbaar.
-        Material(
-          color: AppColor.surface,
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(width: double.infinity, child: child),
-          ),
-        ),
-      ],
+          if (_open)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(width: double.infinity, child: widget.child),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1636,11 +1833,7 @@ class _TimePickerBox extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.schedule,
-                  size: 18,
-                  color: AppColor.inkMuted,
-                ),
+                const Icon(Icons.schedule, size: 18, color: AppColor.inkMuted),
                 const SizedBox(width: 10),
                 Text(time.format(context), style: AppText.bodyStrong),
               ],

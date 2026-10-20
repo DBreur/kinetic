@@ -24,6 +24,7 @@ import '../repositories/session_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/weigh_in_sheet.dart';
 import '../widgets/kinetic.dart';
 import 'avatar_crop_screen.dart';
 import 'technique_detail_screen.dart';
@@ -340,6 +341,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    // Nieuw gewicht ingevuld: ook als weging bewaren (met datum).
+    if (validW != null && validW != profile.weightKg) {
+      await widget.controller.addWeighIn(validW);
     }
   }
 
@@ -532,7 +538,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: AppSpace.md),
+          WeighInSummary(controller: widget.controller),
+          const SizedBox(height: AppSpace.sm),
           Row(
             children: [
               Expanded(

@@ -7,12 +7,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/app_config.dart';
 import '../core/error_messages.dart';
 import '../models/app_profile.dart';
+import '../models/circuit.dart';
 import '../models/glucose.dart';
 import '../models/glucose_entry.dart';
+import '../models/weigh_in.dart';
 import '../repositories/glucose_entry_repository.dart';
 import '../repositories/profile_repository.dart';
+import '../repositories/weigh_in_repository.dart';
+import '../services/background_glucose_service.dart';
 import '../services/glucose_provider.dart';
+import '../services/notification_router.dart';
 import '../services/video_labels.dart';
+import '../services/weigh_in_reminder_service.dart';
 import '../widgets/glucose_alarm.dart';
 import '../widgets/muscle_figure.dart';
 
@@ -73,7 +79,36 @@ class AlarmDecision {
 }
 
 class AppController extends ChangeNotifier {
-  AppController();
+  AppController() {
+    alarmGuard.onSnoozeChanged = BackgroundGlucoseWatcher.instance.saveSnooze;
+    NotificationRouter.pendingSnooze.addListener(_onSnoozeRequest);
+  }
+
+  /// Verzoek om een circuit als losse training te starten (vanuit de
+  /// bibliotheek of de circuit-editor) — de shell luistert en start hem.
+  final ValueNotifier<Circuit?> pendingCircuitStart = ValueNotifier(null);
+
+  void startCircuitTraining(Circuit circuit) =>
+      pendingCircuitStart.value = circuit;
+
+  /// Navigator van de hele app — zodat het glucose-alarm ook buiten een
+  /// training zijn paneel kan tonen, op welk scherm je ook zit.
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  /// Context bovenop alle schermen (de overlay van de app-navigator), of
+  /// null zolang de app nog niet getekend is.
+  BuildContext? get _overlayContext =>
+      navigatorKey.currentState?.overlay?.context;
+
+  void _onSnoozeRequest() {
+    final request = NotificationRouter.pendingSnooze.value;
+    if (request == null) return;
+    NotificationRouter.pendingSnooze.value = null;
+    alarmGuard.snoozeFromNotification(
+      isHigh: request.isHigh,
+      mmol: request.mmol,
+    );
+  }
 
   SupabaseClient? _client;
   ProfileRepository? _profiles;
@@ -182,9 +217,8 @@ class AppController extends ChangeNotifier {
       final userId = user?.id;
       final client = _client;
       if (userId == null || client == null) return;
-      final entries = await GlucoseEntryRepository(
-        client,
-      ).recentForUser(userId);
+      final entries = await GlucoseEntryRepository(client)
+          .recentForUser(userId);
       cachedFingerEntries = entries;
       cachedGlucose = snapshotFromFingerEntries(entries);
       return;
@@ -201,7 +235,26 @@ class AppController extends ChangeNotifier {
         message: current.message,
       );
     }
-    cachedGlucose = await provider.fetch();
+    final snapshot = await provider.fetch();
+    cachedGlucose = snapshot;
+    _checkPolledReading(snapshot);
+  }
+
+  /// Buiten een training het alarm laten meekijken met de minuut-poll. Een
+  /// lopende sessie controleert zelf (met de trainingsgrens), dus dan niet.
+  void _checkPolledReading(GlucoseSnapshot snapshot) {
+    final reading = snapshot.reading;
+    final context = _overlayContext;
+    if (_sessionActive || reading == null || snapshot.isStale) return;
+    if (context == null) return;
+    checkGlucoseReading(
+      () => _overlayContext ?? context,
+      reading,
+      onManualEntry: (ctx) => handleManualEntryFromAlarm(ctx, (r) {
+        offerGlucoseReading(r);
+        checkGlucoseReading(() => _overlayContext ?? context, r);
+      }),
+    );
   }
 
   /// Een nieuwere meting van elders (bv. een lopende training) — alleen
@@ -264,8 +317,12 @@ class AppController extends ChangeNotifier {
       );
     }
 
-    // 2. Alarm helemaal uit.
-    if (p.alarmMode == AlarmMode.off) {
+    // 2. Alarm helemaal uit. Tijdens een training geldt de eigen
+    //    trainingsstand (als die is ingesteld), anders de dagelijkse.
+    final mode = sessionActive
+        ? (p.trainingAlarmMode ?? p.alarmMode)
+        : p.alarmMode;
+    if (mode == AlarmMode.off) {
       return AlarmDecision(
         enabled: false,
         withSound: false,
@@ -279,7 +336,7 @@ class AppController extends ChangeNotifier {
     if (sessionActive) {
       return AlarmDecision(
         enabled: true,
-        withSound: p.alarmMode == AlarmMode.sound,
+        withSound: mode == AlarmMode.sound,
         lowBelow: p.trainingLimit,
         isTrainingLimit: true,
       );
@@ -323,6 +380,7 @@ class AppController extends ChangeNotifier {
       isTrainingLimit: decision.isTrainingLimit,
       highAbove: profile?.hyperLimit,
       highEnabled: profile?.hyperAlarmEnabled ?? true,
+      snoozeMinutes: profile?.alarmSnoozeMinutes ?? 15,
       onManualEntry: onManualEntry,
     );
   }
@@ -414,6 +472,7 @@ class AppController extends ChangeNotifier {
     }
     await saveProfile(p.copyWith(avatarUrl: ''));
   }
+
   User? _debugUser;
   User? get user => _debugUser ?? _client?.auth.currentUser;
   bool get hasSupabase => AppConfig.hasSupabase;
@@ -513,6 +572,65 @@ class AppController extends ChangeNotifier {
       : '${p.glucoseSource.name}|${p.nightscoutUrl}|${p.nightscoutToken}|'
             '${p.dexcomUsername}|${p.dexcomServer}';
 
+  // ── Wegen ──────────────────────────────────────────────────────────────
+
+  /// Wegingen, nieuwste eerst — geladen met [loadWeighIns].
+  final ValueNotifier<List<WeighIn>> weighIns = ValueNotifier(const []);
+
+  DateTime? get lastWeighInAt =>
+      weighIns.value.isEmpty ? null : weighIns.value.first.measuredAt;
+
+  Future<void> loadWeighIns() async {
+    final userId = user?.id;
+    final c = _client;
+    if (userId == null || c == null) return;
+    try {
+      weighIns.value = await WeighInRepository(c).listForUser(userId);
+    } catch (_) {
+      // Tabel nog niet gemigreerd of geen verbinding: lijst blijft leeg.
+    }
+    unawaited(WeighInReminderService.instance.sync(_profile, lastWeighInAt));
+  }
+
+  /// Bewaart een weging en zet hem ook als actueel gewicht in het profiel.
+  /// Geeft false terug als opslaan niet lukte.
+  Future<bool> addWeighIn(double kg, {DateTime? at}) async {
+    final userId = user?.id;
+    final c = _client;
+    final p = _profile;
+    if (userId == null || c == null) return false;
+    try {
+      final saved = await WeighInRepository(c).create(
+        WeighIn(id: '', measuredAt: at ?? DateTime.now(), weightKg: kg),
+        userId,
+      );
+      weighIns.value = [saved, ...weighIns.value]
+        ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+      if (p != null && p.weightKg != kg && weighIns.value.first == saved) {
+        await saveProfile(p.copyWith(weightKg: kg));
+      }
+      unawaited(WeighInReminderService.instance.sync(_profile, lastWeighInAt));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> deleteWeighIn(WeighIn weighIn) async {
+    final c = _client;
+    if (c == null) return;
+    try {
+      await WeighInRepository(c).delete(weighIn.id);
+      weighIns.value = [
+        for (final w in weighIns.value)
+          if (w.id != weighIn.id) w,
+      ];
+      unawaited(WeighInReminderService.instance.sync(_profile, lastWeighInAt));
+    } catch (_) {
+      // Blijft staan; volgende keer opnieuw proberen.
+    }
+  }
+
   Future<void> saveProfile(AppProfile next) async {
     busy = true;
     authError = null;
@@ -522,7 +640,8 @@ class AppController extends ChangeNotifier {
       profile = await _profiles!.upsert(next);
       // Bron of koppeling veranderd (of Dexcom-wachtwoord net bewaard):
       // meteen opnieuw ophalen in plaats van tot de volgende minuut wachten.
-      if (isPollingGlucose && _glucoseSourceKey(before) != _glucoseSourceKey(profile)) {
+      if (isPollingGlucose &&
+          _glucoseSourceKey(before) != _glucoseSourceKey(profile)) {
         refreshGlucose();
       }
       state = profile!.onboardingCompleted

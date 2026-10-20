@@ -52,3 +52,6 @@ dart_defines.json
 
 # Supabase CLI state
 lib/supabase/.temp/
+
+# Gebouwde APK's (build_apk.ps1)
+/releases/

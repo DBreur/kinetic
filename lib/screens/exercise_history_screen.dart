@@ -49,9 +49,8 @@ class _ExerciseHistoryScreenState extends State<ExerciseHistoryScreen> {
       return;
     }
     try {
-      final history = await SessionRepository(
-        client,
-      ).performanceHistory(userId, widget.exerciseName);
+      final history = await SessionRepository(client)
+          .performanceHistory(userId, widget.exerciseName);
       if (!mounted) return;
       setState(() {
         _history = history;
@@ -69,8 +68,10 @@ class _ExerciseHistoryScreenState extends State<ExerciseHistoryScreen> {
   String _fmtKg(double kg) =>
       kg % 1 == 0 ? kg.toInt().toString() : kg.toString();
 
+  /// Per set zoals hij gedaan is: "12,5 kg · × 8", "20s" of
+  /// "12,5 kg · verzuring" — niet altijd reps.
   String _formatSets(List<ExerciseSet> sets) =>
-      sets.map((s) => '${_fmtKg(s.kg)}kg × ${s.reps}').join(', ');
+      sets.map((s) => s.summary).join(', ');
 
   @override
   Widget build(BuildContext context) {

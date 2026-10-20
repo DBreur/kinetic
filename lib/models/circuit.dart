@@ -23,6 +23,18 @@ class CircuitStep {
   final String extraTarget;
   final int? restSeconds;
 
+  /// Video's bij deze stap (links). Leeg = die van de oefening met dezelfde
+  /// naam in je oefeningen, als die er zijn.
+  final List<String> videoUrls;
+
+  /// Blok binnen het circuit: opeenvolgende stappen met hetzelfde nummer
+  /// doe je samen een eigen aantal rondes ([blockRounds]) voordat je naar
+  /// het volgende deel gaat. Null = geen blok. Zie [Circuit.segments].
+  final int? block;
+
+  /// Rondes van het blok — staat op elke stap van het blok, de eerste telt.
+  final int? blockRounds;
+
   const CircuitStep({
     required this.name,
     this.seconds,
@@ -30,6 +42,9 @@ class CircuitStep {
     this.toBurn = false,
     this.extraTarget = '',
     this.restSeconds,
+    this.videoUrls = const [],
+    this.block,
+    this.blockRounds,
   });
 
   StepKind get kind => toBurn
@@ -65,6 +80,11 @@ class CircuitStep {
       toBurn: toBurn,
       extraTarget: (map['extra_target'] as String?) ?? '',
       restSeconds: (map['rest'] as num?)?.toInt(),
+      videoUrls: ((map['videos'] as List?) ?? const [])
+          .map((e) => e as String)
+          .toList(),
+      block: (map['block'] as num?)?.toInt(),
+      blockRounds: (map['block_rounds'] as num?)?.toInt(),
     );
   }
 
@@ -79,16 +99,47 @@ class CircuitStep {
       StepKind.time => {'seconds': seconds ?? 40},
     },
     'rest': ?restSeconds,
+    if (videoUrls.isNotEmpty) 'videos': videoUrls,
+    'block': ?block,
+    'block_rounds': ?blockRounds,
   };
 
-  CircuitStep copyWith({String? name}) => CircuitStep(
+  CircuitStep copyWith({
+    String? name,
+    List<String>? videoUrls,
+    int? block,
+    bool clearBlock = false,
+    int? blockRounds,
+  }) => CircuitStep(
     name: name ?? this.name,
     seconds: seconds,
     reps: reps,
     toBurn: toBurn,
     extraTarget: extraTarget,
     restSeconds: restSeconds,
+    videoUrls: videoUrls ?? this.videoUrls,
+    block: clearBlock ? null : (block ?? this.block),
+    blockRounds: clearBlock ? null : (blockRounds ?? this.blockRounds),
   );
+}
+
+/// Een deel van een circuit dat je een aantal rondes herhaalt: een blok
+/// (stappen [start] tot [end]) of, zonder blokken, het hele circuit.
+class CircuitSegment {
+  final int start;
+  final int end;
+  final int rounds;
+
+  /// Bloknummer, of null voor stappen buiten een blok.
+  final int? block;
+  const CircuitSegment({
+    required this.start,
+    required this.end,
+    required this.rounds,
+    this.block,
+  });
+
+  int get length => end - start;
 }
 
 class Circuit {
@@ -105,6 +156,11 @@ class Circuit {
   /// [effectiveSteps].
   final List<CircuitStep> steps;
 
+  /// Met blokken: true = elk blok zijn eigen rondes na elkaar (A A A, B B
+  /// B); false = het hele circuit telkens één keer door ([rounds] keer),
+  /// blokken zijn dan alleen een groepering.
+  final bool roundsPerBlock;
+
   const Circuit({
     required this.id,
     required this.name,
@@ -115,13 +171,17 @@ class Circuit {
     this.description = '',
     this.videoUrls = const [],
     this.steps = const [],
+    this.roundsPerBlock = true,
   });
 
   /// De stappen zoals ze gedaan worden: de eigen stappen, of (bij oudere
   /// circuits) elke oefening even lang als [workSeconds].
   List<CircuitStep> get effectiveSteps => steps.isNotEmpty
       ? steps
-      : [for (final n in exerciseNames) CircuitStep(name: n, seconds: workSeconds)];
+      : [
+          for (final n in exerciseNames)
+            CircuitStep(name: n, seconds: workSeconds),
+        ];
 
   factory Circuit.fromJson(Map<String, dynamic> json) => Circuit(
     id: (json['id'] as String?) ?? '',
@@ -137,6 +197,7 @@ class Circuit {
         .map((e) => e as String)
         .toList(),
     steps: ((json['steps'] as List?) ?? []).map(CircuitStep.fromJson).toList(),
+    roundsPerBlock: (json['rounds_per_block'] as bool?) ?? true,
   );
 
   /// Namen en een werktijd voor Uchivo (dat alleen die velden kent): de
@@ -155,13 +216,51 @@ class Circuit {
   String get summary {
     final st = effectiveSteps;
     final targets = {for (final s in st) s.targetLabel};
+    final blocks = roundsPerBlock
+        ? segments.where((g) => g.block != null).length
+        : 0;
     return [
       '${st.length} oefening${st.length == 1 ? '' : 'en'}',
-      '$rounds ronde${rounds == 1 ? '' : 's'}',
+      if (blocks > 0)
+        '$blocks blok${blocks == 1 ? '' : 'ken'}'
+      else
+        '$rounds ronde${rounds == 1 ? '' : 's'}',
       if (targets.length == 1) '${targets.first} per oefening',
       _restLabel,
     ].join(' · ');
   }
+
+  /// De delen die je na elkaar doet. Zonder blokken: één deel (alle
+  /// stappen, [rounds] rondes). Met blokken: elk blok met zijn eigen
+  /// rondes; stappen ertussen zonder blok vormen samen een deel met
+  /// [rounds] rondes.
+  List<CircuitSegment> get segments {
+    final st = effectiveSteps;
+    if (!roundsPerBlock || !hasBlocks) {
+      return [CircuitSegment(start: 0, end: st.length, rounds: rounds)];
+    }
+    final result = <CircuitSegment>[];
+    var i = 0;
+    while (i < st.length) {
+      final block = st[i].block;
+      var end = i + 1;
+      while (end < st.length && st[end].block == block) {
+        end++;
+      }
+      result.add(
+        CircuitSegment(
+          start: i,
+          end: end,
+          rounds: block == null ? rounds : (st[i].blockRounds ?? rounds),
+          block: block,
+        ),
+      );
+      i = end;
+    }
+    return result;
+  }
+
+  bool get hasBlocks => effectiveSteps.any((s) => s.block != null);
 
   /// Rust ná stap [i]: de eigen rust van die stap, anders de standaard.
   int restAfter(int i) {
@@ -170,16 +269,17 @@ class Circuit {
   }
 
   String get _restLabel {
-    final rests = {for (var i = 0; i < effectiveSteps.length; i++) restAfter(i)};
+    final rests = {
+      for (var i = 0; i < effectiveSteps.length; i++) restAfter(i),
+    };
     if (rests.length > 1) return 'rust per oefening';
     final r = rests.isEmpty ? restSeconds : rests.first;
     return r > 0 ? '${r}s rust' : 'geen rust';
   }
 
   /// "1 min Schaduwboksen, 10× Push-up, …"
-  String get stepsLabel => [
-    for (final s in effectiveSteps) '${s.targetLabel} ${s.name}',
-  ].join(', ');
+  String get stepsLabel =>
+      [for (final s in effectiveSteps) '${s.targetLabel} ${s.name}'].join(', ');
 
   Map<String, dynamic> _fields() => {
     'name': name,
@@ -190,6 +290,7 @@ class Circuit {
     'description': description,
     'video_urls': videoUrls,
     'steps': steps.map((s) => s.toJson()).toList(),
+    'rounds_per_block': roundsPerBlock,
   };
 
   Map<String, dynamic> toInsertJson(String userId) => {
@@ -211,6 +312,7 @@ class Circuit {
     String? description,
     List<String>? videoUrls,
     List<CircuitStep>? steps,
+    bool? roundsPerBlock,
   }) => Circuit(
     id: id,
     name: name ?? this.name,
@@ -221,5 +323,6 @@ class Circuit {
     description: description ?? this.description,
     videoUrls: videoUrls ?? this.videoUrls,
     steps: steps ?? this.steps,
+    roundsPerBlock: roundsPerBlock ?? this.roundsPerBlock,
   );
 }

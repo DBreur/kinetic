@@ -88,9 +88,26 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Spotify-login (spotify_sdk): vangt de terugkeer na het
+             inloggen op. Moet overeenkomen met de Redirect URI in het
+             Spotify-dashboard: kinetic://spotify-auth -->
+        <activity
+            android:name="com.spotify.sdk.android.auth.browser.RedirectUriReceiverActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="kinetic"
+                    android:host="spotify-auth"/>
+            </intent-filter>
+        </activity>
     </application>
 
     <queries>
+        <!-- Spotify-app om mee te verbinden (App Remote). -->
+        <package android:name="com.spotify.music"/>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

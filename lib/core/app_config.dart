@@ -19,4 +19,11 @@ class AppConfig {
   static const nightscoutUrl = String.fromEnvironment('NIGHTSCOUT_URL');
 
   static bool get hasNightscout => nightscoutUrl.trim().isNotEmpty;
+
+  // Spotify — Client ID van je app op developer.spotify.com. De Redirect URI
+  // staat vast (zie AndroidManifest.xml) en moet daar ook zo ingesteld zijn.
+  static const spotifyClientId = String.fromEnvironment('SPOTIFY_CLIENT_ID');
+  static const spotifyRedirectUri = 'kinetic://spotify-auth';
+
+  static bool get hasSpotify => spotifyClientId.trim().isNotEmpty;
 }

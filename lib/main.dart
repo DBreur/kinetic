@@ -45,6 +45,7 @@ class MyApp extends StatelessWidget {
       animation: controller,
       builder: (context, _) {
         return MaterialApp(
+          navigatorKey: controller.navigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'Kinetic',
           theme: color.KineticTheme.dark,

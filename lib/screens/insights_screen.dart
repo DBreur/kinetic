@@ -15,6 +15,7 @@ import '../repositories/session_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/weigh_in_sheet.dart';
 import '../widgets/kinetic.dart';
 
 class InsightsScreen extends StatefulWidget {
@@ -85,6 +86,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             selected: _period,
             onChanged: (p) => setState(() => _period = p),
           ),
+          WeighInSummary(controller: widget.controller),
           const SizedBox(height: AppSpace.lg),
           if (!_loading && insights.totalSessions == 0)
             const EmptyState(

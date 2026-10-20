@@ -379,6 +379,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.2.2"
+  flutter_svg:
+    dependency: "direct main"
+    description:
+      name: flutter_svg
+      sha256: "35882981abcbfb8c15b286f0cd690ff25bac12d95eff3e25ee207f37d4c42e7f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -898,6 +906,46 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.2"
+  spotify_sdk:
+    dependency: "direct main"
+    description:
+      name: spotify_sdk
+      sha256: "6ef9496f1010b7e4e6e473e0c71cdcbc250a558d441149fa3da462749d115784"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.3"
+  spotify_sdk_android:
+    dependency: transitive
+    description:
+      name: spotify_sdk_android
+      sha256: dd1aec2cc6efa112e04790ed3008896c4b0cdc3b7108d77d8b67f6112db89368
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.3"
+  spotify_sdk_ios:
+    dependency: transitive
+    description:
+      name: spotify_sdk_ios
+      sha256: "7096e6e023b82e8a38db13b7b6aebbfc1fc09d35fd094c20651b1583f1a8a9df"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.3"
+  spotify_sdk_platform_interface:
+    dependency: transitive
+    description:
+      name: spotify_sdk_platform_interface
+      sha256: e5378162f18f58f5c3ef324c5dccc32f6f5f1eac525c0c2cf95de47ead58a709
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.3"
+  spotify_sdk_web:
+    dependency: transitive
+    description:
+      name: spotify_sdk_web
+      sha256: "4a7ffac72ca6c19bc4ae7037b379f9a0909c188dc57072bdd0cdc7ad35a24b1f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.3"
   stack_trace:
     dependency: transitive
     description:
@@ -954,6 +1002,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.18.3"
+  synchronized:
+    dependency: transitive
+    description:
+      name: synchronized
+      sha256: b3d516dbd3757ff2a458735e4f6cbac9ff261f576f6e87bcb17feabb39e657c5
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.5.0"
   term_glyph:
     dependency: transitive
     description:
@@ -1058,6 +1114,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.6.0"
+  vector_graphics:
+    dependency: transitive
+    description:
+      name: vector_graphics
+      sha256: "0964703d02677ac8636b4aef95de0b7e816224ff0082908c2c950529cb9a2f5e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.4"
+  vector_graphics_codec:
+    dependency: transitive
+    description:
+      name: vector_graphics_codec
+      sha256: "99fd9fbd34d9f9a32efd7b6a6aae14125d8237b10403b422a6a6dfeac2806146"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.13"
+  vector_graphics_compiler:
+    dependency: transitive
+    description:
+      name: vector_graphics_compiler
+      sha256: a8e2c19796144da2f81bcc96dad1bb19c4677b561c452081b97ee737b9faed65
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.2"
   vector_math:
     dependency: transitive
     description:
@@ -1172,4 +1252,4 @@ packages:
     version: "2.1.1"
 sdks:
   dart: ">=3.13.3 <4.0.0"
-  flutter: ">=3.47.0"
+  flutter: ">=3.47.1"

@@ -8,6 +8,7 @@
 //   5. laatste sessies
 
 import 'package:flutter/material.dart';
+
 import 'dart:async';
 
 import '../core/formatters.dart';
@@ -22,6 +23,7 @@ import '../models/workout_template.dart';
 import '../core/competition_plan.dart';
 import '../models/agenda.dart';
 import '../repositories/agenda_repository.dart';
+import '../repositories/circuit_repository.dart';
 import '../repositories/food_log_repository.dart';
 import '../repositories/glucose_entry_repository.dart';
 import '../repositories/session_repository.dart';
@@ -31,10 +33,12 @@ import '../services/agenda_notification_service.dart';
 import '../services/technique_reminder_input.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/glucose_alarm.dart' show AlarmSnooze, SnoozeBanner;
 import '../widgets/kinetic.dart';
 import '../widgets/manual_glucose.dart';
 import 'agenda_screen.dart' show CompetitionCountdownCard;
 import 'session_detail_screen.dart';
+
 import 'package:intl/intl.dart';
 
 // ───────────────────────────── scherm ───────────────────────────────────────
@@ -318,10 +322,9 @@ class _NowScreenState extends State<NowScreen> {
       if (mounted) {
         setState(() {
           _nextCompetition = nextCompetition(competitions, now);
-          _trainingsToday = trainings
-              .where((t) => daysUntil(t.startsAt, now) == 0)
-              .toList()
-            ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+          _trainingsToday =
+              trainings.where((t) => daysUntil(t.startsAt, now) == 0).toList()
+                ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
         });
       }
       await AgendaNotificationService.instance.sync(
@@ -367,19 +370,26 @@ class _NowScreenState extends State<NowScreen> {
     final userId = widget.controller.user?.id;
     final client = widget.controller.client;
     var templates = const <WorkoutTemplate>[];
+    var circuits = const <Circuit>[];
     if (userId != null && client != null) {
       try {
         templates = await WorkoutTemplateRepository(client).listForUser(userId);
       } catch (_) {
         // Geen schema's beschikbaar; gewoon blanco starten.
       }
+      try {
+        circuits = await CircuitRepository(client).listForUser(userId);
+      } catch (_) {
+        // Geen circuits beschikbaar.
+      }
     }
     var planned = const <ExerciseEntry>[];
     var plannedCircuits = const <Circuit>[];
-    if (templates.isNotEmpty) {
+    if (templates.isNotEmpty || circuits.isNotEmpty) {
       if (!mounted) return;
-      final chosen = await _pickStrengthTemplate(context, templates);
-      if (chosen == null) return; // geannuleerd
+      final chosen = await _pickStrengthTemplate(context, templates, circuits);
+      // Geannuleerd, of een circuit gekozen (dat start de shell zelf).
+      if (chosen == null) return;
       planned = chosen.exercises;
       plannedCircuits = chosen.circuits;
     }
@@ -395,6 +405,7 @@ class _NowScreenState extends State<NowScreen> {
   Future<WorkoutTemplate?> _pickStrengthTemplate(
     BuildContext context,
     List<WorkoutTemplate> templates,
+    List<Circuit> circuits,
   ) {
     return showModalBottomSheet<WorkoutTemplate>(
       context: context,
@@ -405,98 +416,158 @@ class _NowScreenState extends State<NowScreen> {
           top: Radius.circular(AppRadius.sheet),
         ),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          18,
-          20,
-          MediaQuery.of(ctx).padding.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: AppColor.line,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              'Krachttraining starten',
-              style: AppText.cardTitle.copyWith(fontSize: 18),
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: () =>
-                  Navigator.pop(ctx, const WorkoutTemplate(id: '', name: '')),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
+      builder: (ctx) => SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            18,
+            20,
+            MediaQuery.of(ctx).padding.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColor.lineStrong),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.add, size: 18, color: AppColor.inkMuted),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Blanco starten',
-                      style: AppText.bodyStrong.copyWith(fontSize: 13),
-                    ),
-                  ],
+                  color: AppColor.line,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-            for (final t in templates)
+              Text(
+                'Krachttraining starten',
+                style: AppText.cardTitle.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 16),
               InkWell(
-                onTap: () => Navigator.pop(ctx, t),
+                onTap: () =>
+                    Navigator.pop(ctx, const WorkoutTemplate(id: '', name: '')),
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 10,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColor.surfaceRaised,
+                    border: Border.all(color: AppColor.lineStrong),
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              t.name,
-                              style: AppText.bodyStrong.copyWith(fontSize: 13),
-                            ),
-                            Text(
-                              '${t.exercises.length} oefening${t.exercises.length == 1 ? '' : 'en'}',
-                              style: AppText.caption.copyWith(fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right,
-                        size: 18,
-                        color: AppColor.inkFaint,
+                      const Icon(Icons.add, size: 18, color: AppColor.inkMuted),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Blanco starten',
+                        style: AppText.bodyStrong.copyWith(fontSize: 13),
                       ),
                     ],
                   ),
                 ),
               ),
-          ],
+              for (final t in templates)
+                InkWell(
+                  onTap: () => Navigator.pop(ctx, t),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColor.surfaceRaised,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                t.name,
+                                style: AppText.bodyStrong.copyWith(
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                '${t.exercises.length} oefening${t.exercises.length == 1 ? '' : 'en'}',
+                                style: AppText.caption.copyWith(fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: AppColor.inkFaint,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (circuits.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('CIRCUITS', style: AppText.overline),
+                const SizedBox(height: 8),
+                for (final c in circuits)
+                  InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      widget.controller.startCircuitTraining(c);
+                    },
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColor.surfaceRaised,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.loop,
+                            size: 18,
+                            color: AppColor.inkMuted,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  c.name,
+                                  style: AppText.bodyStrong.copyWith(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  c.summary,
+                                  style: AppText.caption.copyWith(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.play_arrow,
+                            size: 18,
+                            color: AppColor.coral,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -631,6 +702,10 @@ class _NowScreenState extends State<NowScreen> {
               const SizedBox(height: AppSpace.lg),
             ],
 
+          SnoozeBanner(
+            guard: widget.controller.alarmGuard,
+            padding: const EdgeInsets.only(bottom: AppSpace.md),
+          ),
           for (final section
               in widget.controller.profile?.dashboard.visibleSections ??
                   DashboardConfig.standard.visibleSections)
@@ -655,9 +730,7 @@ class _NowScreenState extends State<NowScreen> {
   }
 
   Future<void> _startMat() async {
-    final saved = await widget.openMatSession(
-      initialReading: _glucose.reading,
-    );
+    final saved = await widget.openMatSession(initialReading: _glucose.reading);
     if (saved == true) _loadRecentSessions();
   }
 
@@ -798,7 +871,11 @@ class _PlannedStartCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.event_available, size: 20, color: AppColor.coral),
+              const Icon(
+                Icons.event_available,
+                size: 20,
+                color: AppColor.coral,
+              ),
               const SizedBox(width: 8),
               const Expanded(
                 child: KLabel('Geplande training', color: AppColor.coralSoft),
@@ -820,7 +897,9 @@ class _PlannedStartCard extends StatelessWidget {
             onPressed: onStart,
             icon: const Icon(Icons.play_arrow_rounded),
             label: const Text('Start nu'),
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(56),
+            ),
           ),
         ],
       ),
@@ -892,7 +971,8 @@ class _ReadinessCardState extends State<_ReadinessCard> {
         continue;
       }
       if (best == null ||
-          (p.at.difference(target)).abs() < (best.at.difference(target)).abs()) {
+          (p.at.difference(target)).abs() <
+              (best.at.difference(target)).abs()) {
         best = p;
       }
     }
@@ -1260,16 +1340,18 @@ class _AlarmStatusLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<DateTime?>(
-      valueListenable: controller.alarmGuard.nextRemeasureAt,
-      builder: (context, remeasureAt, _) {
-        if (remeasureAt != null) {
-          final left = remeasureAt.difference(DateTime.now());
+    return ValueListenableBuilder<AlarmSnooze?>(
+      valueListenable: controller.alarmGuard.snooze,
+      builder: (context, snooze, _) {
+        if (snooze != null) {
+          final left = snooze.until.difference(DateTime.now());
           final minutes = left.isNegative ? 0 : (left.inSeconds / 60).ceil();
           return Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Hermeting over $minutes min',
+              snooze.treated
+                  ? 'Hermeting over $minutes min'
+                  : 'Alarm gesluimerd — nog $minutes min',
               style: AppText.caption.copyWith(color: AppColor.tealBright),
             ),
           );
@@ -1331,7 +1413,10 @@ class _TrainingDayCard extends StatelessWidget {
           '${summary.sessionCount} training${summary.sessionCount == 1 ? '' : 'en'} · ${summary.minutes} min',
         ),
       if (summary.carbs > 0)
-        (Icons.restaurant_outlined, '${carbsText(summary.carbs)}g koolhydraten'),
+        (
+          Icons.restaurant_outlined,
+          '${carbsText(summary.carbs)}g koolhydraten',
+        ),
       if (plannedToday > 0)
         (
           Icons.event_outlined,
@@ -1366,7 +1451,11 @@ class _TrainingDayCard extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      const Icon(Icons.event, size: 18, color: AppColor.coralSoft),
+                      const Icon(
+                        Icons.event,
+                        size: 18,
+                        color: AppColor.coralSoft,
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         DateFormat('HH:mm').format(t.startsAt),
@@ -1375,8 +1464,10 @@ class _TrainingDayCard extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          [t.displayTitle, if (t.location.isNotEmpty) t.location]
-                              .join(' · '),
+                          [
+                            t.displayTitle,
+                            if (t.location.isNotEmpty) t.location,
+                          ].join(' · '),
                           style: AppText.body,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1530,9 +1621,7 @@ class _PrepBlock extends StatelessWidget {
                 tooltip: item.done ? 'Markeer als open' : 'Markeer als gedaan',
                 onPressed: onToggle,
                 icon: Icon(
-                  item.done
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
+                  item.done ? Icons.check_circle : Icons.radio_button_unchecked,
                   color: item.done ? AppColor.ice : AppColor.inkFaint,
                 ),
               ),
@@ -1545,7 +1634,6 @@ class _PrepBlock extends StatelessWidget {
 }
 
 // ───────────────────────── voorbereiding toevoegen/aanpassen ────────────────
-
 
 /// Resultaat van [showPrepItemSheet]: een nieuw/aangepast item, of een
 /// signaal dat het verwijderd moet worden.

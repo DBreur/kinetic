@@ -246,7 +246,7 @@ class FoodLogScreenState extends State<FoodLogScreen> {
             const SizedBox(height: AppSpace.md),
           ],
           if (profile != null && profile.mealOneOffEnabled) ...[
-            const _OneOffMealReminder(),
+            _OneOffMealReminder(withSound: profile.foodWaitReminderSound),
             const SizedBox(height: AppSpace.md),
           ],
           if (profile != null)
@@ -299,15 +299,18 @@ class FoodLogScreenState extends State<FoodLogScreen> {
                   icon: const Icon(Icons.ios_share, color: AppColor.inkMuted),
                   onSelected: exportLog,
                   itemBuilder: (_) => const [
-                    PopupMenuItem(value: true, child: Text('Exporteer als PDF')),
-                    PopupMenuItem(value: false, child: Text('Exporteer als CSV')),
+                    PopupMenuItem(
+                      value: true,
+                      child: Text('Exporteer als PDF'),
+                    ),
+                    PopupMenuItem(
+                      value: false,
+                      child: Text('Exporteer als CSV'),
+                    ),
                   ],
                 ),
               if (!_searching)
-                KLabel(
-                  '${today.length} vandaag',
-                  color: AppColor.inkFaint,
-                ),
+                KLabel('${today.length} vandaag', color: AppColor.inkFaint),
             ],
           ),
           const SizedBox(height: AppSpace.sm),
@@ -315,9 +318,7 @@ class FoodLogScreenState extends State<FoodLogScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                query.isNotEmpty
-                    ? 'Niets gevonden voor "$_query".'
-                    : 'Nog niets gelogd. Tik op "Maaltijd loggen" om bij te houden wat je hebt gegeten.',
+                query.isNotEmpty ? 'Niets gevonden voor "$_query".' : 'Nog niets gelogd. Tik op "Maaltijd loggen" om bij te houden wat je hebt gegeten.',
                 style: AppText.caption,
               ),
             ),
@@ -368,7 +369,9 @@ class FoodLogScreenState extends State<FoodLogScreen> {
 /// "Herinner me om …": één melding op een zelfgekozen tijd. Toont de
 /// ingestelde herinnering met een knop om hem te annuleren.
 class _OneOffMealReminder extends StatefulWidget {
-  const _OneOffMealReminder();
+  const _OneOffMealReminder({required this.withSound});
+
+  final bool withSound;
 
   @override
   State<_OneOffMealReminder> createState() => _OneOffMealReminderState();
@@ -397,7 +400,10 @@ class _OneOffMealReminderState extends State<_OneOffMealReminder> {
     var at = DateTime(now.year, now.month, now.day, time.hour, time.minute);
     // Tijd al voorbij vandaag? Dan morgen.
     if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
-    await MealReminderService.instance.scheduleOneOff(at);
+    await MealReminderService.instance.scheduleOneOff(
+      at,
+      withSound: widget.withSound,
+    );
     if (mounted) setState(() => _at = at);
   }
 
@@ -518,10 +524,7 @@ class _BolusHeroCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: KMetricTile(
-                  label: 'Momenten',
-                  value: '${today.length}',
-                ),
+                child: KMetricTile(label: 'Momenten', value: '${today.length}'),
               ),
             ],
           ),
@@ -718,8 +721,7 @@ class _FoodLogRow extends StatelessWidget {
                 ),
               ],
               const Spacer(),
-              if (bg != null)
-                KTag('BG ${mmolText(bg)}', color: bgColor),
+              if (bg != null) KTag('BG ${mmolText(bg)}', color: bgColor),
             ],
           ),
           const SizedBox(height: 6),
@@ -728,7 +730,10 @@ class _FoodLogRow extends StatelessWidget {
             style: AppText.bodyStrong,
           ),
           if (e.carbs != null)
-            Text('${carbsText(e.carbs!)} g koolhydraten', style: AppText.caption),
+            Text(
+              '${carbsText(e.carbs!)} g koolhydraten',
+              style: AppText.caption,
+            ),
           if (e.insulinUnits != null) ...[
             const SizedBox(height: 8),
             Wrap(
@@ -896,6 +901,7 @@ class _FoodLogSheetState extends State<_FoodLogSheet> {
   late Map<String, int> _presetCounts;
   InsulinTiming? _insulinTiming;
   double? _insulinWaitMinutes;
+
   /// Waar zolang de glucose nog de automatisch ingevulde waarde is (niet
   /// zelf aangepast) — voor het "van sensor"-labeltje.
   bool _mmolPrefilled = false;
@@ -962,7 +968,9 @@ class _FoodLogSheetState extends State<_FoodLogSheet> {
     _carbsController.text = e?.carbs != null ? carbsText(e!.carbs!) : '';
     _mmolController.text = e?.mmol != null ? mmolText(e!.mmol!) : '';
     final r = widget.latestReading;
-    if (e == null && r != null && isPrefillableReading(r, widget.readingFromSensor)) {
+    if (e == null &&
+        r != null &&
+        isPrefillableReading(r, widget.readingFromSensor)) {
       _mmolController.text = mmolText(r.mmol);
       _mmolPrefilled = true;
       _prefillReading = r;
@@ -1004,8 +1012,7 @@ class _FoodLogSheetState extends State<_FoodLogSheet> {
 
   Timer? _ticker;
 
-  void _onLiveGlucose() =>
-      _offerReading(widget.liveGlucose?.value?.reading);
+  void _onLiveGlucose() => _offerReading(widget.liveGlucose?.value?.reading);
 
   /// Een (nieuwere) meting invullen — niet als je zelf iets hebt getypt, en
   /// alleen als hij nieuwer is dan wat er al staat.
@@ -1270,7 +1277,9 @@ class _FoodLogSheetState extends State<_FoodLogSheet> {
             Row(
               children: [
                 Icon(
-                  widget.readingFromSensor ? Icons.sensors : Icons.water_drop_outlined,
+                  widget.readingFromSensor
+                      ? Icons.sensors
+                      : Icons.water_drop_outlined,
                   size: 14,
                   color: AppColor.ice,
                 ),
@@ -1484,7 +1493,10 @@ class _BolusInputBox extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppText.caption.copyWith(fontSize: 10, color: AppColor.inkFaint),
+          style: AppText.caption.copyWith(
+            fontSize: 10,
+            color: AppColor.inkFaint,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -1524,7 +1536,10 @@ class _BolusTotalBox extends StatelessWidget {
       children: [
         Text(
           'TOTAAL',
-          style: AppText.caption.copyWith(fontSize: 10, color: AppColor.inkFaint),
+          style: AppText.caption.copyWith(
+            fontSize: 10,
+            color: AppColor.inkFaint,
+          ),
         ),
         const SizedBox(height: 6),
         Container(

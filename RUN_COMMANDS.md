@@ -59,3 +59,28 @@ Place this in the project root:
   "NIGHTSCOUT_URL": "https://cgm-remote-monitor-latest-urlj.onrender.com"
 }
 ```
+
+## Spotify (one-time setup)
+
+The Spotify button during a training uses the Spotify app on your phone. You need **Spotify Premium** for skip and queue.
+
+1. Go to <https://developer.spotify.com/dashboard> and create an app (choose **Android** as the platform).
+2. Add the Android package `com.example.kinetic` with the SHA-1 fingerprint of the signing key. The release build is currently signed with the debug key, so print that fingerprint with:
+
+   ```powershell
+   keytool -list -v -keystore "$env:USERPROFILE\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
+   ```
+
+   Copy the line that starts with `SHA1:`.
+3. Add the Redirect URI `kinetic://spotify-auth` (exactly this value).
+4. Put the Client ID in `dart_defines.json`:
+
+   ```json
+   "SPOTIFY_CLIENT_ID": "<your client id>"
+   ```
+
+5. Build again with `.\build_apk.ps1`.
+
+## Database migrations
+
+Run new files from `lib/supabase/migrations/` once in the Supabase dashboard (SQL Editor). The latest one is `202610200001_alarm_snooze_rest_and_weigh_ins.sql`, which adds the snooze time, the default rest and weighing with dates.

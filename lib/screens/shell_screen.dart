@@ -23,6 +23,7 @@ import '../services/meal_reminder_service.dart';
 import '../services/notification_router.dart';
 import '../services/system_bars.dart';
 import '../services/technique_reminder_input.dart';
+import '../services/weigh_in_reminder_service.dart';
 import '../services/agenda_notification_service.dart';
 import '../state/app_controller.dart';
 import '../state/live_session_controller.dart';
@@ -58,8 +59,7 @@ class ShellScreen extends StatefulWidget {
   State<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends State<ShellScreen>
-    with WidgetsBindingObserver {
+class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   int _tab = 0;
   int _trainSegment = 0;
 
@@ -78,6 +78,8 @@ class _ShellScreenState extends State<ShellScreen>
     widget.controller.addListener(_syncBackgroundWatcher);
     _syncBackgroundWatcher();
     NotificationRouter.pendingStart.addListener(_onStartRequest);
+    widget.controller.pendingCircuitStart.addListener(_onCircuitStart);
+    widget.controller.loadWeighIns();
     // Live glucose voor de hele app, op elk tabblad.
     widget.controller.startGlucosePolling();
     _persistTimer = Timer.periodic(
@@ -108,13 +110,42 @@ class _ShellScreenState extends State<ShellScreen>
     }
   }
 
+  /// Een circuit als losse training: nieuwe krachttraining met alleen dit
+  /// circuit, dat meteen begint. Loopt er al een krachttraining, dan komt het
+  /// circuit daarbij (en start het daar).
+  Future<void> _onCircuitStart() async {
+    final circuit = widget.controller.pendingCircuitStart.value;
+    if (circuit == null || !mounted) return;
+    widget.controller.pendingCircuitStart.value = null;
+    final existing = _liveStrength;
+    if (existing != null) {
+      existing.addCircuit(circuit);
+      existing.startCircuit(existing.circuits.length - 1);
+      await _openStrength(existing);
+      return;
+    }
+    final reading = widget.controller.cachedGlucose?.reading;
+    final profile = widget.controller.profile;
+    final provider = profile == null
+        ? null
+        : await resolveGlucoseProvider(profile);
+    if (!mounted) return;
+    final ctrl = StrengthSessionController(
+      title: circuit.name.isEmpty ? 'Circuit' : circuit.name,
+      appController: widget.controller,
+      contextOf: () => context,
+      provider: provider,
+      initialReading: reading,
+      plannedCircuits: [circuit],
+      circuitOnly: true,
+    );
+    ctrl.startCircuit(0);
+    await _openStrength(ctrl);
+  }
+
   /// Start de sessie die bij een geplande training hoort: mat-sessie bij
   /// sambo, krachttraining bij kracht — met de geplande titel.
-  Future<void> _startPlanned(
-    String id,
-    TrainingKind kind,
-    String title,
-  ) async {
+  Future<void> _startPlanned(String id, TrainingKind kind, String title) async {
     if (id.isNotEmpty) setState(() => _startedPlanned.add(id));
     final reading = widget.controller.cachedGlucose?.reading;
     if (kind == TrainingKind.kracht) {
@@ -208,6 +239,7 @@ class _ShellScreenState extends State<ShellScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     NotificationRouter.pendingStart.removeListener(_onStartRequest);
+    widget.controller.pendingCircuitStart.removeListener(_onCircuitStart);
     _persistTimer?.cancel();
     widget.controller.stopGlucosePolling();
     widget.controller.removeListener(_syncBackgroundWatcher);
@@ -225,6 +257,10 @@ class _ShellScreenState extends State<ShellScreen>
     MealReminderService.instance.syncOneOff(
       widget.controller.profile?.mealOneOffEnabled ?? true,
     );
+    WeighInReminderService.instance.sync(
+      widget.controller.profile,
+      widget.controller.lastWeighInAt,
+    );
     SystemBars.setAlwaysHidden(
       widget.controller.profile?.hideSystemBars ?? false,
     );
@@ -235,9 +271,7 @@ class _ShellScreenState extends State<ShellScreen>
   Future<void> _scheduleSessionTechniqueReminders() async {
     final input = await loadTechniqueReminderInput(widget.controller);
     if (input == null || !input.enabled) return;
-    final names = [
-      for (final id in input.practiceNextIds) ?input.names[id],
-    ];
+    final names = [for (final id in input.practiceNextIds) ?input.names[id]];
     final after = [
       for (final m in input.defaultReminders)
         if (m < 0) -m,
@@ -264,7 +298,9 @@ class _ShellScreenState extends State<ShellScreen>
     // (bij een geplande training staan ze al vanaf de geplande start).
     if (!fromPlanned) unawaited(_scheduleSessionTechniqueReminders());
     final profile = widget.controller.profile;
-    final provider = profile == null ? null : await resolveGlucoseProvider(profile);
+    final provider = profile == null
+        ? null
+        : await resolveGlucoseProvider(profile);
     final ctrl = MatSessionController(
       title: title,
       appController: widget.controller,
@@ -307,7 +343,9 @@ class _ShellScreenState extends State<ShellScreen>
     final existing = _liveStrength;
     if (existing != null) return _openStrength(existing);
     final profile = widget.controller.profile;
-    final provider = profile == null ? null : await resolveGlucoseProvider(profile);
+    final provider = profile == null
+        ? null
+        : await resolveGlucoseProvider(profile);
     final ctrl = StrengthSessionController(
       title: title,
       appController: widget.controller,
@@ -365,7 +403,8 @@ class _ShellScreenState extends State<ShellScreen>
         Navigator.push<void>(
           context,
           MaterialPageRoute(
-            builder: (_) => TrainingLibraryScreen(controller: widget.controller),
+            builder: (_) =>
+                TrainingLibraryScreen(controller: widget.controller),
           ),
         );
       case QuickAction.finger ||
@@ -822,43 +861,55 @@ class _TrainingScreenState extends State<TrainingScreen> {
                 ),
                 // Schema's, circuits en oefeningen horen bij krachttraining.
                 if (_filter == 'Kracht')
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                  child: Row(
-                    children: [
-                      for (final (tab, icon, label) in const [
-                        (LibraryTab.templates, Icons.view_list_outlined, "Schema's"),
-                        (LibraryTab.circuits, Icons.loop, 'Circuits'),
-                        (LibraryTab.exercises, Icons.fitness_center, 'Oefeningen'),
-                      ]) ...[
-                        if (tab != LibraryTab.templates) const SizedBox(width: 8),
-                        Expanded(
-                          child: KCard(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            onTap: () => Navigator.push<void>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => TrainingLibraryScreen(
-                                  controller: widget.controller,
-                                  initialTab: tab,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: Row(
+                      children: [
+                        for (final (tab, icon, label) in const [
+                          (
+                            LibraryTab.templates,
+                            Icons.view_list_outlined,
+                            "Schema's",
+                          ),
+                          (LibraryTab.circuits, Icons.loop, 'Circuits'),
+                          (
+                            LibraryTab.exercises,
+                            Icons.fitness_center,
+                            'Oefeningen',
+                          ),
+                        ]) ...[
+                          if (tab != LibraryTab.templates)
+                            const SizedBox(width: 8),
+                          Expanded(
+                            child: KCard(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              onTap: () => Navigator.push<void>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => TrainingLibraryScreen(
+                                    controller: widget.controller,
+                                    initialTab: tab,
+                                  ),
                                 ),
                               ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(icon, size: 20, color: AppColor.slate),
-                                const SizedBox(height: 4),
-                                Text(label, style: AppText.caption.copyWith(
-                                  color: AppColor.ink,
-                                )),
-                              ],
+                              child: Column(
+                                children: [
+                                  Icon(icon, size: 20, color: AppColor.slate),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    label,
+                                    style: AppText.caption.copyWith(
+                                      color: AppColor.ink,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
                 const SizedBox(height: 6),
                 if (!loading && filtered.isEmpty)
                   Padding(
@@ -1010,7 +1061,6 @@ class TechniquesScreen extends StatefulWidget {
 }
 
 enum _TechniquesView { techniques, combinations }
-
 
 /// Vaste, begrensde verzameling categorieën om op te filteren — de vier
 /// handmatige (zie kBlockCategories) plus de twee die de kaart afleidt uit
@@ -1211,9 +1261,7 @@ class _TechniquesScreenState extends State<TechniquesScreen> {
       final updated = await _comboRepo.setFavorite(combo.id, !combo.favorite);
       if (!mounted) return;
       setState(() {
-        _combos = [
-          for (final c in _combos) c.id == updated.id ? updated : c,
-        ];
+        _combos = [for (final c in _combos) c.id == updated.id ? updated : c];
       });
     } catch (_) {
       if (mounted) {
@@ -1340,7 +1388,8 @@ class _TechniquesScreenState extends State<TechniquesScreen> {
               _categoryFilter.isEmpty || _categoryFilter.contains(t.category),
         )
         .where(
-          (t) => _statusFilter.isEmpty || _statusFilter.contains(t.learningStatus),
+          (t) =>
+              _statusFilter.isEmpty || _statusFilter.contains(t.learningStatus),
         )
         .where(
           (t) =>
@@ -1621,7 +1670,10 @@ class _TechniquesScreenState extends State<TechniquesScreen> {
 (Color, Color)? _learningBadgeColors(LearningStatus status) => switch (status) {
   LearningStatus.learning => (AppColor.tealWash, AppColor.tealBright),
   LearningStatus.mastered => (AppColor.greenWash, AppColor.greenBright),
-  LearningStatus.planned => (Colors.white.withValues(alpha: .08), AppColor.inkMuted),
+  LearningStatus.planned => (
+    Colors.white.withValues(alpha: .08),
+    AppColor.inkMuted,
+  ),
   LearningStatus.none => null,
 };
 
@@ -2120,7 +2172,9 @@ class _CombinationTile extends StatelessWidget {
               icon: Icon(
                 combo.favorite ? Icons.star : Icons.star_border,
                 size: 20,
-                color: combo.favorite ? AppColor.amberBright : AppColor.inkFaint,
+                color: combo.favorite
+                    ? AppColor.amberBright
+                    : AppColor.inkFaint,
               ),
             ),
             Expanded(

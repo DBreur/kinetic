@@ -36,33 +36,53 @@ class GlucoseAlarmGuard {
 
   bool _alarmShowing = false;
 
-  // Snooze na "Ingenomen": 15 minuten geen nieuw alarm voor dezelfde
-  // overschrijding, tenzij de waarde nog 0,5 mmol/L of meer verder zakt.
-  DateTime? _treatedAt;
-  double? _treatedValue;
-  Timer? _remeasureTimer;
+  /// Context van de open alarmsheet — om hem te kunnen sluiten als je via
+  /// de knop in de melding sluimert.
+  BuildContext? _sheetContext;
 
-  // Laatst geziene meting/parameters — nodig om na 15 minuten opnieuw te
+  // Sluimeren: tot [_snoozedUntil] geen nieuw alarm voor dezelfde kant
+  // (laag/hoog). Bij laag gaat het alarm tóch af als de waarde nog 0,5
+  // mmol/L of meer verder zakt. Komt de waarde weer binnen de grenzen, dan
+  // vervalt het sluimeren en volgt er geen alarm meer.
+  DateTime? _snoozedUntil;
+  bool _snoozeHigh = false;
+  double? _snoozeValue;
+
+  /// Waar als het sluimeren kwam van de knop in het paneel (behandeld) — dan
+  /// volgt na afloop een hermeet-herinnering (als er intussen geen herstel
+  /// was).
+  bool _snoozeTreated = false;
+  Timer? _snoozeTimer;
+
+  // Laatst geziene meting/parameters — nodig om na het sluimeren opnieuw te
   // kunnen beoordelen zonder dat er intussen per se een nieuwe meting is
   // binnengekomen.
   GlucoseReading? _lastReading;
   BuildContext Function()? _lastContextOf;
   double? _lastLowBelow;
+  bool _lastLowEnabled = true;
+  double? _lastHighAbove;
+  bool _lastHighEnabled = true;
   bool _lastWithSound = true;
   bool _lastBreakSilentMode = true;
   bool _lastIsTrainingLimit = false;
+  int _lastSnoozeMinutes = 15;
   Future<void> Function(BuildContext)? _lastOnManualEntry;
 
-  /// Wanneer de volgende hermeting-herinnering afgaat — null als er geen
-  /// behandeling loopt. UI (bv. het Nu-scherm) kan dit tonen als aftellertje.
-  final ValueNotifier<DateTime?> nextRemeasureAt = ValueNotifier(null);
+  /// Lopend sluimeren (of hermeet-timer na sluimeren via het paneel) — null als er niets
+  /// loopt. UI (bv. het Nu-scherm) toont dit als aftellertje.
+  final ValueNotifier<AlarmSnooze?> snooze = ValueNotifier(null);
 
-  /// Annuleert een eventuele lopende hermeting-timer — nodig zodra de guard
+  /// Wordt aangeroepen als het sluimeren begint of stopt — de app geeft het
+  /// door aan de achtergrondbewaking, zodat die ook stil blijft.
+  void Function(AlarmSnooze? snooze)? onSnoozeChanged;
+
+  /// Annuleert een eventuele lopende sluimer-timer — nodig zodra de guard
   /// niet langer gebruikt wordt (bv. bij het opruimen van een test of een
-  /// sessie), anders blijft er een losse Timer van tot 15 minuten hangen.
+  /// sessie), anders blijft er een losse Timer hangen.
   void dispose() {
-    _remeasureTimer?.cancel();
-    nextRemeasureAt.dispose();
+    _snoozeTimer?.cancel();
+    snooze.dispose();
   }
 
   Future<void> check(
@@ -75,105 +95,115 @@ class GlucoseAlarmGuard {
     bool isTrainingLimit = false,
     double? highAbove,
     bool highEnabled = true,
+    int snoozeMinutes = 15,
     Future<void> Function(BuildContext)? onManualEntry,
   }) async {
     _lastReading = reading;
     _lastContextOf = contextOf;
     _lastLowBelow = lowBelow;
+    _lastLowEnabled = lowEnabled;
+    _lastHighAbove = highAbove;
+    _lastHighEnabled = highEnabled;
     _lastWithSound = withSound;
     _lastBreakSilentMode = breakSilentMode;
     _lastIsTrainingLimit = isTrainingLimit;
+    _lastSnoozeMinutes = snoozeMinutes;
     _lastOnManualEntry = onManualEntry;
 
     if (_alarmShowing) return;
 
     final isLow = lowEnabled && reading.mmol <= lowBelow;
-    if (isLow) {
-      if (_isSnoozed(reading.mmol)) return;
-      await _raiseAlarm(
-        contextOf(),
-        reading,
-        isHigh: false,
-        lowBelow: lowBelow,
-        withSound: withSound,
-        breakSilentMode: breakSilentMode,
-        isTrainingLimit: isTrainingLimit,
-        onManualEntry: onManualEntry,
-      );
-    } else if (highEnabled && highAbove != null && reading.mmol >= highAbove) {
-      await _raiseAlarm(
-        contextOf(),
-        reading,
-        isHigh: true,
-        lowBelow: lowBelow,
-        highAbove: highAbove,
-        withSound: withSound,
-        breakSilentMode: breakSilentMode,
-        isTrainingLimit: isTrainingLimit,
-        onManualEntry: onManualEntry,
-      );
-    } else if (reading.mmol > lowBelow) {
-      // Waarde is weer boven de grens: de behandeling is geslaagd, snooze
-      // vervalt.
+    final isHigh =
+        !isLow && highEnabled && highAbove != null && reading.mmol >= highAbove;
+    if (isLow || isHigh) {
+      if (_isSnoozed(reading.mmol, high: isHigh)) return;
+      await _raiseAlarm(contextOf(), reading, isHigh: isHigh);
+    } else {
+      // Weer binnen de grenzen: sluimeren vervalt, geen alarm meer — en een
+      // latere, nieuwe overschrijding alarmeert gewoon weer.
       _clearSnooze();
     }
   }
 
-  bool _isSnoozed(double mmol) {
-    final treatedAt = _treatedAt;
-    final treatedValue = _treatedValue;
-    if (treatedAt == null || treatedValue == null) return false;
-    if (DateTime.now().difference(treatedAt) >= const Duration(minutes: 15)) {
-      return false;
-    }
-    // Binnen het venster: alleen opnieuw alarmeren als de waarde nog 0,5
-    // mmol/L of meer verder gezakt is dan toen je "Ingenomen" indrukte.
-    return mmol > treatedValue - 0.5;
+  bool _isSnoozed(double mmol, {required bool high}) {
+    final until = _snoozedUntil;
+    final value = _snoozeValue;
+    if (until == null || value == null) return false;
+    if (!DateTime.now().isBefore(until)) return false;
+    if (_snoozeHigh != high) return false;
+    // Laag: alleen opnieuw alarmeren als de waarde nog 0,5 mmol/L of meer
+    // verder gezakt is dan toen je sluimerde via het paneel.
+    return high || mmol > value - 0.5;
   }
 
   void _clearSnooze() {
-    _treatedAt = null;
-    _treatedValue = null;
-    _remeasureTimer?.cancel();
-    _remeasureTimer = null;
-    nextRemeasureAt.value = null;
+    final had = _snoozedUntil != null;
+    _snoozedUntil = null;
+    _snoozeValue = null;
+    _snoozeTreated = false;
+    _snoozeTimer?.cancel();
+    _snoozeTimer = null;
+    snooze.value = null;
+    if (had) onSnoozeChanged?.call(null);
   }
 
-  void _startSnooze(double valueAtTreatment) {
-    _treatedAt = DateTime.now();
-    _treatedValue = valueAtTreatment;
-    _remeasureTimer?.cancel();
-    final at = DateTime.now().add(const Duration(minutes: 15));
-    nextRemeasureAt.value = at;
-    _remeasureTimer = Timer(const Duration(minutes: 15), _onRemeasureDue);
+  /// Start het sluimeren voor [minutes] minuten. [treated] = via de knop in
+  /// het paneel (dan volgt bij een hypo een hermeet-herinnering).
+  void startSnooze({
+    required bool isHigh,
+    required double value,
+    required int minutes,
+    bool treated = false,
+  }) {
+    final until = DateTime.now().add(Duration(minutes: minutes));
+    _snoozedUntil = until;
+    _snoozeHigh = isHigh;
+    _snoozeValue = value;
+    _snoozeTreated = treated;
+    _snoozeTimer?.cancel();
+    _snoozeTimer = Timer(Duration(minutes: minutes), _onSnoozeEnd);
+    final next = AlarmSnooze(
+      until: until,
+      isHigh: isHigh,
+      value: value,
+      treated: treated,
+    );
+    snooze.value = next;
+    onSnoozeChanged?.call(next);
   }
 
-  void _onRemeasureDue() {
-    nextRemeasureAt.value = null;
+  /// Sluimeren handmatig opheffen: het alarm let meteen weer op.
+  void cancelSnooze() => _clearSnooze();
+
+  /// "Sluimeren" uit de knop in de systeemmelding: sluit een open sheet en
+  /// sluimert met de laatst ingestelde duur.
+  void snoozeFromNotification({required bool isHigh, required double mmol}) {
+    startSnooze(isHigh: isHigh, value: mmol, minutes: _lastSnoozeMinutes);
+    _notifier.cancelAlarm();
+    final sheet = _sheetContext;
+    if (sheet != null && sheet.mounted) Navigator.pop(sheet);
+  }
+
+  void _onSnoozeEnd() {
+    final treated = _snoozeTreated;
+    final high = _snoozeHigh;
     final reading = _lastReading;
     final lowBelow = _lastLowBelow;
     final contextOf = _lastContextOf;
+    _clearSnooze();
     if (reading == null || lowBelow == null || contextOf == null) return;
-    if (reading.mmol <= lowBelow) {
-      // Nog steeds onder de grens: alarm gaat opnieuw af.
-      _treatedAt = null;
-      _treatedValue = null;
-      _raiseAlarm(
-        contextOf(),
-        reading,
-        isHigh: false,
-        lowBelow: lowBelow,
-        withSound: _lastWithSound,
-        breakSilentMode: _lastBreakSilentMode,
-        isTrainingLimit: _lastIsTrainingLimit,
-        onManualEntry: _lastOnManualEntry,
-      );
-    } else {
+    final highAbove = _lastHighAbove;
+    final stillOut = high
+        ? (_lastHighEnabled && highAbove != null && reading.mmol >= highAbove)
+        : (_lastLowEnabled && reading.mmol <= lowBelow);
+    if (stillOut) {
+      // Nog steeds buiten de grens: alarm gaat opnieuw af.
+      _raiseAlarm(contextOf(), reading, isHigh: high);
+    } else if (treated && !high) {
       _notifier.showRemeasureReminder(
         withSound: _lastWithSound,
         currentValue: reading.mmol,
       );
-      _clearSnooze();
     }
   }
 
@@ -181,18 +211,14 @@ class GlucoseAlarmGuard {
     BuildContext context,
     GlucoseReading reading, {
     required bool isHigh,
-    required double lowBelow,
-    double? highAbove,
-    required bool withSound,
-    required bool breakSilentMode,
-    required bool isTrainingLimit,
-    Future<void> Function(BuildContext)? onManualEntry,
   }) async {
     _alarmShowing = true;
+    final minutes = _lastSnoozeMinutes;
+    final onManualEntry = _lastOnManualEntry;
     HapticFeedback.heavyImpact();
     await _notifier.showAlarm(
-      withSound: withSound,
-      breakSilentMode: breakSilentMode,
+      withSound: _lastWithSound,
+      breakSilentMode: _lastBreakSilentMode,
       isHigh: isHigh,
       mmol: reading.mmol,
     );
@@ -200,55 +226,92 @@ class GlucoseAlarmGuard {
       _alarmShowing = false;
       return;
     }
+    var handled = false;
     await showModalBottomSheet<void>(
       context: context,
-      isDismissible: false,
-      enableDrag: false,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: AppColor.bg.withValues(alpha: .82),
-      builder: (sheetContext) => GlucoseAlertSheet(
-        reading: reading,
-        isHigh: isHigh,
-        lowBelow: lowBelow,
-        highAbove: highAbove,
-        isTrainingLimit: isTrainingLimit,
-        onTreated: () {
-          if (!isHigh) _startSnooze(reading.mmol);
-          _notifier.cancelAlarm();
-          Navigator.pop(sheetContext);
-        },
-        onManualEntry: onManualEntry == null
-            ? null
-            : () async {
-                await onManualEntry(sheetContext);
-              },
-      ),
+      barrierColor: AppColor.bg.withValues(alpha: .55),
+      builder: (sheetContext) {
+        _sheetContext = sheetContext;
+        return GlucoseAlertSheet(
+          reading: reading,
+          isHigh: isHigh,
+          lowBelow: _lastLowBelow ?? 3.9,
+          highAbove: _lastHighAbove,
+          isTrainingLimit: _lastIsTrainingLimit,
+          snoozeMinutes: minutes,
+          onSnooze: () {
+            handled = true;
+            startSnooze(
+              isHigh: isHigh,
+              value: reading.mmol,
+              minutes: minutes,
+              treated: true,
+            );
+            Navigator.pop(sheetContext);
+          },
+          onManualEntry: onManualEntry == null
+              ? null
+              : () async {
+                  await onManualEntry(sheetContext);
+                },
+        );
+      },
     );
+    _sheetContext = null;
+    // Weggeveegd of weggetikt zonder knop: telt als sluimeren (tenzij er
+    // intussen via de melding al gesluimerd is).
+    if (!handled && _snoozedUntil == null) {
+      startSnooze(isHigh: isHigh, value: reading.mmol, minutes: minutes);
+    }
     _notifier.cancelAlarm();
     _alarmShowing = false;
   }
 }
 
+/// Een lopende sluimering — voor het aftellertje in de UI.
+class AlarmSnooze {
+  final DateTime until;
+  final bool isHigh;
+
+  /// De waarde op het moment van sluimeren.
+  final double value;
+
+  /// Waar na "Ingenomen"/"Correctie genomen": dan is het een hermeet-timer.
+  final bool treated;
+  const AlarmSnooze({
+    required this.until,
+    required this.isHigh,
+    required this.value,
+    required this.treated,
+  });
+}
+
 /// Komt over álles heen — ook over mat-modus, krachttraining en
-/// instellingen. Daarom een sheet met isDismissible: false, geen pagina in
-/// de navigatiestapel.
+/// instellingen. Een compact paneel van onderen; wegvegen telt als
+/// sluimeren.
 class GlucoseAlertSheet extends StatelessWidget {
   final GlucoseReading reading;
   final bool isHigh;
   final double lowBelow;
   final double? highAbove;
   final bool isTrainingLimit;
-  final VoidCallback onTreated;
+  final int snoozeMinutes;
+
+  /// De enige actieknop: behandeld (of later) — het alarm blijft
+  /// [snoozeMinutes] minuten stil, daarna volgt een hermeting.
+  final VoidCallback onSnooze;
   final VoidCallback? onManualEntry;
   const GlucoseAlertSheet({
     super.key,
     required this.reading,
-    required this.onTreated,
+    required this.onSnooze,
     this.isHigh = false,
     this.lowBelow = 3.9,
     this.highAbove,
     this.isTrainingLimit = false,
+    this.snoozeMinutes = 15,
     this.onManualEntry,
   });
 
@@ -269,18 +332,15 @@ class GlucoseAlertSheet extends StatelessWidget {
         : 'Stop de sessie en neem 15 g snelle koolhydraten.';
     final adviceBody = isHigh
         ? 'Meet opnieuw over 30 minuten voor je verder traint.'
-        : 'Meet opnieuw over 15 minuten.';
-    final primaryLabel = isHigh
-        ? 'Correctie genomen'
-        : 'Ingenomen — timer 15 min';
+        : 'Meet opnieuw over $snoozeMinutes minuten.';
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
         20,
-        22,
+        12,
         20,
-        26 + MediaQuery.of(context).padding.bottom,
+        16 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: ground,
@@ -298,7 +358,7 @@ class GlucoseAlertSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Row(
             children: [
               Container(
@@ -367,10 +427,10 @@ class GlucoseAlertSheet extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: .07),
               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -399,14 +459,15 @@ class GlucoseAlertSheet extends StatelessWidget {
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: onTreated,
+            child: FilledButton.icon(
+              onPressed: onSnooze,
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: ground,
                 minimumSize: const Size.fromHeight(52),
               ),
-              child: Text(primaryLabel),
+              icon: const Icon(Icons.snooze),
+              label: Text('Sluimeren $snoozeMinutes min'),
             ),
           ),
           if (!isHigh) ...[
@@ -442,4 +503,62 @@ Future<void> handleManualEntryFromAlarm(
   final value = await showManualGlucoseDialog(context);
   if (value == null) return;
   onReading(GlucoseReading(value, Trend.flat, DateTime.now()));
+}
+
+/// Balk "Alarm gesluimerd — nog 12 min" met een knop om het sluimeren op te
+/// heffen. Alleen zichtbaar zolang er gesluimerd wordt; telt elke 15 s af.
+class SnoozeBanner extends StatelessWidget {
+  const SnoozeBanner({super.key, required this.guard, this.padding});
+
+  final GlucoseAlarmGuard guard;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<AlarmSnooze?>(
+      valueListenable: guard.snooze,
+      builder: (context, snooze, _) {
+        if (snooze == null) return const SizedBox.shrink();
+        return StreamBuilder<void>(
+          stream: Stream<void>.periodic(const Duration(seconds: 15)),
+          builder: (context, _) {
+            final left = snooze.until.difference(DateTime.now());
+            final minutes = left.isNegative ? 0 : (left.inSeconds / 60).ceil();
+            final accent = snooze.isHigh ? AppColor.amber : AppColor.redBright;
+            return Padding(
+              padding: padding ?? EdgeInsets.zero,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: accent.withValues(alpha: .35)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.snooze, size: 18, color: accent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '${snooze.isHigh ? 'Hyper' : 'Hypo'}-alarm '
+                        'gesluimerd — nog $minutes min',
+                        style: AppText.bodyStrong.copyWith(
+                          fontSize: 13,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: guard.cancelSnooze,
+                      child: const Text('Opheffen'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }

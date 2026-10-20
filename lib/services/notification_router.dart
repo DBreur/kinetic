@@ -17,6 +17,35 @@ import '../models/agenda.dart';
 /// Id van de actieknop in de startmelding.
 const kStartTrainingActionId = 'start_training';
 
+/// Id van de knop "Sluimeren" in de glucose-alarmmelding.
+const kSnoozeAlarmActionId = 'snooze_alarm';
+
+/// Verzoek om het glucose-alarm te sluimeren, uit de alarmmelding.
+class AlarmSnoozeRequest {
+  final bool isHigh;
+  final double mmol;
+  const AlarmSnoozeRequest({required this.isHigh, required this.mmol});
+
+  /// Payload voor in de alarmmelding.
+  static String payloadFor({required bool isHigh, required double mmol}) =>
+      jsonEncode({'type': 'glucose_alarm', 'high': isHigh, 'mmol': mmol});
+
+  /// Null als de payload niet van een alarmmelding is.
+  static AlarmSnoozeRequest? tryParse(String? payload) {
+    if (payload == null || payload.isEmpty) return null;
+    try {
+      final map = jsonDecode(payload);
+      if (map is! Map || map['type'] != 'glucose_alarm') return null;
+      return AlarmSnoozeRequest(
+        isHigh: map['high'] == true,
+        mmol: (map['mmol'] as num?)?.toDouble() ?? 0,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 /// Verzoek om een geplande training te starten, uit een melding.
 class PlannedStartRequest {
   final String trainingId;
@@ -43,7 +72,10 @@ class PlannedStartRequest {
   });
 
   /// Null als de payload niet van een startmelding is.
-  static PlannedStartRequest? tryParse(String? payload, {bool startNow = false}) {
+  static PlannedStartRequest? tryParse(
+    String? payload, {
+    bool startNow = false,
+  }) {
     if (payload == null || payload.isEmpty) return null;
     try {
       final map = jsonDecode(payload);
@@ -64,11 +96,23 @@ class NotificationRouter {
   NotificationRouter._();
 
   /// Het laatste startverzoek; de shell zet hem na afhandeling op null.
-  static final ValueNotifier<PlannedStartRequest?> pendingStart =
-      ValueNotifier(null);
+  static final ValueNotifier<PlannedStartRequest?> pendingStart = ValueNotifier(
+    null,
+  );
+
+  /// Het laatste sluimerverzoek; AppController zet hem na afhandeling op
+  /// null.
+  static final ValueNotifier<AlarmSnoozeRequest?> pendingSnooze = ValueNotifier(
+    null,
+  );
 
   /// Doorgeven als `onDidReceiveNotificationResponse` bij élke initialize().
   static void handle(NotificationResponse response) {
+    if (response.actionId == kSnoozeAlarmActionId) {
+      final snooze = AlarmSnoozeRequest.tryParse(response.payload);
+      if (snooze != null) pendingSnooze.value = snooze;
+      return;
+    }
     final request = PlannedStartRequest.tryParse(
       response.payload,
       startNow: response.actionId == kStartTrainingActionId,

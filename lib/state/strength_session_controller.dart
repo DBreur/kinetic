@@ -6,9 +6,11 @@
 // StrengthModeScreen niet gemount is.
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
+import '../core/rest_blocks.dart';
 import '../core/exercise_library.dart';
 import '../core/interval_timer.dart';
 import '../models/app_profile.dart';
@@ -27,9 +29,9 @@ import '../state/live_session_controller.dart';
 import '../widgets/glucose_alarm.dart';
 import '../widgets/manual_glucose.dart';
 
-/// Standaard rusttijd tussen sets, net als in Lyfta — telt zichtbaar af
-/// zodra je een set afvinkt.
-const restSeconds = 90;
+/// Standaard rusttijd tussen sets als er geen profiel is — normaal komt die
+/// uit de instellingen (AppProfile.defaultRestSeconds).
+const defaultRestFallback = 90;
 
 class LiveSet {
   double kg;
@@ -114,7 +116,25 @@ class LiveSet {
 
 enum SetMode { reps, time, burn }
 
-class LiveExercise {
+/// Een lopende tijd-set (of zijn voorbereiding), voor de aftelbalk bovenin.
+class ActiveTimedSet {
+  final int exerciseIndex;
+  final int setIndex;
+  final String name;
+  final bool preparing;
+  final Duration left;
+  final Duration total;
+  const ActiveTimedSet({
+    required this.exerciseIndex,
+    required this.setIndex,
+    required this.name,
+    required this.preparing,
+    required this.left,
+    required this.total,
+  });
+}
+
+class LiveExercise implements BlockMember {
   String name;
   List<LiveSet> sets;
 
@@ -128,29 +148,55 @@ class LiveExercise {
   /// [StrengthSessionController._checkNewRecord]).
   double? personalRecord;
   final String description;
+
+  /// Zie [ExerciseEntry.block] en [ExerciseEntry.restSeconds].
+  @override
+  int? block;
+  @override
+  int? restSeconds;
   LiveExercise({
     required this.name,
     required this.sets,
     this.lastPerformance,
     this.personalRecord,
     this.description = '',
+    this.block,
+    this.restSeconds,
   });
+
+  ExerciseEntry toEntry({bool onlyWorthSaving = false}) => ExerciseEntry(
+    name: name,
+    sets: [
+      for (final s in sets)
+        if (!onlyWorthSaving || s.worthSaving) s.toExerciseSet(),
+    ],
+    block: block,
+    restSeconds: restSeconds,
+  );
 }
 
-enum CircuitPhase { work, rest }
+enum CircuitPhase { prep, work, rest }
 
 /// Een circuit zoals het live in een sessie draait — begint met [startCircuit]
-/// en schakelt daarna zelf automatisch door (werk → rust → volgende
-/// oefening → volgende ronde), aangestuurd vanuit
+/// en schakelt daarna zelf automatisch door (voorbereiden → werk → rust →
+/// volgende oefening → volgende ronde → volgend blok), aangestuurd vanuit
 /// [StrengthSessionController]'s bestaande 1s-ticker.
 class LiveCircuit {
   final Circuit circuit;
+
+  /// Ronde binnen het huidige deel (blok), vanaf 0.
   int round = 0;
   int exerciseIndex = 0;
+  int segmentIndex = 0;
   CircuitPhase phase = CircuitPhase.work;
   bool isRunning = false;
   bool isDone = false;
+  bool isPaused = false;
   final IntervalTimer timer = IntervalTimer();
+
+  /// Seconden aftellen vóór elke oefening (halters afstellen) — gezet door
+  /// de controller uit de instellingen. 0 = meteen beginnen.
+  int prepSeconds = 0;
 
   /// Lengte van de lopende rust (verschilt per stap) — voor de voortgangsbalk.
   int restTotal = 0;
@@ -158,15 +204,56 @@ class LiveCircuit {
   LiveCircuit(this.circuit);
 
   late final List<CircuitStep> steps = circuit.effectiveSteps;
+  late final List<CircuitSegment> segments = circuit.segments;
+
+  CircuitSegment get segment => segments[segmentIndex];
 
   CircuitStep? get currentStep =>
       exerciseIndex < steps.length ? steps[exerciseIndex] : null;
   String get currentExerciseName => currentStep?.name ?? '';
 
+  /// De oefening die na de huidige komt (voor tijdens rust en voorbereiden).
+  CircuitStep? get nextStep {
+    final next = _nextPosition();
+    return next == null ? null : steps[next.$3];
+  }
+
   /// Een herhalingen-stap ("10× push-up") telt niet af — je tikt "Klaar".
   bool get waitingForTap =>
-      isRunning && phase == CircuitPhase.work && currentStep?.isTimed == false;
+      isRunning &&
+      !isPaused &&
+      phase == CircuitPhase.work &&
+      currentStep?.isTimed == false;
   Duration get timeLeft => timer.remaining;
+
+  /// Lengte van de lopende fase, voor de voortgangsbalk.
+  int get phaseTotal => switch (phase) {
+    CircuitPhase.prep => prepSeconds,
+    CircuitPhase.rest => restTotal,
+    CircuitPhase.work => currentStep?.seconds ?? circuit.workSeconds,
+  };
+
+  /// Begint (of herstart) het circuit bij het eerste deel.
+  void start() {
+    isRunning = true;
+    isDone = false;
+    isPaused = false;
+    segmentIndex = 0;
+    round = 0;
+    exerciseIndex = 0;
+    startStep();
+  }
+
+  /// Begint de huidige oefening: eerst voorbereiden (als ingesteld), dan
+  /// werken.
+  void startStep() {
+    if (prepSeconds > 0) {
+      phase = CircuitPhase.prep;
+      timer.start(Duration(seconds: prepSeconds));
+    } else {
+      startWork();
+    }
+  }
 
   /// Start de werkfase van de huidige stap: aftellen bij een tijd-stap,
   /// wachten op "Klaar" bij een herhalingen-stap.
@@ -180,19 +267,47 @@ class LiveCircuit {
     }
   }
 
+  void pause() {
+    if (!isRunning || isPaused) return;
+    timer.pause();
+    isPaused = true;
+  }
+
+  void resume() {
+    if (!isPaused) return;
+    isPaused = false;
+    timer.resume();
+  }
+
+  /// Volgende positie (deel, ronde, oefening), of null als dit de laatste
+  /// oefening van het hele circuit was.
+  (int, int, int)? _nextPosition() {
+    final seg = segment;
+    if (exerciseIndex < seg.end - 1) {
+      return (segmentIndex, round, exerciseIndex + 1);
+    }
+    if (round < seg.rounds - 1) return (segmentIndex, round + 1, seg.start);
+    if (segmentIndex < segments.length - 1) {
+      return (segmentIndex + 1, 0, segments[segmentIndex + 1].start);
+    }
+    return null;
+  }
+
   /// Zet het circuit één fase verder. Geeft `true` als het circuit klaar is.
   bool advance() {
-    final c = circuit;
+    if (phase == CircuitPhase.prep) {
+      startWork();
+      return false;
+    }
+    final next = _nextPosition();
     if (phase == CircuitPhase.work) {
-      final isLastExercise = exerciseIndex == steps.length - 1;
-      final isLastRound = round == c.rounds - 1;
-      if (isLastExercise && isLastRound) {
+      if (next == null) {
         isRunning = false;
         isDone = true;
         timer.cancel();
         return true;
       }
-      final rest = c.restAfter(exerciseIndex);
+      final rest = circuit.restAfter(exerciseIndex);
       if (rest > 0) {
         phase = CircuitPhase.rest;
         restTotal = rest;
@@ -201,14 +316,17 @@ class LiveCircuit {
       }
     }
     // Rust is om (of er is geen rust ingesteld): door naar de volgende
-    // oefening, of naar de volgende ronde als dit de laatste oefening was.
-    if (exerciseIndex == steps.length - 1) {
-      round += 1;
-      exerciseIndex = 0;
-    } else {
-      exerciseIndex += 1;
+    // oefening, ronde of blok.
+    if (next == null) {
+      isRunning = false;
+      isDone = true;
+      timer.cancel();
+      return true;
     }
-    startWork();
+    segmentIndex = next.$1;
+    round = next.$2;
+    exerciseIndex = next.$3;
+    startStep();
     return false;
   }
 }
@@ -230,6 +348,7 @@ class StrengthSessionController extends ChangeNotifier
     DateTime? pauseStartedAt,
     List<GlucosePoint> restoredSeries = const [],
     List<NutritionEntry> restoredNutrition = const [],
+    this.circuitOnly = false,
   }) {
     reading = initialReading ?? GlucoseReading(6.8, Trend.flat, DateTime.now());
     series.add(GlucosePoint(reading.at, reading.mmol));
@@ -270,9 +389,9 @@ class StrengthSessionController extends ChangeNotifier
         exercises.add(
           LiveExercise(
             name: e.name,
-            sets: e.sets
-                .map(LiveSet.from)
-                .toList(),
+            sets: e.sets.map(LiveSet.from).toList(),
+            block: e.block,
+            restSeconds: e.restSeconds,
           ),
         );
         unawaited(ensureCustomExercise(e.name));
@@ -286,6 +405,10 @@ class StrengthSessionController extends ChangeNotifier
 
   @override
   final String title;
+
+  /// Losse circuittraining (gestart vanuit een circuit): alleen dat
+  /// circuit, zonder knoppen om oefeningen of andere circuits toe te voegen.
+  final bool circuitOnly;
   final GlucoseProvider? provider;
   final AppController appController;
 
@@ -304,7 +427,17 @@ class StrengthSessionController extends ChangeNotifier
   Timer? _tick;
   Timer? _poller;
   Timer? _restTimer;
-  DateTime? _restEndAt;
+  final IntervalTimer _rest = IntervalTimer();
+
+  /// Voorbereiden vóór een tijd-set (bv. plank): eerst dit aftellen, dan
+  /// start de klok van de set zelf.
+  final IntervalTimer _setPrep = IntervalTimer();
+  (int, int)? _prepFor;
+
+  /// Lengte van de lopende rust (voor de voortgangsbalk) en wat er daarna
+  /// komt, bv. "Ronde 2 · Goblet squat".
+  int restTotal = defaultRestFallback;
+  String? restNext;
   bool saving = false;
   @override
   bool isPaused = false;
@@ -330,13 +463,46 @@ class StrengthSessionController extends ChangeNotifier
     return DateTime.now().difference(_startedAt) - pausedSoFar;
   }
 
-  /// Resterende rust in seconden, live herberekend uit [_restEndAt] zodat
-  /// hij net als [elapsed] doorloopt ook als het scherm even uit is geweest.
-  int get restLeft {
-    if (_restEndAt == null) return 0;
-    final left = _restEndAt!.difference(DateTime.now()).inSeconds;
-    return left > 0 ? left : 0;
+  /// Resterende rust in seconden, live herberekend (kloktijd) zodat hij net
+  /// als [elapsed] doorloopt ook als het scherm even uit is geweest.
+  int get restLeft => _rest.remaining.inSeconds;
+
+  /// De tijd-set die nu loopt of zich voorbereidt — voor de grote
+  /// aftelbalk bovenin. Null als er geen loopt.
+  ActiveTimedSet? get activeTimedSet {
+    final prep = _prepFor;
+    if (prep != null && _setPrep.isRunning) {
+      final e = exercises[prep.$1];
+      return ActiveTimedSet(
+        exerciseIndex: prep.$1,
+        setIndex: prep.$2,
+        name: e.name,
+        preparing: true,
+        left: _setPrep.remaining,
+        total: Duration(seconds: prepSeconds),
+      );
+    }
+    for (var ei = 0; ei < exercises.length; ei++) {
+      final sets = exercises[ei].sets;
+      for (var si = 0; si < sets.length; si++) {
+        final set = sets[si];
+        if (set._timerStarted && !set.done && set.timerRunning) {
+          return ActiveTimedSet(
+            exerciseIndex: ei,
+            setIndex: si,
+            name: exercises[ei].name,
+            preparing: false,
+            left: set.timeLeft,
+            total: Duration(seconds: set.seconds ?? 0),
+          );
+        }
+      }
+    }
+    return null;
   }
+
+  /// Voorbereidingstijd vóór een tijd-set of circuitoefening (instelling).
+  int get prepSeconds => appController.profile?.circuitPrepSeconds ?? 0;
 
   @override
   double get glucoseMmol => reading.mmol;
@@ -390,10 +556,28 @@ class StrengthSessionController extends ChangeNotifier
     }
   }
 
+  /// Circuits die door de sessiepauze zijn stilgezet (niet die je zelf al
+  /// had gepauzeerd) — alleen die gaan bij hervatten weer lopen.
+  final Set<LiveCircuit> _pausedBySession = {};
+
   void pause() {
     if (isPaused) return;
     _pauseStartedAt = DateTime.now();
     isPaused = true;
+    // Alles wat aftelt staat stil: rust, voorbereiden, tijd-sets, circuits.
+    _rest.pause();
+    _setPrep.pause();
+    for (final e in exercises) {
+      for (final set in e.sets) {
+        set._timer.pause();
+      }
+    }
+    for (final lc in circuits) {
+      if (lc.isRunning && !lc.isPaused) {
+        lc.pause();
+        _pausedBySession.add(lc);
+      }
+    }
     notifyListeners();
   }
 
@@ -402,12 +586,34 @@ class StrengthSessionController extends ChangeNotifier
     _pausedAccum += DateTime.now().difference(_pauseStartedAt!);
     _pauseStartedAt = null;
     isPaused = false;
+    _rest.resume();
+    _setPrep.resume();
+    for (final e in exercises) {
+      for (final set in e.sets) {
+        set._timer.resume();
+      }
+    }
+    for (final lc in _pausedBySession) {
+      lc.resume();
+    }
+    _pausedBySession.clear();
     notifyListeners();
     // Meteen een verse waarde: tijdens de pauze lag de app vaak stil.
     refreshReading();
   }
 
-  Future<void> _loadCustomExercises() async {
+  /// Het laden van de catalogus — [ensureCustomExercise] wacht hierop, anders
+  /// denkt hij dat een oefening nog niet bestaat terwijl de lijst er gewoon
+  /// nog niet is (zo ontstonden er bij elke trainingsstart kopieën).
+  Future<void>? _customLoad;
+
+  /// Oefeningen die nu worden aangemaakt (op naam, kleine letters) — twee
+  /// gelijktijdige aanroepen voor dezelfde naam maken er maar één.
+  final Map<String, Future<void>> _creating = {};
+
+  Future<void> _loadCustomExercises() => _customLoad ??= _fetchCustomExercises();
+
+  Future<void> _fetchCustomExercises() async {
     final userId = appController.user?.id;
     final client = appController.client;
     if (userId == null || client == null) return;
@@ -423,31 +629,80 @@ class StrengthSessionController extends ChangeNotifier
 
   Exercise? matchingCustomExercise(String name) {
     for (final e in customExercises) {
-      if (e.name.toLowerCase() == name.toLowerCase()) return e;
+      // Zelfde vergelijking als de database: hoofdletters en spaties aan
+      // het begin/eind tellen niet.
+      if (e.name.trim().toLowerCase() == name.trim().toLowerCase()) return e;
     }
     return null;
+  }
+
+  /// Video's voor een stap in een circuit: die van de stap zelf, anders die
+  /// van de oefening met dezelfde naam in je oefeningen.
+  List<String> videosForStep(CircuitStep step) => step.videoUrls.isNotEmpty
+      ? step.videoUrls
+      : (matchingCustomExercise(step.name)?.videoUrls ?? const []);
+
+  /// Bewaart een video bij oefening [name] in je oefeningen (en maakt die
+  /// oefening aan als hij er nog niet is), zodat hij er ook de volgende
+  /// keer bij staat.
+  Future<void> addExerciseVideo(String name, String url) async {
+    final client = appController.client;
+    if (client == null) return;
+    await ensureCustomExercise(name);
+    final existing = matchingCustomExercise(name);
+    if (existing == null || existing.videoUrls.contains(url)) return;
+    try {
+      final saved = await ExerciseRepository(client).updateContent(
+        existing.copyWith(videoUrls: [...existing.videoUrls, url]),
+      );
+      customExercises = [
+        for (final e in customExercises) e.id == saved.id ? saved : e,
+      ];
+      notifyListeners();
+    } catch (_) {
+      // Video blijft in deze sessie zichtbaar in het paneel; opslaan in de
+      // catalogus kan later vanuit de oefeningenlijst.
+    }
   }
 
   /// Slaat een net getypte, nog onbekende naam op in de oefeningcatalogus,
   /// zodat je 'm later een beschrijving kunt geven en hij in de lijst blijft
   /// staan voor volgende trainingen.
   Future<void> ensureCustomExercise(String name) async {
-    if (matchingCustomExercise(name) != null) return;
-    if (kExerciseLibrary.any((n) => n.toLowerCase() == name.toLowerCase())) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    await _loadCustomExercises();
+    if (matchingCustomExercise(trimmed) != null) return;
+    if (kExerciseLibrary.any((n) => n.toLowerCase() == trimmed.toLowerCase())) {
       return;
     }
+    final key = trimmed.toLowerCase();
+    final running = _creating[key];
+    if (running != null) return running;
+    final future = _createCustomExercise(trimmed);
+    _creating[key] = future;
+    try {
+      await future;
+    } finally {
+      _creating.remove(key);
+    }
+  }
+
+  Future<void> _createCustomExercise(String name) async {
     final userId = appController.user?.id;
     final client = appController.client;
     if (userId == null || client == null) return;
     try {
-      final created = await ExerciseRepository(
-        client,
-      ).create(Exercise(id: '', name: name), userId);
+      final created = await ExerciseRepository(client)
+          .create(Exercise(id: '', name: name), userId);
       customExercises = [...customExercises, created];
       notifyListeners();
     } catch (_) {
-      // Oefening telt al mee in deze sessie; alleen het los opslaan in de
-      // catalogus (voor een beschrijving/hergebruik) is mislukt.
+      // Bestaat al (de database staat geen dubbele namen toe — bv. net op
+      // een ander toestel aangemaakt): de lijst opnieuw ophalen. Anders
+      // telt de oefening gewoon mee in deze sessie, zonder catalogus.
+      _customLoad = null;
+      await _loadCustomExercises();
     }
   }
 
@@ -456,9 +711,8 @@ class StrengthSessionController extends ChangeNotifier
     final client = appController.client;
     if (userId == null || client == null) return;
     try {
-      final entries = await GlucoseEntryRepository(
-        client,
-      ).recentForUser(userId);
+      final entries = await GlucoseEntryRepository(client)
+          .recentForUser(userId);
       fingerEntries = entries;
       notifyListeners();
     } catch (_) {
@@ -475,9 +729,8 @@ class StrengthSessionController extends ChangeNotifier
     final client = appController.client;
     if (userId == null || client == null) return;
     try {
-      final entry = await GlucoseEntryRepository(
-        client,
-      ).create(userId, value, now);
+      final entry = await GlucoseEntryRepository(client)
+          .create(userId, value, now);
       fingerEntries = [entry, ...fingerEntries].take(5).toList();
       notifyListeners();
     } catch (_) {
@@ -612,9 +865,8 @@ class StrengthSessionController extends ChangeNotifier
     final userId = appController.user?.id;
     final client = appController.client;
     if (userId == null || client == null) return const [];
-    final history = await SessionRepository(
-      client,
-    ).performanceHistory(userId, name);
+    final history = await SessionRepository(client)
+        .performanceHistory(userId, name);
     _performanceHistory[name] = history;
     return history;
   }
@@ -633,9 +885,7 @@ class StrengthSessionController extends ChangeNotifier
       LiveExercise(
         name: name,
         sets: last != null && last.isNotEmpty
-            ? last
-                  .map(LiveSet.like)
-                  .toList()
+            ? last.map(LiveSet.like).toList()
             : [LiveSet()],
         lastPerformance: last,
         personalRecord: pr,
@@ -663,7 +913,77 @@ class StrengthSessionController extends ChangeNotifier
 
   void removeExercise(int i) {
     exercises.removeAt(i);
+    _normalizeBlocks();
     notifyListeners();
+  }
+
+  /// Haalt één set weg, ook midden in een lopende training.
+  void removeSet(int ei, int si) {
+    final sets = exercises[ei].sets;
+    if (si < 0 || si >= sets.length) return;
+    sets.removeAt(si);
+    notifyListeners();
+  }
+
+  // ── rust en blokken ────────────────────────────────────────────────────────
+
+  int get defaultRest =>
+      appController.profile?.defaultRestSeconds ?? defaultRestFallback;
+
+  List<int?> get _blocks => [for (final e in exercises) e.block];
+
+  /// Bereik van het blok waar oefening [ei] in zit (los = alleen zichzelf).
+  ({int start, int end}) blockOf(int ei) => blockRange(_blocks, ei);
+
+  /// Rust na een set van [ei] (los) of na een ronde van zijn blok.
+  int restAfter(int ei) => restAfterIn(exercises, ei, defaultRest);
+
+  /// Koppelt oefening [ei] aan de oefening erboven: samen één blok.
+  void linkWithPrevious(int ei) {
+    linkWithPreviousIn(exercises, ei);
+    notifyListeners();
+  }
+
+  /// Haalt oefening [ei] uit zijn blok.
+  void unlink(int ei) {
+    unlinkIn(exercises, ei);
+    notifyListeners();
+  }
+
+  /// Zet de rust van het hele blok waar [ei] in zit (of van de losse
+  /// oefening). Null = terug naar de standaard.
+  void setRest(int ei, int? seconds) {
+    setBlockRestIn(exercises, ei, seconds);
+    notifyListeners();
+  }
+
+  void _normalizeBlocks() => normalizeBlocksIn(exercises);
+
+  /// Na het afvinken van set [si] van [ei]: rust, maar in een blok pas als
+  /// set [si] van álle oefeningen in het blok af is (de ronde is klaar).
+  void _restAfterSet(int ei, int si) {
+    final r = blockOf(ei);
+    for (var i = r.start; i < r.end; i++) {
+      final sets = exercises[i].sets;
+      if (si < sets.length && !sets[si].done) return;
+    }
+    final inBlock = r.end - r.start > 1;
+    String? next;
+    if (inBlock) {
+      final more = [
+        for (var i = r.start; i < r.end; i++)
+          if (exercises[i].sets.length > si + 1) i,
+      ];
+      if (more.isNotEmpty) {
+        next = 'Ronde ${si + 2} · ${exercises[more.first].name}';
+      }
+    } else if (exercises[ei].sets.length > si + 1) {
+      next = 'Set ${si + 2} · ${exercises[ei].name}';
+    }
+    if (next == null && r.end < exercises.length) {
+      next = 'Volgende: ${exercises[r.end].name}';
+    }
+    _startRestTimer(restAfter(ei), next: next);
   }
 
   void addSet(int i) {
@@ -689,9 +1009,21 @@ class StrengthSessionController extends ChangeNotifier
     final sets = exercise.sets;
     final wasDone = sets[si].done;
     sets[si] = patch(sets[si]);
-    if (!wasDone && sets[si].done) {
-      _startRestTimer();
-      _checkNewRecord(exercise, sets[si].kg);
+    final set = sets[si];
+    if (wasDone != set.done) {
+      // De klok van een tijd-set hoort bij één poging: afgevinkt (door de
+      // klok of met de hand) of weer uitgevinkt — dan is hij klaar. Anders
+      // vinkt _checkSetTimers een uitgevinkte set meteen weer aan.
+      set._timer.cancel();
+      set._timerStarted = false;
+      if (_prepFor == (ei, si)) {
+        _prepFor = null;
+        _setPrep.cancel();
+      }
+    }
+    if (!wasDone && set.done) {
+      _restAfterSet(ei, si);
+      _checkNewRecord(exercise, set.kg);
     }
     notifyListeners();
   }
@@ -701,16 +1033,65 @@ class StrengthSessionController extends ChangeNotifier
   /// als handmatig afvinken, dus de rust-timer gaat daarna gewoon aan.
   void startSetTimer(int ei, int si) {
     final set = exercises[ei].sets[si];
+    if (set.seconds == null || set.done) return;
+    if (prepSeconds > 0) {
+      _prepFor = (ei, si);
+      _setPrep.start(Duration(seconds: prepSeconds));
+    } else {
+      _startSetClock(set);
+    }
+    notifyListeners();
+  }
+
+  void _startSetClock(LiveSet set) {
     final seconds = set.seconds;
-    if (seconds == null || set.done) return;
+    if (seconds == null) return;
     set._timer.start(Duration(seconds: seconds));
     set._timerStarted = true;
+  }
+
+  /// Een lopende tijd-set (of zijn voorbereiding) stoppen zonder af te
+  /// vinken.
+  void stopSetTimer() {
+    _prepFor = null;
+    _setPrep.cancel();
+    for (final e in exercises) {
+      for (final set in e.sets) {
+        if (set._timerStarted && !set.done) {
+          set._timer.cancel();
+          set._timerStarted = false;
+        }
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Voorbereiden overslaan: de klok van de set zelf begint meteen.
+  void skipSetPrep() {
+    final prep = _prepFor;
+    if (prep == null) return;
+    _prepFor = null;
+    _setPrep.cancel();
+    if (prep.$1 < exercises.length &&
+        prep.$2 < exercises[prep.$1].sets.length) {
+      _startSetClock(exercises[prep.$1].sets[prep.$2]);
+    }
     notifyListeners();
   }
 
   /// Vinkt een tijd-gebaseerde set automatisch af zodra de aftelklok (die
   /// met [startSetTimer] is gestart) op nul staat.
   void _checkSetTimers() {
+    // Voorbereiding om? Dan begint de klok van de set zelf.
+    final prep = _prepFor;
+    if (prep != null && !_setPrep.isRunning && !isPaused) {
+      _prepFor = null;
+      HapticFeedback.mediumImpact();
+      if (prep.$1 < exercises.length &&
+          prep.$2 < exercises[prep.$1].sets.length) {
+        _startSetClock(exercises[prep.$1].sets[prep.$2]);
+      }
+    }
     for (var ei = 0; ei < exercises.length; ei++) {
       final sets = exercises[ei].sets;
       for (var si = 0; si < sets.length; si++) {
@@ -739,18 +1120,30 @@ class StrengthSessionController extends ChangeNotifier
   void startCircuit(int i) {
     final lc = circuits[i];
     if (lc.steps.isEmpty) return;
-    lc.isRunning = true;
-    lc.isDone = false;
-    lc.round = 0;
-    lc.exerciseIndex = 0;
-    lc.startWork();
+    // Zonder profiel (bv. in tests) geen voorbereiding; anders de instelling
+    // (standaard 10 s).
+    lc.prepSeconds = prepSeconds;
+    lc.start();
     notifyListeners();
   }
 
   void stopCircuit(int i) {
     final lc = circuits[i];
     lc.isRunning = false;
+    lc.isPaused = false;
     lc.timer.cancel();
+    notifyListeners();
+  }
+
+  /// Zet een lopend circuit stil of laat het verder lopen — de aftelklok
+  /// gaat verder waar hij was.
+  void togglePauseCircuit(int i) {
+    final lc = circuits[i];
+    if (lc.isPaused) {
+      lc.resume();
+    } else {
+      lc.pause();
+    }
     notifyListeners();
   }
 
@@ -758,6 +1151,7 @@ class StrengthSessionController extends ChangeNotifier
   void skipCircuitPhase(int i) {
     final lc = circuits[i];
     if (!lc.isRunning) return;
+    if (lc.isPaused) lc.resume();
     _advanceCircuit(lc);
     notifyListeners();
   }
@@ -769,6 +1163,7 @@ class StrengthSessionController extends ChangeNotifier
     for (final lc in circuits) {
       if (lc.isRunning &&
           !lc.isDone &&
+          !lc.isPaused &&
           !lc.waitingForTap &&
           !lc.timer.isRunning) {
         _advanceCircuit(lc);
@@ -801,15 +1196,23 @@ class StrengthSessionController extends ChangeNotifier
   void reorderExercise(int oldIndex, int newIndex) {
     final moved = exercises.removeAt(oldIndex);
     exercises.insert(newIndex, moved);
+    _normalizeBlocks();
     notifyListeners();
   }
 
-  void _startRestTimer() {
+  void _startRestTimer(int seconds, {String? next}) {
     _restTimer?.cancel();
-    _restEndAt = DateTime.now().add(Duration(seconds: restSeconds));
+    if (seconds <= 0) {
+      _rest.cancel();
+      return;
+    }
+    restTotal = seconds;
+    restNext = next;
+    _rest.start(Duration(seconds: seconds));
+    if (isPaused) _rest.pause();
     _restTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (restLeft <= 0) {
-        _restEndAt = null;
+      if (!_rest.isRunning) {
+        _rest.cancel();
         _restTimer?.cancel();
       }
       notifyListeners();
@@ -818,7 +1221,7 @@ class StrengthSessionController extends ChangeNotifier
 
   void skipRest() {
     _restTimer?.cancel();
-    _restEndAt = null;
+    _rest.cancel();
     notifyListeners();
   }
 
@@ -838,15 +1241,8 @@ class StrengthSessionController extends ChangeNotifier
 
   Map<String, dynamic> toSnapshot() => {
     ..._snapshotBase('kracht'),
-    'exercises': [
-      for (final e in exercises)
-        ExerciseEntry(
-          name: e.name,
-          sets: [
-            for (final s in e.sets) s.toExerciseSet(),
-          ],
-        ).toJson(),
-    ],
+    'circuitOnly': circuitOnly,
+    'exercises': [for (final e in exercises) e.toEntry().toJson()],
     'circuits': circuits.map((c) => c.circuit.toJson()).toList(),
   };
 
@@ -859,6 +1255,7 @@ class StrengthSessionController extends ChangeNotifier
     GlucoseProvider? provider,
   }) => StrengthSessionController(
     title: (json['title'] as String?) ?? 'Krachttraining',
+    circuitOnly: (json['circuitOnly'] as bool?) ?? false,
     appController: appController,
     contextOf: contextOf,
     provider: provider,
@@ -871,7 +1268,9 @@ class StrengthSessionController extends ChangeNotifier
         Circuit.fromJson(c as Map<String, dynamic>),
     ],
     startedAt: DateTime.parse(json['startedAt'] as String).toLocal(),
-    pausedAccum: Duration(milliseconds: (json['pausedAccumMs'] as num?)?.toInt() ?? 0),
+    pausedAccum: Duration(
+      milliseconds: (json['pausedAccumMs'] as num?)?.toInt() ?? 0,
+    ),
     pauseStartedAt: json['pauseStartedAt'] == null
         ? null
         : DateTime.parse(json['pauseStartedAt'] as String).toLocal(),
@@ -902,15 +1301,7 @@ class StrengthSessionController extends ChangeNotifier
       glucoseSeries: series,
       exercises: exercises
           .where((e) => e.sets.any((s) => s.worthSaving))
-          .map(
-            (e) => ExerciseEntry(
-              name: e.name,
-              sets: [
-                for (final s in e.sets)
-                  if (s.worthSaving) s.toExerciseSet(),
-              ],
-            ),
-          )
+          .map((e) => e.toEntry(onlyWorthSaving: true))
           .toList(),
       nutrition: nutrition,
       circuits: circuits.map((lc) => lc.circuit).toList(),

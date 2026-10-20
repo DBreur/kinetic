@@ -99,10 +99,8 @@ class _TrainingLibraryScreenState extends State<TrainingLibraryScreen> {
     final result = await Navigator.push<CircuitEditResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => CircuitEditScreen(
-          controller: widget.controller,
-          circuit: existing,
-        ),
+        builder: (_) =>
+            CircuitEditScreen(controller: widget.controller, circuit: existing),
       ),
     );
     if (result != null) _load();
@@ -169,8 +167,7 @@ class _TrainingLibraryScreenState extends State<TrainingLibraryScreen> {
         style: AppText.caption,
       ),
       const SizedBox(height: 12),
-      if (!_loading && _templates.isEmpty)
-        _empty('Nog geen schema\'s.'),
+      if (!_loading && _templates.isEmpty) _empty('Nog geen schema\'s.'),
       for (final t in _templates)
         _LibraryRow(
           icon: Icons.view_list_outlined,
@@ -206,6 +203,7 @@ class _TrainingLibraryScreenState extends State<TrainingLibraryScreen> {
           title: c.name,
           subtitle: c.summary,
           onTap: () => _openCircuitEditor(existing: c),
+          onStart: () => widget.controller.startCircuitTraining(c),
         ),
       const SizedBox(height: 4),
       FilledButton.icon(
@@ -228,12 +226,16 @@ class _LibraryRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.onStart,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+
+  /// Als gezet: een startknop in plaats van het pijltje.
+  final VoidCallback? onStart;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -262,7 +264,15 @@ class _LibraryRow extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppColor.inkFaint),
+          if (onStart != null)
+            IconButton(
+              tooltip: 'Start als training',
+              onPressed: onStart,
+              icon: const Icon(Icons.play_circle_outline),
+              color: AppColor.coral,
+            )
+          else
+            const Icon(Icons.chevron_right, color: AppColor.inkFaint),
         ],
       ),
     ),
@@ -377,6 +387,11 @@ class _ExercisesSheetState extends State<_ExercisesSheet> {
   }
 
   Future<void> _create(Exercise exercise) async {
+    final key = exercise.name.trim().toLowerCase();
+    if (_exercises.any((e) => e.name.trim().toLowerCase() == key)) {
+      _failed('"${exercise.name.trim()}" staat al in je oefeningen.');
+      return;
+    }
     setState(() => _busy = true);
     try {
       final created = await widget.repository.create(exercise, widget.userId);
@@ -393,9 +408,8 @@ class _ExercisesSheetState extends State<_ExercisesSheet> {
   void _failed(String message) {
     if (!mounted) return;
     setState(() => _busy = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Aanpassen — een oefening uit de vaste lijst wordt daarbij een eigen

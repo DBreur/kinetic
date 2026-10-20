@@ -15,6 +15,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'notification_router.dart';
 import 'notification_style.dart';
+
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -29,7 +30,9 @@ class AgendaNotificationService {
 
   static const _trainingChannelId = 'kinetic_planned_training';
   static const _competitionChannelId = 'kinetic_competition_countdown';
-  static const _techniqueSoundChannelId = 'kinetic_technique_reminder_sound';
+  // v2: het geluidsbestand zat niet in de release-build (zie
+  // res/raw/keep.xml); het oude kanaal verwees naar niets.
+  static const _techniqueSoundChannelId = 'kinetic_technique_reminder_sound_v2';
   static const _techniqueSilentChannelId = 'kinetic_technique_reminder_silent';
   static const _firstTrainingId = 40000;
   static const _firstStartId = 45000;
@@ -75,6 +78,9 @@ class AgendaNotificationService {
         ),
         onDidReceiveNotificationResponse: NotificationRouter.handle,
       );
+      await deleteStaleChannels(_android, const [
+        'kinetic_technique_reminder_sound',
+      ]);
       await _android?.createNotificationChannel(
         const AndroidNotificationChannel(
           _trainingChannelId,
@@ -174,12 +180,12 @@ class AgendaNotificationService {
         color: kNotificationColor,
         technique == null
             ? (isTraining ? _trainingChannelId : _competitionChannelId)
-            : (technique ? _techniqueSoundChannelId : _techniqueSilentChannelId),
+            : (technique
+                  ? _techniqueSoundChannelId
+                  : _techniqueSilentChannelId),
         technique == null
             ? (isTraining ? 'Geplande trainingen' : 'Wedstrijd-aftelling')
-            : (technique
-                  ? 'Technieken oefenen'
-                  : 'Technieken oefenen (stil)'),
+            : (technique ? 'Technieken oefenen' : 'Technieken oefenen (stil)'),
         importance: isTraining ? Importance.high : Importance.defaultImportance,
         priority: isTraining ? Priority.high : Priority.defaultPriority,
         styleInformation: BigTextStyleInformation(s.body),
@@ -337,10 +343,11 @@ List<ScheduledAgendaNotification> planAgendaNotifications({
   final upcomingTrainings =
       trainings.where((t) => t.remindAt?.isAfter(now) ?? false).toList()
         ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-  for (var i = 0;
-      i < upcomingTrainings.length &&
-          i < AgendaNotificationService.maxTrainings;
-      i++) {
+  for (
+    var i = 0;
+    i < upcomingTrainings.length && i < AgendaNotificationService.maxTrainings;
+    i++
+  ) {
     final t = upcomingTrainings[i];
     final hh = t.startsAt.hour.toString().padLeft(2, '0');
     final mm = t.startsAt.minute.toString().padLeft(2, '0');
@@ -369,9 +376,11 @@ List<ScheduledAgendaNotification> planAgendaNotifications({
           )
           .toList()
         ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-  for (var i = 0;
-      i < toStart.length && i < AgendaNotificationService.maxTrainings;
-      i++) {
+  for (
+    var i = 0;
+    i < toStart.length && i < AgendaNotificationService.maxTrainings;
+    i++
+  ) {
     final t = toStart[i];
     result.add(
       ScheduledAgendaNotification(
@@ -390,17 +399,21 @@ List<ScheduledAgendaNotification> planAgendaNotifications({
           .where((c) => c.dailyReminder && daysUntil(c.startsAt, now) >= 0)
           .toList()
         ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-  for (var c = 0;
-      c < upcomingComps.length && c < AgendaNotificationService.maxCompetitions;
-      c++) {
+  for (
+    var c = 0;
+    c < upcomingComps.length && c < AgendaNotificationService.maxCompetitions;
+    c++
+  ) {
     final comp = upcomingComps[c];
     final minutes = minutesOfDay(comp.reminderTime);
     final today = DateTime(now.year, now.month, now.day);
     final totalDays = daysUntil(comp.startsAt, now);
     var slot = 0;
-    for (var d = 0;
-        d <= totalDays && slot < AgendaNotificationService.maxDailyPerCompetition;
-        d++) {
+    for (
+      var d = 0;
+      d <= totalDays && slot < AgendaNotificationService.maxDailyPerCompetition;
+      d++
+    ) {
       final day = DateTime(today.year, today.month, today.day + d);
       final at = DateTime(
         day.year,
@@ -434,14 +447,15 @@ List<ScheduledAgendaNotification> _planTechniqueReminders(
   TechniqueReminderInput input,
 ) {
   final result = <ScheduledAgendaNotification>[];
-  final upcoming =
-      trainings.where((t) => t.startsAt.isAfter(now)).toList()
-        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+  final upcoming = trainings.where((t) => t.startsAt.isAfter(now)).toList()
+    ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
   final nextSambo = upcoming.indexWhere((t) => t.kind.isSambo);
   final nextIndex = nextSambo >= 0 ? nextSambo : (upcoming.isEmpty ? -1 : 0);
-  for (var i = 0;
-      i < upcoming.length && i < AgendaNotificationService.maxTrainings;
-      i++) {
+  for (
+    var i = 0;
+    i < upcoming.length && i < AgendaNotificationService.maxTrainings;
+    i++
+  ) {
     final t = upcoming[i];
     final isNext = i == nextIndex && input.practiceNextIds.isNotEmpty;
     final names = <String>[
@@ -457,10 +471,12 @@ List<ScheduledAgendaNotification> _planTechniqueReminders(
         : (isNext ? normalizeReminders(input.defaultReminders) : const <int>[]);
     final hh = t.startsAt.hour.toString().padLeft(2, '0');
     final mm = t.startsAt.minute.toString().padLeft(2, '0');
-    for (var j = 0;
-        j < reminders.length &&
-            j < AgendaNotificationService.maxTechniqueRemindersPerTraining;
-        j++) {
+    for (
+      var j = 0;
+      j < reminders.length &&
+          j < AgendaNotificationService.maxTechniqueRemindersPerTraining;
+      j++
+    ) {
       final minutes = reminders[j];
       final at = t.startsAt.subtract(Duration(minutes: minutes));
       if (!at.isAfter(now)) continue;

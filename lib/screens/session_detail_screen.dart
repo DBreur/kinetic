@@ -472,6 +472,8 @@ class _ExerciseSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final summary = entry.sets.isEmpty
         ? '—'
+        // Hier alleen gewone reps-sets (tijd/verzuring krijgen hieronder
+        // een eigen regel per set, zie _detailed).
         : '${entry.sets.length} × ${entry.sets.map((s) => s.reps).join('/')}'
               '${entry.sets.first.kg > 0 ? ' · ${mmolText(entry.sets.first.kg)} kg' : ''}';
     return Container(
