@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
+import '../core/rest_blocks.dart';
 import '../core/session_times.dart';
 import '../models/combination.dart';
 import '../models/exercise.dart';
@@ -18,6 +19,7 @@ import '../repositories/session_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/position_practice_editor.dart';
 import '../widgets/number_input.dart';
 import '../widgets/exercise_picker.dart';
 import '../widgets/block_widgets.dart';
@@ -55,30 +57,67 @@ class _EditSet {
   /// Tijd-set (bv. plank): seconden in plaats van reps.
   int? seconds;
 
-  /// De oorspronkelijke set, zodat verzuring en gelukt/reden bij opslaan
-  /// blijven staan — hier pas je kg en reps (of de tijd) aan.
-  final ExerciseSet? base;
-  _EditSet({this.kg = 0, this.reps = 8, this.seconds, this.base});
+  /// "Tot verzuring", met hoeveel erna (doel en gedaan).
+  bool toBurn;
+  String extraTarget;
+  int? extraReps;
 
-  /// "Tot verzuring": geen reps om aan te passen.
-  bool get toBurn => base?.toBurn ?? false;
+  /// Afgevinkt zoals in de training — bewerken verandert dat niet (vroeger
+  /// werd bij opslaan alles "gedaan"). Een nieuw toegevoegde set telt wel
+  /// als gedaan.
+  bool done;
+
+  /// De oorspronkelijke set, zodat gelukt/reden bij opslaan blijven staan.
+  final ExerciseSet? base;
+  _EditSet({
+    this.kg = 0,
+    this.reps = 8,
+    this.seconds,
+    this.toBurn = false,
+    this.extraTarget = '',
+    this.extraReps,
+    this.done = true,
+    this.base,
+  });
+
+  /// reps → tijd → tot verzuring → reps (zoals in de training).
+  void nextMode() {
+    if (toBurn) {
+      toBurn = false;
+      seconds = null;
+      extraReps = null;
+    } else if (seconds != null) {
+      toBurn = true;
+      seconds = null;
+      if (extraTarget.isEmpty) extraTarget = '5–10';
+    } else {
+      seconds = 30;
+    }
+  }
 
   ExerciseSet toSet() => (base ?? const ExerciseSet(kg: 0, reps: 0)).copyWith(
     kg: kg,
     reps: reps,
     seconds: seconds,
     clearSeconds: seconds == null,
-    done: true,
+    toBurn: toBurn,
+    extraTarget: toBurn ? extraTarget : '',
+    extraReps: extraReps,
+    clearExtraReps: !toBurn || extraReps == null,
+    done: done,
   );
 }
 
-class _EditExercise {
+class _EditExercise implements BlockMember {
   String name;
   List<_EditSet> sets;
 
-  /// Blok en rust blijven zoals ze in de training stonden.
-  final int? block;
-  final int? restSeconds;
+  /// Blok en rust zoals ze in de training stonden (na verslepen opnieuw
+  /// gecontroleerd met normalizeBlocksIn).
+  @override
+  int? block;
+  @override
+  int? restSeconds;
   _EditExercise({
     required this.name,
     required this.sets,
@@ -96,7 +135,6 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
   late List<_EditExercise> _exercises;
   late List<NutritionEntry> _nutrition;
   bool _adding = false;
-  bool _addingExercise = false;
   bool _busy = false;
   final _exerciseQuery = TextEditingController();
   final _scroll = ScrollController();
@@ -127,6 +165,10 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                     kg: s.kg,
                     reps: s.reps,
                     seconds: s.seconds,
+                    toBurn: s.toBurn,
+                    extraTarget: s.extraTarget,
+                    extraReps: s.extraReps,
+                    done: s.done,
                     base: s,
                   ),
                 )
@@ -220,6 +262,16 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
         child: _BlockEditSheet(
           entry: _blocks[i],
           onRemove: () => Navigator.pop(ctx, true),
+          suggestedPositions: [
+            for (final t in _knownTechniques)
+              if (t.name.toLowerCase() == _blocks[i].name.toLowerCase())
+                ...t.groundPositions,
+          ],
+          showPositions: !_knownTechniques.any(
+            (t) =>
+                t.name.toLowerCase() == _blocks[i].name.toLowerCase() &&
+                t.category == 'Takedown',
+          ),
         ),
       ),
     );
@@ -478,12 +530,33 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                   style: AppText.overline,
                 ),
                 const SizedBox(height: 10),
-                for (var i = 0; i < _blocks.length; i++)
-                  _BlockRow(
-                    key: ValueKey(_blocks[i].id),
-                    entry: _blocks[i],
-                    onTap: () => _editBlock(i),
+                ReorderableListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  onReorderItem: (from, to) => setState(
+                    () => _blocks.insert(to, _blocks.removeAt(from)),
                   ),
+                  children: [
+                    for (var i = 0; i < _blocks.length; i++)
+                      _BlockRow(
+                        key: ValueKey(_blocks[i].id),
+                        entry: _blocks[i],
+                        onTap: () => _editBlock(i),
+                        dragHandle: ReorderableDragStartListener(
+                          index: i,
+                          child: const Padding(
+                            padding: EdgeInsets.only(right: 8),
+                            child: Icon(
+                              Icons.drag_handle,
+                              size: 18,
+                              color: AppColor.inkFaint,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 if (_adding)
                   Padding(
                     padding: const EdgeInsets.only(top: 4, bottom: 10),
@@ -509,63 +582,89 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
                 const SizedBox(height: 22),
                 Text('OEFENINGEN', style: AppText.overline),
                 const SizedBox(height: 10),
-                for (var ei = 0; ei < _exercises.length; ei++)
-                  _EditExerciseCard(
-                    exercise: _exercises[ei],
-                    onRemove: () => setState(() => _exercises.removeAt(ei)),
-                    onAddSet: () => setState(
-                      () => _exercises[ei].sets.add(
-                        _EditSet(
-                          kg: _exercises[ei].sets.isEmpty
-                              ? 0
-                              : _exercises[ei].sets.last.kg,
-                          reps: _exercises[ei].sets.isEmpty
-                              ? 8
-                              : _exercises[ei].sets.last.reps,
-                          // Zelfde soort set als de vorige (tijd/verzuring).
-                          seconds: _exercises[ei].sets.isEmpty
-                              ? null
-                              : _exercises[ei].sets.last.seconds,
-                          base: _exercises[ei].sets.isEmpty
-                              ? null
-                              : _exercises[ei].sets.last.base?.copyWith(
-                                  completed: null,
-                                  clearCompleted: true,
-                                  note: '',
-                                ),
+                if (_exercises.isNotEmpty)
+                  ReorderableListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    onReorderItem: (from, to) => setState(() {
+                      _exercises.insert(to, _exercises.removeAt(from));
+                      normalizeBlocksIn(_exercises);
+                    }),
+                    children: [
+                      for (var ei = 0; ei < _exercises.length; ei++)
+                        _EditExerciseCard(
+                          key: ValueKey(_exercises[ei]),
+                          dragHandle: ReorderableDragStartListener(
+                            index: ei,
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.drag_handle,
+                                size: 18,
+                                color: AppColor.inkFaint,
+                              ),
+                            ),
+                          ),
+                          exercise: _exercises[ei],
+                          onRemove: () =>
+                              setState(() => _exercises.removeAt(ei)),
+                          onAddSet: () => setState(
+                            () => _exercises[ei].sets.add(
+                              _EditSet(
+                                kg: _exercises[ei].sets.isEmpty
+                                    ? 0
+                                    : _exercises[ei].sets.last.kg,
+                                reps: _exercises[ei].sets.isEmpty
+                                    ? 8
+                                    : _exercises[ei].sets.last.reps,
+                                // Zelfde soort set als de vorige (tijd/verzuring).
+                                seconds: _exercises[ei].sets.isEmpty
+                                    ? null
+                                    : _exercises[ei].sets.last.seconds,
+                                toBurn:
+                                    _exercises[ei].sets.isNotEmpty &&
+                                    _exercises[ei].sets.last.toBurn,
+                                extraTarget: _exercises[ei].sets.isEmpty
+                                    ? ''
+                                    : _exercises[ei].sets.last.extraTarget,
+                                extraReps: _exercises[ei].sets.isEmpty
+                                    ? null
+                                    : _exercises[ei].sets.last.extraReps,
+                                base: _exercises[ei].sets.isEmpty
+                                    ? null
+                                    : _exercises[ei].sets.last.base?.copyWith(
+                                        completed: null,
+                                        clearCompleted: true,
+                                        note: '',
+                                      ),
+                              ),
+                            ),
+                          ),
+                          onRemoveSet: (si) =>
+                              setState(() => _exercises[ei].sets.removeAt(si)),
+                          onSetChanged: (si, patch) => setState(() {
+                            patch(_exercises[ei].sets[si]);
+                          }),
                         ),
-                      ),
-                    ),
-                    onRemoveSet: (si) =>
-                        setState(() => _exercises[ei].sets.removeAt(si)),
-                    onSetChanged: (si, patch) => setState(() {
-                      patch(_exercises[ei].sets[si]);
-                    }),
+                    ],
                   ),
-                if (_addingExercise)
-                  _AddExerciseInline(
-                    query: _exerciseQuery,
-                    customExercises: _knownExercises,
-                    onPick: (name) => setState(() {
-                      _exercises.add(
+                AddBlockButton(
+                  label: 'Oefening toevoegen',
+                  onTap: () async {
+                    final name = await showExercisePickerScreen(
+                      context,
+                      customExercises: _knownExercises,
+                    );
+                    if (name == null || !mounted) return;
+                    setState(
+                      () => _exercises.add(
                         _EditExercise(name: name, sets: [_EditSet()]),
-                      );
-                      _addingExercise = false;
-                      _exerciseQuery.clear();
-                    }),
-                    onCancel: () => setState(() {
-                      _addingExercise = false;
-                      _exerciseQuery.clear();
-                    }),
-                  )
-                else
-                  AddBlockButton(
-                    label: 'Oefening toevoegen',
-                    onTap: () {
-                      setState(() => _addingExercise = true);
-                      _scrollToBottom();
-                    },
-                  ),
+                      ),
+                    );
+                    _scrollToBottom();
+                  },
+                ),
               ],
               if (_nutrition.isNotEmpty) ...[
                 const SizedBox(height: 22),
@@ -614,9 +713,15 @@ class _SessionEditScreenState extends State<SessionEditScreen> {
 }
 
 class _BlockRow extends StatelessWidget {
-  const _BlockRow({super.key, required this.entry, required this.onTap});
+  const _BlockRow({
+    super.key,
+    required this.entry,
+    required this.onTap,
+    this.dragHandle,
+  });
   final TechniqueEntry entry;
   final VoidCallback onTap;
+  final Widget? dragHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -632,6 +737,7 @@ class _BlockRow extends StatelessWidget {
         ),
         child: Row(
           children: [
+            ?dragHandle,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -660,9 +766,20 @@ class _BlockRow extends StatelessWidget {
 }
 
 class _BlockEditSheet extends StatefulWidget {
-  const _BlockEditSheet({required this.entry, required this.onRemove});
+  const _BlockEditSheet({
+    required this.entry,
+    required this.onRemove,
+    this.suggestedPositions = const [],
+    this.showPositions = true,
+  });
   final TechniqueEntry entry;
+
+  /// Posities kiezen — niet bij een takedown (staand).
+  final bool showPositions;
   final VoidCallback onRemove;
+
+  /// Vaste posities van deze techniek uit de catalogus.
+  final List<String> suggestedPositions;
 
   @override
   State<_BlockEditSheet> createState() => _BlockEditSheetState();
@@ -791,15 +908,32 @@ class _BlockEditSheetState extends State<_BlockEditSheet> {
                 color: Colors.white.withValues(alpha: .05),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: NumberStepper(
-                label: 'GEOEFEND',
-                value: e.minutes,
-                suffix: ' min',
-                accent: accent,
-                onDown: () =>
-                    setState(() => e.minutes = (e.minutes - 1).clamp(0, 180)),
-                onUp: () =>
-                    setState(() => e.minutes = (e.minutes + 1).clamp(0, 180)),
+              child: Column(
+                children: [
+                  NumberStepper(
+                    label: 'GEOEFEND',
+                    value: e.minutes,
+                    suffix: ' min',
+                    accent: accent,
+                    onDown: () => setState(
+                      () => e.minutes = (e.minutes - 1).clamp(0, 180),
+                    ),
+                    onUp: () => setState(
+                      () => e.minutes = (e.minutes + 1).clamp(0, 180),
+                    ),
+                  ),
+                  const Divider(height: 16, color: AppColor.line),
+                  NumberStepper(
+                    label: 'AANTAL',
+                    value: e.reps,
+                    suffix: '×',
+                    accent: accent,
+                    onDown: () =>
+                        setState(() => e.reps = (e.reps - 1).clamp(0, 999)),
+                    onUp: () =>
+                        setState(() => e.reps = (e.reps + 1).clamp(0, 999)),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -810,6 +944,14 @@ class _BlockEditSheetState extends State<_BlockEditSheet> {
               onRate: (r) => setState(() => e.rating = r),
             ),
             const SizedBox(height: 16),
+            if (widget.showPositions) ...[
+              PositionPracticeEditor(
+                value: e.positions,
+                suggested: widget.suggestedPositions,
+                onChanged: (p) => setState(() => e.positions = p),
+              ),
+              const SizedBox(height: 16),
+            ],
           ] else if (e.kind == BlockKind.warmup) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -890,11 +1032,13 @@ class _BlockEditSheetState extends State<_BlockEditSheet> {
 
 class _EditExerciseCard extends StatelessWidget {
   const _EditExerciseCard({
+    super.key,
     required this.exercise,
     required this.onRemove,
     required this.onAddSet,
     required this.onRemoveSet,
     required this.onSetChanged,
+    this.dragHandle,
   });
 
   final _EditExercise exercise;
@@ -902,6 +1046,7 @@ class _EditExerciseCard extends StatelessWidget {
   final VoidCallback onAddSet;
   final ValueChanged<int> onRemoveSet;
   final void Function(int setIndex, void Function(_EditSet) patch) onSetChanged;
+  final Widget? dragHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -917,6 +1062,7 @@ class _EditExerciseCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              ?dragHandle,
               Expanded(child: Text(exercise.name, style: AppText.cardTitle)),
               InkWell(
                 onTap: onRemove,
@@ -968,17 +1114,7 @@ class _EditExerciseCard extends StatelessWidget {
                   ),
                   Expanded(
                     child: exercise.sets[si].toBurn
-                        ? Center(
-                            child: Text(
-                              exercise.sets[si].base?.summary
-                                      .split(' · ')
-                                      .last ??
-                                  'verzuring',
-                              style: AppText.caption.copyWith(
-                                color: AppColor.amber,
-                              ),
-                            ),
-                          )
+                        ? _burnTarget(context, si)
                         : exercise.sets[si].seconds != null
                         ? _numberField(
                             value: exercise.sets[si].seconds!.toDouble(),
@@ -1014,6 +1150,27 @@ class _EditExerciseCard extends StatelessWidget {
                               (s) => s.reps = v.round().clamp(1, 100),
                             ),
                           ),
+                  ),
+                  Tooltip(
+                    message: 'Reps / tijd / tot verzuring',
+                    child: InkWell(
+                      onTap: () => onSetChanged(si, (s) => s.nextMode()),
+                      borderRadius: BorderRadius.circular(99),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          exercise.sets[si].toBurn
+                              ? Icons.local_fire_department_outlined
+                              : exercise.sets[si].seconds != null
+                              ? Icons.timer_outlined
+                              : Icons.repeat,
+                          size: 16,
+                          color: exercise.sets[si].toBurn
+                              ? AppColor.amber
+                              : AppColor.inkFaint,
+                        ),
+                      ),
+                    ),
                   ),
                   InkWell(
                     onTap: () => onRemoveSet(si),
@@ -1051,6 +1208,68 @@ class _EditExerciseCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// "verzuring +5–10": tik om het aantal erna aan te passen.
+  Widget _burnTarget(BuildContext context, int si) {
+    final set = exercise.sets[si];
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () async {
+        final controller = TextEditingController(text: set.extraTarget);
+        final result = await showDialog<String>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text('Na de verzuring', style: AppText.cardTitle),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              style: AppText.body,
+              decoration: const InputDecoration(
+                hintText: 'Aantal herhalingen, bv. 5–10',
+              ),
+              onSubmitted: (v) => Navigator.pop(c, v),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c),
+                child: const Text('Annuleer'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(c, controller.text),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        if (result != null) {
+          onSetChanged(si, (s) => s.extraTarget = result.trim());
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              set.extraReps != null
+                  ? '+${set.extraReps}'
+                  : set.extraTarget.isEmpty
+                  ? 'verzuring'
+                  : '+${set.extraTarget}',
+              style: AppText.bodyStrong.copyWith(color: AppColor.amber),
+            ),
+            Text(
+              'na verzuring',
+              style: AppText.caption.copyWith(
+                fontSize: 9,
+                color: AppColor.inkFaint,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1129,28 +1348,6 @@ class _EditExerciseCard extends StatelessWidget {
       ],
     );
   }
-}
-
-class _AddExerciseInline extends StatelessWidget {
-  const _AddExerciseInline({
-    required this.query,
-    required this.customExercises,
-    required this.onPick,
-    required this.onCancel,
-  });
-
-  final TextEditingController query;
-  final List<Exercise> customExercises;
-  final ValueChanged<String> onPick;
-  final VoidCallback onCancel;
-
-  @override
-  Widget build(BuildContext context) => ExercisePicker(
-    query: query,
-    customExercises: customExercises,
-    onPick: onPick,
-    onCancel: onCancel,
-  );
 }
 
 /// "Van 19:00" / "Tot 20:30" — tik om een tijd te kiezen.

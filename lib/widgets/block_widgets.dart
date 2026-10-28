@@ -89,6 +89,12 @@ class TechniqueEntry {
   /// de catalogus aanmaakt bij het opslaan.
   bool catalogLinked;
 
+  /// Hoe vaak geoefend — alleen technique.
+  int reps;
+
+  /// Per positie hoe het ging — alleen technique.
+  List<PositionPractice> positions;
+
   /// Id van de combinatie waaruit dit blok is "uitgeklapt" (zie
   /// `_buildComboEntries`) — alleen in het geheugen tijdens een live sessie,
   /// zodat bv. de combinatie-video's erbij gezocht kunnen worden. Niet
@@ -114,7 +120,10 @@ class TechniqueEntry {
     this.loggedAt,
     this.catalogLinked = false,
     this.comboId,
+    this.reps = 0,
+    List<PositionPractice>? positions,
   }) : id = id ?? UniqueKey(),
+       positions = positions ?? [],
        roundMinutes = roundMinutes ?? [],
        goals = goals ?? [],
        roundGoals = roundGoals ?? [],
@@ -140,6 +149,8 @@ class TechniqueEntry {
     restSeconds: List.of(b.restSeconds),
     loggedAt: b.loggedAt,
     catalogLinked: b.catalogLinked,
+    reps: b.reps,
+    positions: List.of(b.positions),
   )..ensureRoundsSynthesized();
 
   /// Sparblokken van vóór deze feature hebben alleen een totale duur en een
@@ -179,6 +190,8 @@ class TechniqueEntry {
     restSeconds: restSeconds,
     loggedAt: loggedAt,
     catalogLinked: catalogLinked,
+    reps: reps,
+    positions: positions,
   );
 }
 
@@ -194,11 +207,14 @@ String blockMetaLine(TechniqueEntry t) {
     final withTransition = t.transition.isNotEmpty
         ? (t.meta.isNotEmpty ? '${t.transition} · ${t.meta}' : t.transition)
         : t.meta;
-    base = t.minutes > 0
-        ? (withTransition.isNotEmpty
-              ? '$withTransition · ${t.minutes} min'
-              : '${t.minutes} min')
-        : withTransition;
+    final amount = [
+      if (t.reps > 0) '${t.reps}×',
+      if (t.minutes > 0) '${t.minutes} min',
+    ].join(' · ');
+    base = [
+      if (withTransition.isNotEmpty) withTransition,
+      if (amount.isNotEmpty) amount,
+    ].join(' · ');
   } else if (t.kind == BlockKind.sparring && t.roundMinutes.isNotEmpty) {
     final total = t.roundMinutes.fold(0, (a, b) => a + b);
     base = '$total min · ${t.roundMinutes.length} rondes';

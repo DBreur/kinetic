@@ -12,10 +12,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/formatters.dart';
+import '../models/training_session.dart' show PositionPractice, TrainingSession;
 import '../models/technique.dart';
 import '../repositories/agenda_repository.dart';
+import '../repositories/session_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/position_practice_editor.dart';
 import '../widgets/block_widgets.dart' show StarRow, NoteField;
 import '../widgets/ground_position_tags.dart';
 import '../widgets/inline_video_player.dart';
@@ -31,6 +34,18 @@ class TechniqueOccurrence {
   final String note;
   final bool fromSession;
 
+  /// Per positie hoe het ging (alleen uit een training).
+  final List<PositionPractice> positions;
+
+  /// Hoe vaak geoefend in die training (0 = niet geteld).
+  final int reps;
+
+  /// De training waar deze beoordeling uit komt (alleen [fromSession]).
+  final TrainingSession? session;
+
+  /// Welk blok in [session] (om de beoordeling daar aan te passen).
+  final int? blockIndex;
+
   /// Index in de eigen updates-lijst — alleen gezet voor updates die de
   /// gebruiker zelf kan verwijderen (niet voor sessie-historie).
   final int? manualIndex;
@@ -41,6 +56,10 @@ class TechniqueOccurrence {
     required this.note,
     this.fromSession = false,
     this.manualIndex,
+    this.positions = const [],
+    this.reps = 0,
+    this.session,
+    this.blockIndex,
   });
 }
 
@@ -51,12 +70,17 @@ class TechniqueDetailScreen extends StatefulWidget {
     required this.userId,
     required this.technique,
     this.sessionOccurrences = const [],
+    this.onOpenSession,
   });
 
   final TechniqueRepository repository;
   final String userId;
   final Technique technique;
   final List<TechniqueOccurrence> sessionOccurrences;
+
+  /// Opent de training waar een beoordeling uit komt (om hem daar te
+  /// bekijken of aan te passen).
+  final Future<void> Function(TrainingSession session)? onOpenSession;
 
   @override
   State<TechniqueDetailScreen> createState() => _TechniqueDetailScreenState();
@@ -65,7 +89,6 @@ class TechniqueDetailScreen extends StatefulWidget {
 class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
   late Technique _technique;
   bool _changed = false;
-  bool _adding = false;
   bool _busy = false;
   late final TextEditingController _goalController;
   Timer? _goalDebounce;
@@ -179,15 +202,339 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
     }
   }
 
-  Future<void> _addUpdate(int rating, String note) async {
+  /// Een update maken: sterren, per positie hoe het ging, en een notitie.
+  /// [rating] = vooraf gekozen sterren (uit de kaart bovenaan).
+  Future<void> _openUpdate({int rating = 0}) async {
+    final t = _technique;
+    final result = await showModalBottomSheet<_UpdateResult>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _UpdateSheet(
+        initialRating: rating,
+        suggestedPositions: t.groundPositions,
+        showPositions: t.category != 'Takedown',
+      ),
+    );
+    final update = result?.update;
+    if (update != null && mounted) {
+      await _addUpdate(update.rating, update.note, update.positions);
+    }
+  }
+
+  /// Eén update in de lijst. Eigen update: tikken = aanpassen of
+  /// verwijderen (lang indrukken verwijderde hem vroeger zonder vragen).
+  /// Uit een training: openen, beoordeling aanpassen of wissen.
+  Widget _occurrenceTile(TechniqueOccurrence o) => GestureDetector(
+    onTap: _busy
+        ? null
+        : o.manualIndex != null
+        ? () => _editUpdate(o.manualIndex!)
+        : o.session != null
+        ? () => _sessionActions(o)
+        : null,
+    child: _OccurrenceCard(occurrence: o),
+  );
+
+  /// Beoordelingen uit trainingen — lokaal bij te werken na aanpassen of
+  /// wissen (de training zelf wordt opgeslagen).
+  late List<TechniqueOccurrence> _sessionOccurrences = List.of(
+    widget.sessionOccurrences,
+  );
+
+  /// Tik op een update uit een training: openen, aanpassen of wissen.
+  Future<void> _sessionActions(TechniqueOccurrence o) async {
+    final canEdit = o.session != null && o.blockIndex != null;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Text(
+                'Uit de training van ${dutchShortDate(o.date)}',
+                style: AppText.cardTitle,
+              ),
+            ),
+            if (widget.onOpenSession != null)
+              ListTile(
+                leading: const Icon(Icons.open_in_new),
+                title: const Text('Training openen'),
+                onTap: () => Navigator.pop(c, 'open'),
+              ),
+            if (canEdit) ...[
+              ListTile(
+                leading: const Icon(Icons.star_outline),
+                title: const Text('Beoordeling aanpassen'),
+                subtitle: const Text('Sterren, posities en notitie'),
+                onTap: () => Navigator.pop(c, 'edit'),
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColor.redBright,
+                ),
+                title: const Text(
+                  'Oordeel wissen',
+                  style: TextStyle(color: AppColor.redBright),
+                ),
+                subtitle: const Text(
+                  'Sterren en notities weg; posities en aantal blijven',
+                ),
+                onTap: () => Navigator.pop(c, 'wipe'),
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case 'open':
+        await widget.onOpenSession?.call(o.session!);
+      case 'edit':
+        final t = _technique;
+        final result = await showModalBottomSheet<_UpdateResult>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => _UpdateSheet(
+            initialRating: o.rating,
+            initialNote: o.note,
+            initialPositions: o.positions,
+            suggestedPositions: t.groundPositions,
+            showPositions: t.category != 'Takedown',
+          ),
+        );
+        final u = result?.update;
+        if (u == null || !mounted) return;
+        await _saveSessionFeedback(
+          o,
+          rating: u.rating,
+          note: u.note,
+          positions: u.positions,
+        );
+      case 'wipe':
+        final sure = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text('Oordeel wissen?', style: AppText.cardTitle),
+            content: Text(
+              'De sterren en notities (ook per positie) gaan uit deze '
+              'training. Vanuit welke posities je oefende en hoe vaak blijven '
+              'staan — dat is wat je echt deed. Een positie weghalen kan via '
+              '"Beoordeling aanpassen".',
+              style: AppText.body.copyWith(color: AppColor.inkMuted),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Annuleer'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(c, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColor.redBright,
+                ),
+                child: const Text('Wissen'),
+              ),
+            ],
+          ),
+        );
+        if (sure == true && mounted) {
+          // Alleen het oordeel weg; de feiten (posities, aantal) blijven.
+          await _saveSessionFeedback(
+            o,
+            rating: 0,
+            note: '',
+            positions: [
+              for (final p in o.positions)
+                PositionPractice(position: p.position, reps: p.reps),
+            ],
+          );
+        }
+    }
+  }
+
+  /// Zet de beoordeling terug in het blok van de training en slaat die op.
+  Future<void> _saveSessionFeedback(
+    TechniqueOccurrence o, {
+    required int rating,
+    required String note,
+    required List<PositionPractice> positions,
+    int? reps,
+  }) async {
+    final session = o.session!;
+    final idx = o.blockIndex!;
+    if (idx < 0 || idx >= session.blocks.length) return;
+    final block = session.blocks[idx].copyWith(
+      rating: rating,
+      note: note,
+      positions: positions,
+      reps: reps,
+    );
+    final next = session.copyWith(
+      blocks: [
+        for (var i = 0; i < session.blocks.length; i++)
+          i == idx ? block : session.blocks[i],
+      ],
+    );
+    setState(() => _busy = true);
+    try {
+      final saved = await SessionRepository(widget.repository.client)
+          .updateContent(next);
+      if (!mounted) return;
+      final empty =
+          rating == 0 &&
+          note.trim().isEmpty &&
+          positions.isEmpty &&
+          (reps ?? block.reps) == 0;
+      setState(() {
+        _busy = false;
+        _changed = true;
+        _sessionOccurrences = [
+          for (final x in _sessionOccurrences)
+            if (!identical(x, o))
+              // Andere beoordelingen uit dezelfde training: verwijzen nu
+              // naar de opgeslagen versie.
+              x.session?.id == saved.id
+                  ? TechniqueOccurrence(
+                      date: x.date,
+                      rating: x.rating,
+                      note: x.note,
+                      fromSession: true,
+                      positions: x.positions,
+                      reps: x.reps,
+                      session: saved,
+                      blockIndex: x.blockIndex,
+                    )
+                  : x
+            else if (!empty)
+              TechniqueOccurrence(
+                date: o.date,
+                rating: rating,
+                note: note,
+                fromSession: true,
+                positions: positions,
+                reps: reps ?? block.reps,
+                session: saved,
+                blockIndex: idx,
+              ),
+        ];
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opslaan is niet gelukt. Probeer opnieuw.'),
+        ),
+      );
+    }
+  }
+
+  /// Tik op een eigen update: aanpassen, of verwijderen (met bevestiging).
+  Future<void> _editUpdate(int i) async {
+    final t = _technique;
+    final existing = t.updates[i];
+    final result = await showModalBottomSheet<_UpdateResult>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _UpdateSheet(
+        initialRating: existing.rating,
+        initialNote: existing.note,
+        initialPositions: existing.positions,
+        suggestedPositions: t.groundPositions,
+        showPositions: t.category != 'Takedown',
+        canDelete: true,
+      ),
+    );
+    if (result == null || !mounted) return;
+    if (result.delete) {
+      final sure = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: Text('Update verwijderen?', style: AppText.cardTitle),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Annuleer'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              style: TextButton.styleFrom(foregroundColor: AppColor.redBright),
+              child: const Text('Verwijder'),
+            ),
+          ],
+        ),
+      );
+      if (sure == true && mounted) await _removeUpdate(i);
+      return;
+    }
+    final edited = result.update;
+    if (edited == null) return;
+    await _saveUpdates([
+      for (var k = 0; k < t.updates.length; k++)
+        // Het moment blijft dat van de oorspronkelijke update.
+        k == i
+            ? TechniqueUpdate(
+                at: existing.at,
+                rating: edited.rating,
+                note: edited.note,
+                positions: edited.positions,
+              )
+            : t.updates[k],
+    ]);
+  }
+
+  Future<void> _saveUpdates(List<TechniqueUpdate> updates) async {
+    final previous = _technique;
+    setState(() {
+      _technique = _technique.copyWith(updates: updates);
+      _busy = true;
+    });
+    try {
+      final saved = await widget.repository.updateContent(_technique);
+      if (mounted) {
+        setState(() {
+          _technique = saved;
+          _busy = false;
+          _changed = true;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _technique = previous;
+        _busy = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opslaan is niet gelukt. Probeer opnieuw.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _addUpdate(
+    int rating,
+    String note, [
+    List<PositionPractice> positions = const [],
+  ]) async {
     final next = _technique.copyWith(
       updates: [
         ..._technique.updates,
-        TechniqueUpdate(at: DateTime.now(), rating: rating, note: note),
+        TechniqueUpdate(
+          at: DateTime.now(),
+          rating: rating,
+          note: note,
+          positions: positions,
+        ),
       ],
     );
     setState(() {
-      _adding = false;
       _busy = true;
     });
     try {
@@ -280,8 +627,9 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
           rating: t.updates[i].rating,
           note: t.updates[i].note,
           manualIndex: i,
+          positions: t.updates[i].positions,
         ),
-      ...widget.sessionOccurrences,
+      ..._sessionOccurrences,
     ]..sort((a, b) => b.date.compareTo(a.date));
 
     return PopScope(
@@ -329,9 +677,7 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: [
-                    _Badge(text: t.category),
-                  ],
+                  children: [_Badge(text: t.category)],
                 ),
                 if (t.groundPositions.isNotEmpty ||
                     t.transition.isNotEmpty) ...[
@@ -348,6 +694,14 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
                   onStatusChanged: _setLearningStatus,
                   onPickDate: _pickPlannedDate,
                   onGoalChanged: _onGoalChanged,
+                ),
+                const SizedBox(height: 12),
+                _RateNowCard(
+                  lastRating: [
+                    for (final o in occurrences)
+                      if (o.rating > 0) o.rating,
+                  ].firstOrNull,
+                  onRate: _busy ? null : (r) => _openUpdate(rating: r),
                 ),
                 const SizedBox(height: 12),
                 PracticeAtTrainingCard(
@@ -378,59 +732,55 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
                     'Nog geen updates. Voeg er een toe om bij te houden hoe het ging.',
                     style: AppText.caption,
                   )
+                else if (occurrences.length <= 7)
+                  for (final o in occurrences) _occurrenceTile(o)
                 else
-                  for (final o in occurrences)
-                    GestureDetector(
-                      onLongPress: o.manualIndex == null
-                          ? null
-                          : () => _removeUpdate(o.manualIndex!),
-                      child: _OccurrenceCard(occurrence: o),
-                    ),
+                  // Veel updates: precies de eerste 7 zichtbaar, de rest via
+                  // scrollen in dit vak.
+                  _FirstNThenScroll(
+                    visible: 7,
+                    children: [for (final o in occurrences) _occurrenceTile(o)],
+                  ),
                 const SizedBox(height: 8),
-                if (_adding)
-                  _AddUpdateForm(
-                    onCancel: () => setState(() => _adding = false),
-                    onSubmit: _addUpdate,
-                  )
-                else
-                  InkWell(
-                    onTap: () => setState(() => _adding = true),
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .16),
+                InkWell(
+                  onTap: _busy ? null : () => _openUpdate(),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: .16),
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '+',
+                          style: TextStyle(
+                            color: AppColor.tealBright,
+                            fontSize: 17,
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                      ),
-                      child: Row(
-                        children: [
-                          const Text(
-                            '+',
-                            style: TextStyle(
-                              color: AppColor.tealBright,
-                              fontSize: 17,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Update toevoegen — hoe ging het?',
+                            style: AppText.body.copyWith(
+                              color: AppColor.inkMuted,
+                              fontSize: 12,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Update toevoegen — hoe ging het?',
-                              style: AppText.body.copyWith(
-                                color: AppColor.inkMuted,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
                 if (t.updates.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Tik een lange druk op een eigen update om hem te verwijderen.',
+                    'Tik op een update om hem aan te passen of te '
+                    'verwijderen — één uit een training opent die training.',
                     style: AppText.caption.copyWith(fontSize: 10),
                   ),
                 ],
@@ -490,8 +840,9 @@ class _LearningBlock extends StatelessWidget {
     if (technique.learningStatus != LearningStatus.learning || since == null) {
       return null;
     }
-    final relevant = technique.updates.where((u) => u.at.isAfter(since)).toList()
-      ..sort((a, b) => a.at.compareTo(b.at));
+    final relevant =
+        technique.updates.where((u) => u.at.isAfter(since)).toList()
+          ..sort((a, b) => a.at.compareTo(b.at));
     final last = relevant.isNotEmpty ? relevant.last.rating : 0;
     final lastText = last > 0 ? ' · laatste ${'★' * last}' : '';
     return 'Bezig sinds ${dutchShortDate(since)} · ${relevant.length}× geoefend sinds start$lastText';
@@ -527,19 +878,35 @@ class _LearningBlock extends StatelessWidget {
             segments: const [
               ButtonSegment(
                 value: LearningStatus.none,
-                label: Text('Geen', softWrap: false, overflow: TextOverflow.ellipsis),
+                label: Text(
+                  'Geen',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               ButtonSegment(
                 value: LearningStatus.planned,
-                label: Text('Gepland', softWrap: false, overflow: TextOverflow.ellipsis),
+                label: Text(
+                  'Gepland',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               ButtonSegment(
                 value: LearningStatus.learning,
-                label: Text('Bezig', softWrap: false, overflow: TextOverflow.ellipsis),
+                label: Text(
+                  'Bezig',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               ButtonSegment(
                 value: LearningStatus.mastered,
-                label: Text('Beheerst', softWrap: false, overflow: TextOverflow.ellipsis),
+                label: Text(
+                  'Beheerst',
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
             selected: {technique.learningStatus},
@@ -671,8 +1038,9 @@ class _OccurrenceCard extends StatelessWidget {
             ? Colors.white.withValues(alpha: .04)
             : AppColor.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
+        // Uit een training: blauwe streep (niet rood — er is niets mis).
         border: occurrence.fromSession
-            ? Border(left: BorderSide(color: AppColor.teal, width: 2))
+            ? const Border(left: BorderSide(color: AppColor.ice, width: 2))
             : null,
       ),
       child: Column(
@@ -688,9 +1056,17 @@ class _OccurrenceCard extends StatelessWidget {
               if (occurrence.fromSession)
                 Text(
                   '· uit training',
-                  style: AppText.caption.copyWith(fontSize: 10),
+                  style: AppText.caption.copyWith(
+                    fontSize: 10,
+                    color: AppColor.ice,
+                  ),
                 ),
               const Spacer(),
+              if (occurrence.reps > 0)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text('${occurrence.reps}×', style: AppText.caption),
+                ),
               if (occurrence.rating > 0)
                 Text(
                   '★' * occurrence.rating,
@@ -698,6 +1074,13 @@ class _OccurrenceCard extends StatelessWidget {
                 ),
             ],
           ),
+          for (final p in occurrence.positions) ...[
+            const SizedBox(height: 4),
+            Text(
+              p.summary,
+              style: AppText.caption.copyWith(color: AppColor.inkMuted),
+            ),
+          ],
           if (occurrence.note.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
@@ -714,60 +1097,186 @@ class _OccurrenceCard extends StatelessWidget {
   }
 }
 
-class _AddUpdateForm extends StatefulWidget {
-  const _AddUpdateForm({required this.onSubmit, required this.onCancel});
-  final void Function(int rating, String note) onSubmit;
-  final VoidCallback onCancel;
+/// "Hoe gaat het nu?" — bovenaan het detailscherm, zodat beoordelen niet
+/// onderaan onder de video's verstopt zit. Tik op een ster om een update te
+/// maken.
+class _RateNowCard extends StatelessWidget {
+  const _RateNowCard({required this.lastRating, required this.onRate});
 
-  @override
-  State<_AddUpdateForm> createState() => _AddUpdateFormState();
-}
-
-class _AddUpdateFormState extends State<_AddUpdateForm> {
-  int _rating = 0;
-  String _note = '';
+  /// Laatste beoordeling (uit een update of training), of null.
+  final int? lastRating;
+  final ValueChanged<int>? onRate;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColor.surface,
-        border: Border.all(color: Colors.white.withValues(alpha: .14)),
         borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('HOE GING HET?', style: AppText.overline),
-          const SizedBox(height: 10),
-          StarRow(rating: _rating, onRate: (r) => setState(() => _rating = r)),
-          const SizedBox(height: 12),
-          NoteField(
-            value: _note,
-            onChanged: (n) => _note = n,
-            hint: 'Notitie — wat viel op?',
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: widget.onCancel,
-                  child: const Text('Annuleer'),
-                ),
-              ),
+              const Icon(Icons.star_outline, size: 18, color: AppColor.amber),
               const SizedBox(width: 8),
               Expanded(
-                child: FilledButton(
-                  onPressed: () => widget.onSubmit(_rating, _note.trim()),
-                  child: const Text('Toevoegen'),
-                ),
+                child: Text('Hoe gaat het nu?', style: AppText.bodyStrong),
+              ),
+              Text(
+                lastRating == null
+                    ? 'nog niet beoordeeld'
+                    : 'laatst: ${'★' * lastRating!}',
+                style: AppText.caption,
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          StarRow(rating: 0, onRate: onRate ?? (_) {}),
         ],
       ),
+    );
+  }
+}
+
+/// Paneel voor een update: sterren, per positie hoe het ging, en een
+/// notitie. Geeft de update terug bij "Opslaan".
+/// Uitkomst van [_UpdateSheet]: een (aangepaste) update, of verwijderen.
+class _UpdateResult {
+  final TechniqueUpdate? update;
+  final bool delete;
+  const _UpdateResult({this.update, this.delete = false});
+}
+
+class _UpdateSheet extends StatefulWidget {
+  const _UpdateSheet({
+    required this.initialRating,
+    required this.suggestedPositions,
+    required this.showPositions,
+    this.initialNote = '',
+    this.initialPositions = const [],
+    this.canDelete = false,
+  });
+
+  final int initialRating;
+  final String initialNote;
+  final List<PositionPractice> initialPositions;
+  final List<String> suggestedPositions;
+  final bool showPositions;
+
+  /// Bestaande update: ook een knop "Verwijderen".
+  final bool canDelete;
+
+  @override
+  State<_UpdateSheet> createState() => _UpdateSheetState();
+}
+
+class _UpdateSheetState extends State<_UpdateSheet> {
+  late int _rating = widget.initialRating;
+  late String _note = widget.initialNote;
+  late List<PositionPractice> _positions = List.of(widget.initialPositions);
+
+  @override
+  Widget build(BuildContext context) {
+    final insets = MediaQuery.of(context);
+    final empty = _rating == 0 && _note.trim().isEmpty && _positions.isEmpty;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: .8,
+      maxChildSize: .95,
+      builder: (context, scroll) => ListView(
+        controller: scroll,
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + insets.viewInsets.bottom + insets.padding.bottom,
+        ),
+        children: [
+          Text(
+            widget.canDelete ? 'Update aanpassen' : 'Hoe ging het?',
+            style: AppText.title,
+          ),
+          const SizedBox(height: 12),
+          StarRow(rating: _rating, onRate: (r) => setState(() => _rating = r)),
+          if (widget.showPositions) ...[
+            const SizedBox(height: 18),
+            PositionPracticeEditor(
+              value: _positions,
+              suggested: widget.suggestedPositions,
+              onChanged: (p) => setState(() => _positions = p),
+            ),
+          ],
+          const SizedBox(height: 18),
+          NoteField(
+            value: _note,
+            hint: 'Algemene notitie (optioneel)',
+            onChanged: (v) => setState(() => _note = v),
+          ),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: empty
+                ? null
+                : () => Navigator.pop(
+                    context,
+                    _UpdateResult(
+                      update: TechniqueUpdate(
+                        at: DateTime.now(),
+                        rating: _rating,
+                        note: _note.trim(),
+                        positions: _positions,
+                      ),
+                    ),
+                  ),
+            child: const Text('Opslaan'),
+          ),
+          if (widget.canDelete) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () =>
+                  Navigator.pop(context, const _UpdateResult(delete: true)),
+              style: TextButton.styleFrom(foregroundColor: AppColor.redBright),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Update verwijderen'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Toont [children] in een scrollvak dat precies zo hoog is als de eerste
+/// [visible] items samen — hoe groot elk item ook is. Truc: een onzichtbare
+/// kolom met die eerste items bepaalt de hoogte, de echte (scrollende)
+/// lijst ligt eroverheen.
+class _FirstNThenScroll extends StatelessWidget {
+  const _FirstNThenScroll({required this.visible, required this.children});
+
+  final int visible;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Bepaalt alleen de hoogte; niet zichtbaar en niet aan te tikken.
+        IgnorePointer(
+          child: ExcludeSemantics(
+            child: Opacity(
+              opacity: 0,
+              child: Column(children: children.take(visible).toList()),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Scrollbar(
+            child: ListView(padding: EdgeInsets.zero, children: children),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -340,6 +340,14 @@ class _BlockCard extends StatelessWidget {
                   ),
                 ),
           ],
+          // Per positie hoe het ging.
+          for (final p in block.positions) ...[
+            const SizedBox(height: 6),
+            Text(
+              p.summary,
+              style: AppText.caption.copyWith(color: AppColor.inkMuted),
+            ),
+          ],
           if (block.note.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
@@ -460,13 +468,17 @@ class _ExerciseSummary extends StatelessWidget {
 
   /// Sets met meer dan kg × reps (tijd, verzuring, gelukt/reden) krijgen
   /// elk een eigen regel; anders blijft het één compacte regel.
-  bool get _detailed => entry.sets.any(
-    (s) =>
-        s.seconds != null ||
-        s.toBurn ||
-        s.completed != null ||
-        s.note.isNotEmpty,
-  );
+  bool get _detailed =>
+      entry.sets.any(
+        (s) =>
+            s.seconds != null ||
+            s.toBurn ||
+            s.completed != null ||
+            s.note.isNotEmpty,
+      ) ||
+      // Verschillende gewichten: per set tonen, anders zie je alleen het
+      // gewicht van de eerste set.
+      entry.sets.map((s) => s.kg).toSet().length > 1;
 
   @override
   Widget build(BuildContext context) {

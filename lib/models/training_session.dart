@@ -38,6 +38,70 @@ class SparGoal {
       SparGoal(text: text ?? this.text, achieved: achieved ?? this.achieved);
 }
 
+/// Hoe een techniek vanuit één positie ging (bv. armklem vanuit mount):
+/// sterren, hoe vaak, wat goed ging en wat beter kan.
+class PositionPractice {
+  final String position;
+  final int rating; // 0 = niet beoordeeld
+  final int reps; // 0 = niet geteld
+  final String wentWell;
+  final String toImprove;
+
+  const PositionPractice({
+    required this.position,
+    this.rating = 0,
+    this.reps = 0,
+    this.wentWell = '',
+    this.toImprove = '',
+  });
+
+  factory PositionPractice.fromJson(dynamic json) {
+    final map = json as Map<String, dynamic>;
+    return PositionPractice(
+      position: (map['position'] as String?) ?? '',
+      rating: (map['rating'] as num?)?.toInt() ?? 0,
+      reps: (map['reps'] as num?)?.toInt() ?? 0,
+      wentWell: (map['went_well'] as String?) ?? '',
+      toImprove: (map['to_improve'] as String?) ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'position': position,
+    if (rating > 0) 'rating': rating,
+    if (reps > 0) 'reps': reps,
+    if (wentWell.isNotEmpty) 'went_well': wentWell,
+    if (toImprove.isNotEmpty) 'to_improve': toImprove,
+  };
+
+  PositionPractice copyWith({
+    int? rating,
+    int? reps,
+    String? wentWell,
+    String? toImprove,
+  }) => PositionPractice(
+    position: position,
+    rating: rating ?? this.rating,
+    reps: reps ?? this.reps,
+    wentWell: wentWell ?? this.wentWell,
+    toImprove: toImprove ?? this.toImprove,
+  );
+
+  /// "Mount ★★★★ · 5× — goed: … · beter: …"
+  String get summary {
+    final parts = [
+      position,
+      if (rating > 0) '★' * rating,
+      if (reps > 0) '$reps×',
+    ].join(' · ');
+    final notes = [
+      if (wentWell.isNotEmpty) 'goed: $wentWell',
+      if (toImprove.isNotEmpty) 'beter: $toImprove',
+    ].join(' · ');
+    return notes.isEmpty ? parts : '$parts — $notes';
+  }
+}
+
 /// Eén onderdeel van een sambo-sessie: een techniek, de warming-up, of het
 /// sparren. Techniek krijgt een sterbeoordeling; warming-up/sparren krijgen
 /// een duur (en sparren ook rondes) in plaats daarvan.
@@ -82,6 +146,12 @@ class SessionBlock {
   /// wordt aangepast.
   final bool catalogLinked;
 
+  /// Hoe vaak geoefend (naast de tijd) — alleen technique. 0 = niet geteld.
+  final int reps;
+
+  /// Per positie hoe het ging — alleen technique.
+  final List<PositionPractice> positions;
+
   const SessionBlock({
     this.kind = BlockKind.technique,
     required this.name,
@@ -99,6 +169,8 @@ class SessionBlock {
     this.restSeconds = const [],
     this.loggedAt,
     this.catalogLinked = false,
+    this.reps = 0,
+    this.positions = const [],
   });
 
   factory SessionBlock.fromJson(Map<String, dynamic> json) => SessionBlock(
@@ -130,6 +202,10 @@ class SessionBlock {
         ? DateTime.parse(json['logged_at'] as String).toLocal()
         : null,
     catalogLinked: (json['catalog_linked'] as bool?) ?? false,
+    reps: (json['reps'] as num?)?.toInt() ?? 0,
+    positions: ((json['positions'] as List?) ?? [])
+        .map(PositionPractice.fromJson)
+        .toList(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -153,6 +229,9 @@ class SessionBlock {
     'rest_seconds': restSeconds,
     'logged_at': loggedAt?.toUtc().toIso8601String(),
     'catalog_linked': catalogLinked,
+    if (reps > 0) 'reps': reps,
+    if (positions.isNotEmpty)
+      'positions': positions.map((p) => p.toJson()).toList(),
   };
 
   SessionBlock copyWith({
@@ -172,6 +251,8 @@ class SessionBlock {
     List<int>? restSeconds,
     DateTime? loggedAt,
     bool? catalogLinked,
+    int? reps,
+    List<PositionPractice>? positions,
   }) => SessionBlock(
     kind: kind ?? this.kind,
     name: name ?? this.name,
@@ -189,6 +270,8 @@ class SessionBlock {
     restSeconds: restSeconds ?? this.restSeconds,
     loggedAt: loggedAt ?? this.loggedAt,
     catalogLinked: catalogLinked ?? this.catalogLinked,
+    reps: reps ?? this.reps,
+    positions: positions ?? this.positions,
   );
 }
 

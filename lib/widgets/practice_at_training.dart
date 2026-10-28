@@ -11,6 +11,7 @@ import '../models/technique.dart';
 import '../repositories/agenda_repository.dart';
 import '../repositories/technique_repository.dart';
 import '../theme/kinetic_theme.dart';
+import 'focus_picker.dart';
 
 class PracticeAtTrainingCard extends StatefulWidget {
   const PracticeAtTrainingCard({
@@ -69,13 +70,30 @@ class _PracticeAtTrainingCardState extends State<PracticeAtTrainingCard> {
   void _snack(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
-  Future<void> _setNext(bool value) async {
+  Future<void> _setFocus(FocusChoice choice) async {
     try {
-      await widget.techniqueRepository.setPracticeNext(_id, value);
-      widget.onTechniqueChanged(widget.technique.copyWith(practiceNext: value));
+      await widget.techniqueRepository.setFocus(
+        _id,
+        choice.mode,
+        trainingsLeft: choice.trainings,
+        until: choice.until,
+      );
+      widget.onTechniqueChanged(
+        widget.technique.copyWith(
+          focusMode: choice.mode,
+          focusTrainingsLeft: choice.trainings,
+          focusUntil: choice.until,
+          clearFocusDetails: true,
+        ),
+      );
     } catch (_) {
       _snack('Opslaan is niet gelukt. Probeer opnieuw.');
     }
+  }
+
+  Future<void> _chooseFocus() async {
+    final choice = await showFocusPicker(context, technique: widget.technique);
+    if (choice != null) await _setFocus(choice);
   }
 
   Future<void> _link(PlannedTraining t, bool add) async {
@@ -123,15 +141,15 @@ class _PracticeAtTrainingCardState extends State<PracticeAtTrainingCard> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Text('Oefenen bij…', style: AppText.title),
             ),
-            if (!widget.technique.practiceNext)
-              ListTile(
-                leading: const Icon(Icons.skip_next_outlined),
-                title: const Text('Eerstvolgende training'),
-                subtitle: const Text(
-                  'Ook als die niet gepland is — je ziet hem bij de start',
-                ),
-                onTap: () => Navigator.pop(c, 'next'),
+            ListTile(
+              leading: const Icon(Icons.center_focus_strong_outlined),
+              title: const Text('Focus'),
+              subtitle: const Text(
+                'Eerstvolgende training, een aantal trainingen, een periode '
+                'of tot een datum',
               ),
+              onTap: () => Navigator.pop(c, 'focus'),
+            ),
             for (final t in candidates)
               ListTile(
                 leading: const Icon(Icons.event_outlined),
@@ -152,8 +170,8 @@ class _PracticeAtTrainingCardState extends State<PracticeAtTrainingCard> {
         ),
       ),
     );
-    if (choice == 'next') {
-      await _setNext(true);
+    if (choice == 'focus') {
+      await _chooseFocus();
     } else if (choice is PlannedTraining) {
       await _link(choice, true);
     }
@@ -161,7 +179,7 @@ class _PracticeAtTrainingCardState extends State<PracticeAtTrainingCard> {
 
   @override
   Widget build(BuildContext context) {
-    final next = widget.technique.practiceNext;
+    final next = widget.technique.isFocusActive(DateTime.now());
     final linked = _linked;
     return Container(
       padding: const EdgeInsets.all(14),
@@ -205,9 +223,14 @@ class _PracticeAtTrainingCardState extends State<PracticeAtTrainingCard> {
               children: [
                 if (next)
                   InputChip(
-                    avatar: const Icon(Icons.skip_next_outlined, size: 16),
-                    label: const Text('Eerstvolgende training'),
-                    onDeleted: () => _setNext(false),
+                    avatar: const Icon(
+                      Icons.center_focus_strong_outlined,
+                      size: 16,
+                    ),
+                    label: Text('Focus · ${widget.technique.focusLabel}'),
+                    onPressed: _chooseFocus,
+                    onDeleted: () =>
+                        _setFocus(const FocusChoice(FocusMode.none)),
                   ),
                 for (final t in linked)
                   InputChip(

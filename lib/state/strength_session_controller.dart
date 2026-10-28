@@ -85,6 +85,10 @@ class LiveSet {
     extraTarget: s.extraTarget,
   );
 
+  /// Laatst gebruikte tijd van deze set — terug naar "tijd" geeft die weer,
+  /// niet standaard 30 s.
+  int? lastSeconds;
+
   /// Volledige kopie inclusief uitkomst (gepland of hersteld na afsluiten).
   factory LiveSet.from(ExerciseSet s) => LiveSet(
     kg: s.kg,
@@ -988,9 +992,19 @@ class StrengthSessionController extends ChangeNotifier
 
   void addSet(int i) {
     final sets = exercises[i].sets;
-    sets.add(
-      sets.isEmpty ? LiveSet() : LiveSet.like(sets.last.toExerciseSet()),
-    );
+    if (sets.isEmpty) {
+      sets.add(LiveSet());
+    } else {
+      // "+ set" = dezelfde set nog een keer: gewicht, reps of tijd,
+      // verzuring met het aantal erna — alleen niet afgevinkt en zonder
+      // uitkomst of notitie.
+      final last = sets.last;
+      sets.add(
+        LiveSet.like(last.toExerciseSet())
+          ..extraReps = last.extraReps
+          ..lastSeconds = last.lastSeconds,
+      );
+    }
     notifyListeners();
   }
 
@@ -998,7 +1012,10 @@ class StrengthSessionController extends ChangeNotifier
   /// blijven staan.
   void setSetMode(int ei, int si, SetMode mode) {
     final set = exercises[ei].sets[si];
-    set.seconds = mode == SetMode.time ? (set.seconds ?? 30) : null;
+    if (set.seconds != null) set.lastSeconds = set.seconds;
+    set.seconds = mode == SetMode.time
+        ? (set.seconds ?? set.lastSeconds ?? 30)
+        : null;
     set.toBurn = mode == SetMode.burn;
     if (!set.toBurn) set.extraReps = null;
     notifyListeners();

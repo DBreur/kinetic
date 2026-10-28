@@ -163,6 +163,7 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
   String? _searchError;
 
   void _onQueryChanged(String value) {
+    setState(() {}); // ✕-knop tonen/verbergen
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () => _search(value));
   }
@@ -208,7 +209,20 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               )
-            : null,
+            : _query.text.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Wissen',
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  _debounce?.cancel();
+                  _query.clear();
+                  setState(() {
+                    _results = const [];
+                    _searchError = null;
+                  });
+                },
+              ),
       ),
     ),
     if (_searchError != null)
@@ -261,11 +275,18 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
   String? _openError;
   final Set<String> _queued = {};
 
+  /// Zoeken en sorteren binnen de geopende playlist.
+  final _trackFilter = TextEditingController();
+  TrackSort _sort = TrackSort.custom;
+
   Future<void> _openPlaylist(SpotifyPlaylistResult playlist) async {
+    _trackFilter.clear();
+    final sort = await _service.trackSort(playlist.uri);
     setState(() {
       _open = playlist;
       _openTracks = null;
       _openError = null;
+      _sort = sort;
     });
     try {
       final tracks = await _service.tracksOf(playlist);
@@ -313,6 +334,23 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
               style: AppText.cardTitle,
             ),
           ),
+          PopupMenuButton<TrackSort>(
+            tooltip: 'Sorteren',
+            icon: const Icon(Icons.sort),
+            initialValue: _sort,
+            onSelected: (v) {
+              setState(() => _sort = v);
+              _service.setTrackSort(playlist.uri, v);
+            },
+            itemBuilder: (_) => [
+              for (final s in TrackSort.values)
+                CheckedPopupMenuItem(
+                  value: s,
+                  checked: s == _sort,
+                  child: Text(s.label),
+                ),
+            ],
+          ),
           IconButton(
             tooltip: 'Shuffle afspelen',
             onPressed: () async {
@@ -347,16 +385,47 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
         )
       else if (tracks.isEmpty)
         Text('Deze playlist is leeg.', style: AppText.caption)
-      else
-        for (var i = 0; i < tracks.length; i++)
-          _SongTile(
-            track: tracks[i],
-            playing: _service.player?.track?.uri == tracks[i].uri,
-            queued: _queued.contains(tracks[i].uri),
-            onTap: () => _service.playFrom(playlist.uri, tracks[i].uri, i),
-            onQueue: () => _queueTrack(tracks[i]),
+      else ...[
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: TextField(
+            controller: _trackFilter,
+            onChanged: (_) => setState(() {}),
+            style: AppText.body,
+            decoration: InputDecoration(
+              isDense: true,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              hintText: 'Zoek in deze playlist',
+              suffixIcon: _trackFilter.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Wissen',
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => setState(_trackFilter.clear),
+                    ),
+            ),
           ),
+        ),
+        // Sorteren/filteren verandert alleen de weergave: afspelen gebeurt
+        // vanaf de echte plek in de playlist, zodat hij daarna verdergaat.
+        for (final (i, t) in sortTracks(tracks, _sort).where(_matchesFilter))
+          _SongTile(
+            track: t,
+            playing: _service.player?.track?.uri == t.uri,
+            queued: _queued.contains(t.uri),
+            onTap: () => _service.playFrom(playlist.uri, t.uri, i),
+            onQueue: () => _queueTrack(t),
+          ),
+      ],
     ];
+  }
+
+  bool _matchesFilter((int, SpotifyTrackResult) entry) {
+    final q = _trackFilter.text.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final t = entry.$2;
+    return t.name.toLowerCase().contains(q) ||
+        t.artists.toLowerCase().contains(q);
   }
 
   Set<String> _pinned = {};
@@ -379,6 +448,7 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
     _ticker?.cancel();
     _debounce?.cancel();
     _query.dispose();
+    _trackFilter.dispose();
     _service.removeListener(_onService);
     super.dispose();
   }
@@ -402,7 +472,8 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
       } else {
         final pinned = await _service.pinnedPlaylists();
         final me = await _service.myId();
-        final list = await _service.myPlaylists();
+        final order = await _service.playlistOrder();
+        final list = applyPlaylistOrder(await _service.myPlaylists(), order);
         SpotifyPlaylistResult? liked;
         try {
           liked = await _service.likedSongs();
@@ -472,28 +543,62 @@ class _SpotifyPanelState extends State<_SpotifyPanel> {
         const SizedBox(height: 4),
         Text('VASTGEPIND', style: AppText.overline),
       ],
-      for (final p in pinned)
-        _PlaylistTile(
-          playlist: p,
-          openable: p.openableBy(_me),
-          pinned: true,
-          onOpen: () => _openPlaylist(p),
-          onPlay: () => _play(p),
-          onTogglePin: () => _togglePin(p),
-        ),
+      _reorderable(pinned, pinned: true),
       if (pinned.isNotEmpty && rest.isNotEmpty) ...[
         const SizedBox(height: 4),
         Text('PLAYLISTS', style: AppText.overline),
       ],
-      for (final p in rest)
-        _PlaylistTile(
-          playlist: p,
-          openable: p.openableBy(_me),
-          onOpen: () => _openPlaylist(p),
-          onPlay: () => _play(p),
-          onTogglePin: () => _togglePin(p),
-        ),
+      _reorderable(rest, pinned: false),
     ];
+  }
+
+  /// Een sectie playlists die je met de greep kunt verslepen. De nieuwe
+  /// volgorde (vastgepind én de rest) wordt op de telefoon onthouden.
+  Widget _reorderable(
+    List<SpotifyPlaylistResult> items, {
+    required bool pinned,
+  }) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return ReorderableListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      onReorderItem: (from, to) {
+        final moved = [...items];
+        moved.insert(to, moved.removeAt(from));
+        final all = _playlists ?? const <SpotifyPlaylistResult>[];
+        final others = [
+          for (final p in all)
+            if (_pinned.contains(p.uri) != pinned) p,
+        ];
+        final next = pinned ? [...moved, ...others] : [...others, ...moved];
+        setState(() => _playlists = next);
+        _service.setPlaylistOrder([for (final p in next) p.uri]);
+      },
+      children: [
+        for (var i = 0; i < items.length; i++)
+          _PlaylistTile(
+            key: ValueKey(items[i].uri),
+            playlist: items[i],
+            openable: items[i].openableBy(_me),
+            pinned: pinned,
+            onOpen: () => _openPlaylist(items[i]),
+            onPlay: () => _play(items[i]),
+            onTogglePin: () => _togglePin(items[i]),
+            dragHandle: ReorderableDragStartListener(
+              index: i,
+              child: const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Icon(
+                  Icons.drag_handle,
+                  size: 20,
+                  color: AppColor.inkFaint,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Future<void> _play(SpotifyPlaylistResult playlist) async {
@@ -693,6 +798,7 @@ class _Cover extends StatelessWidget {
 /// vastpinnen bovenaan.
 class _PlaylistTile extends StatelessWidget {
   const _PlaylistTile({
+    super.key,
     required this.playlist,
     required this.onOpen,
     required this.onPlay,
@@ -700,7 +806,11 @@ class _PlaylistTile extends StatelessWidget {
     this.pinned = false,
     this.openable = true,
     this.leading,
+    this.dragHandle,
   });
+
+  /// Sleepgreep (alleen in de herordenbare lijst).
+  final Widget? dragHandle;
 
   /// Nummers in te lezen (eigen of samenwerk-playlist)? Anders speelt een
   /// tik hem meteen af.
@@ -721,7 +831,13 @@ class _PlaylistTile extends StatelessWidget {
     // Spotify-lijsten kun je niet openen (Spotify blokkeert dat), wel
     // afspelen.
     onTap: openable ? onOpen : onPlay,
-    leading: leading ?? _Cover(url: playlist.imageUrl, icon: Icons.queue_music),
+    leading: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ?dragHandle,
+        leading ?? _Cover(url: playlist.imageUrl, icon: Icons.queue_music),
+      ],
+    ),
     title: Text(
       playlist.name,
       maxLines: 1,

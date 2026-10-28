@@ -163,64 +163,145 @@ class BlockHeader extends StatelessWidget {
   }
 }
 
-enum ExerciseBlockAction { link, unlink, rest }
+enum ExerciseBlockAction { info, link, unlink, rest, remove }
 
-/// Menu (⋮) per oefening: koppelen aan de oefening erboven, losmaken uit het
-/// blok, en rust instellen.
+/// De enige actieknop (⋮) bij een oefening: opent een paneel met info en
+/// video's, koppelen/losmaken (blok), rust en verwijderen — in plaats van
+/// een rij losse icoontjes op de kaart.
 class ExerciseBlockMenu extends StatelessWidget {
   const ExerciseBlockMenu({
     super.key,
+    required this.title,
     required this.canLink,
     required this.inBlock,
     required this.onSelected,
+    this.hasVideos = false,
   });
 
+  final String title;
   final bool canLink;
   final bool inBlock;
+  final bool hasVideos;
   final ValueChanged<ExerciseBlockAction> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<ExerciseBlockAction>(
-      tooltip: 'Blok en rust',
-      padding: EdgeInsets.zero,
-      iconSize: 18,
-      icon: const Icon(Icons.more_vert, color: AppColor.inkFaint),
-      onSelected: onSelected,
-      itemBuilder: (context) => [
-        if (canLink)
-          const PopupMenuItem(
-            value: ExerciseBlockAction.link,
-            child: ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.link),
-              title: Text('Koppel aan oefening erboven'),
-              subtitle: Text('Samen één blok, rust pas na de ronde'),
+    return IconButton(
+      tooltip: 'Acties',
+      visualDensity: VisualDensity.compact,
+      icon: Icon(
+        Icons.more_vert,
+        color: hasVideos ? AppColor.ice : AppColor.inkFaint,
+      ),
+      onPressed: () async {
+        final action = await showExerciseActions(
+          context,
+          title: title,
+          canLink: canLink,
+          inBlock: inBlock,
+          hasVideos: hasVideos,
+        );
+        if (action == null || !context.mounted) return;
+        if (action == ExerciseBlockAction.remove) {
+          final sure = await showDialog<bool>(
+            context: context,
+            builder: (c) => AlertDialog(
+              title: Text('$title verwijderen?', style: AppText.cardTitle),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(c, false),
+                  child: const Text('Annuleer'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(c, true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColor.redBright,
+                  ),
+                  child: const Text('Verwijder'),
+                ),
+              ],
             ),
-          ),
-        if (inBlock)
-          const PopupMenuItem(
-            value: ExerciseBlockAction.unlink,
-            child: ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.link_off),
-              title: Text('Losmaken uit blok'),
-            ),
-          ),
-        PopupMenuItem(
-          value: ExerciseBlockAction.rest,
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.timer_outlined),
-            title: Text(inBlock ? 'Rust van het blok' : 'Rust na elke set'),
-          ),
-        ),
-      ],
+          );
+          if (sure != true) return;
+        }
+        onSelected(action);
+      },
     );
   }
+}
+
+/// Paneel met de acties voor één oefening.
+Future<ExerciseBlockAction?> showExerciseActions(
+  BuildContext context, {
+  required String title,
+  required bool canLink,
+  required bool inBlock,
+  bool hasVideos = false,
+}) {
+  Widget item(
+    BuildContext c,
+    ExerciseBlockAction action,
+    IconData icon,
+    String label, {
+    String? subtitle,
+    Color? color,
+  }) => ListTile(
+    leading: Icon(icon, color: color),
+    title: Text(label, style: color == null ? null : TextStyle(color: color)),
+    subtitle: subtitle == null ? null : Text(subtitle),
+    onTap: () => Navigator.pop(c, action),
+  );
+
+  return showModalBottomSheet<ExerciseBlockAction>(
+    context: context,
+    builder: (c) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+            child: Text(title, style: AppText.cardTitle),
+          ),
+          item(
+            c,
+            ExerciseBlockAction.info,
+            hasVideos ? Icons.play_circle_outline : Icons.info_outline,
+            hasVideos ? "Uitleg en video's" : 'Uitleg en video toevoegen',
+          ),
+          if (canLink)
+            item(
+              c,
+              ExerciseBlockAction.link,
+              Icons.link,
+              'Koppel aan oefening erboven',
+              subtitle: 'Samen één blok, rust pas na de ronde',
+            ),
+          if (inBlock)
+            item(
+              c,
+              ExerciseBlockAction.unlink,
+              Icons.link_off,
+              'Losmaken uit blok',
+            ),
+          item(
+            c,
+            ExerciseBlockAction.rest,
+            Icons.timer_outlined,
+            inBlock ? 'Rust van het blok' : 'Rust na elke set',
+          ),
+          item(
+            c,
+            ExerciseBlockAction.remove,
+            Icons.delete_outline,
+            'Verwijderen',
+            color: AppColor.redBright,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Uitkomst van [showRestPicker]: een aantal seconden, of [useDefault].

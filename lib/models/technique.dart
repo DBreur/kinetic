@@ -1,6 +1,8 @@
 // technique.dart — een techniek die je los van een training kunt bijhouden:
 // naam, categorie en een logboek van updates (hoe ging het, wanneer).
 
+import 'training_session.dart' show PositionPractice;
+
 /// Eén update over een techniek: een moment waarop je noteerde hoe het ging.
 /// Los toegevoegd (vanuit het Technieken-tabblad) of automatisch aangemaakt
 /// bij het opslaan van een sambo-sessie waarin de techniek behandeld werd.
@@ -9,19 +11,32 @@ class TechniqueUpdate {
   final int rating; // 0 = geen beoordeling, alleen een notitie
   final String note;
 
-  const TechniqueUpdate({required this.at, this.rating = 0, this.note = ''});
+  /// Per positie hoe het ging (sterren, aantal, goed/beter).
+  final List<PositionPractice> positions;
+
+  const TechniqueUpdate({
+    required this.at,
+    this.rating = 0,
+    this.note = '',
+    this.positions = const [],
+  });
 
   factory TechniqueUpdate.fromJson(Map<String, dynamic> json) =>
       TechniqueUpdate(
         at: DateTime.parse(json['at'] as String).toLocal(),
         rating: (json['rating'] as num?)?.toInt() ?? 0,
         note: (json['note'] as String?) ?? '',
+        positions: ((json['positions'] as List?) ?? [])
+            .map(PositionPractice.fromJson)
+            .toList(),
       );
 
   Map<String, dynamic> toJson() => {
     'at': at.toUtc().toIso8601String(),
     'rating': rating,
     'note': note,
+    if (positions.isNotEmpty)
+      'positions': positions.map((p) => p.toJson()).toList(),
   };
 }
 
@@ -117,9 +132,54 @@ class Technique {
   /// lukt vaak vanuit meer dan één positie.
   final List<String> groundPositions;
 
-  /// "Oefenen bij de eerstvolgende training" — ook als die niet gepland is.
-  /// Wordt gewist zodra er een training met deze techniek is opgeslagen.
-  final bool practiceNext;
+  /// Focus op deze techniek: de eerstvolgende training, een aantal
+  /// trainingen, of tot een datum. Zie [isFocusActive].
+  final FocusMode focusMode;
+
+  /// Bij [FocusMode.count]: nog zoveel trainingen.
+  final int? focusTrainingsLeft;
+
+  /// Bij [FocusMode.until]: t/m deze dag.
+  final DateTime? focusUntil;
+
+  /// Staat de focus nu aan?
+  bool isFocusActive(DateTime now) => switch (focusMode) {
+    FocusMode.none => false,
+    FocusMode.next => true,
+    FocusMode.count => (focusTrainingsLeft ?? 0) > 0,
+    FocusMode.until =>
+      focusUntil != null &&
+          !DateTime(now.year, now.month, now.day).isAfter(
+            DateTime(focusUntil!.year, focusUntil!.month, focusUntil!.day),
+          ),
+  };
+
+  /// "Oefenen bij de eerstvolgende training": elke actieve focus telt
+  /// daarvoor mee (herinneringen, "vandaag op de planning").
+  bool get practiceNext => isFocusActive(DateTime.now());
+
+  /// "Eerstvolgende training", "Nog 3 trainingen", "T/m vr 7 nov".
+  String get focusLabel => switch (focusMode) {
+    FocusMode.none => '',
+    FocusMode.next => 'Eerstvolgende training',
+    FocusMode.count =>
+      'Nog ${focusTrainingsLeft ?? 0} '
+          '${focusTrainingsLeft == 1 ? 'training' : 'trainingen'}',
+    FocusMode.until =>
+      focusUntil == null ? '' : 'T/m ${_shortDate(focusUntil!)}',
+  };
+
+  /// Na een opgeslagen training waarin je deze techniek oefende: zo ziet de
+  /// focus er daarna uit (eerstvolgende → klaar; aantal → één minder).
+  ({FocusMode mode, int? left}) focusAfterTraining() => switch (focusMode) {
+    FocusMode.next => (mode: FocusMode.none, left: null),
+    FocusMode.count when (focusTrainingsLeft ?? 0) <= 1 => (
+      mode: FocusMode.none,
+      left: null,
+    ),
+    FocusMode.count => (mode: FocusMode.count, left: focusTrainingsLeft! - 1),
+    _ => (mode: focusMode, left: focusTrainingsLeft),
+  };
 
   const Technique({
     required this.id,
@@ -134,7 +194,9 @@ class Technique {
     this.learningStatus = LearningStatus.none,
     this.plannedFor,
     this.groundPositions = const [],
-    this.practiceNext = false,
+    this.focusMode = FocusMode.none,
+    this.focusTrainingsLeft,
+    this.focusUntil,
     this.learningGoal = '',
     this.learningStartedAt,
     this.createdAt,
@@ -154,9 +216,7 @@ class Technique {
         .map((e) => TechniqueUpdate.fromJson(e as Map<String, dynamic>))
         .toList(),
     sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
-    learningStatus: LearningStatus.fromName(
-      json['learning_status'] as String?,
-    ),
+    learningStatus: LearningStatus.fromName(json['learning_status'] as String?),
     plannedFor: json['planned_for'] == null
         ? null
         : DateTime.parse(json['planned_for'] as String).toLocal(),
@@ -170,7 +230,14 @@ class Technique {
     groundPositions: ((json['ground_positions'] as List?) ?? [])
         .map((e) => e as String)
         .toList(),
-    practiceNext: (json['practice_next'] as bool?) ?? false,
+    focusMode: FocusMode.fromJson(
+      json['focus_mode'] as String?,
+      legacyPracticeNext: (json['practice_next'] as bool?) ?? false,
+    ),
+    focusTrainingsLeft: (json['focus_trainings_left'] as num?)?.toInt(),
+    focusUntil: json['focus_until'] == null
+        ? null
+        : DateTime.parse(json['focus_until'] as String).toLocal(),
   );
 
   Map<String, dynamic> toInsertJson(String userId) => {
@@ -206,7 +273,10 @@ class Technique {
     DateTime? learningStartedAt,
     bool clearLearningStartedAt = false,
     List<String>? groundPositions,
-    bool? practiceNext,
+    FocusMode? focusMode,
+    int? focusTrainingsLeft,
+    DateTime? focusUntil,
+    bool clearFocusDetails = false,
   }) => Technique(
     id: id,
     name: name ?? this.name,
@@ -220,11 +290,53 @@ class Technique {
     learningStatus: learningStatus ?? this.learningStatus,
     plannedFor: clearPlannedFor ? null : (plannedFor ?? this.plannedFor),
     groundPositions: groundPositions ?? this.groundPositions,
-    practiceNext: practiceNext ?? this.practiceNext,
+    focusMode: focusMode ?? this.focusMode,
+    // clearFocusDetails: precies de meegegeven waarden (null = leeg), voor
+    // het wisselen van focus-soort.
+    focusTrainingsLeft: clearFocusDetails
+        ? focusTrainingsLeft
+        : (focusTrainingsLeft ?? this.focusTrainingsLeft),
+    focusUntil: clearFocusDetails
+        ? focusUntil
+        : (focusUntil ?? this.focusUntil),
     learningGoal: learningGoal ?? this.learningGoal,
     learningStartedAt: clearLearningStartedAt
         ? null
         : (learningStartedAt ?? this.learningStartedAt),
     createdAt: createdAt,
   );
+}
+
+enum FocusMode {
+  none,
+  next,
+  count,
+  until;
+
+  static FocusMode fromJson(String? name, {bool legacyPracticeNext = false}) {
+    for (final v in FocusMode.values) {
+      if (v.name == name && v != FocusMode.none) return v;
+    }
+    // Oudere rijen (vóór focus_mode): practice_next = eerstvolgende.
+    return legacyPracticeNext ? FocusMode.next : FocusMode.none;
+  }
+}
+
+String _shortDate(DateTime d) {
+  const days = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
+  const months = [
+    'jan',
+    'feb',
+    'mrt',
+    'apr',
+    'mei',
+    'jun',
+    'jul',
+    'aug',
+    'sep',
+    'okt',
+    'nov',
+    'dec',
+  ];
+  return '${days[d.weekday - 1]} ${d.day} ${months[d.month - 1]}';
 }

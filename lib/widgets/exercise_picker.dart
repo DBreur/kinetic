@@ -285,3 +285,162 @@ class MuscleGroupFilter extends StatelessWidget {
     );
   }
 }
+
+/// Opent een eigen scherm om een oefening te kiezen: zoeken (met ✕),
+/// A–Z/Z–A, filteren op spiergroep en de hele lijst. Geeft de gekozen (of
+/// nieuw getypte) naam terug, of null bij terug.
+Future<String?> showExercisePickerScreen(
+  BuildContext context, {
+  required List<Exercise> customExercises,
+  String title = 'Oefening toevoegen',
+}) => Navigator.push<String>(
+  context,
+  MaterialPageRoute(
+    builder: (_) =>
+        _ExercisePickerScreen(customExercises: customExercises, title: title),
+  ),
+);
+
+class _ExercisePickerScreen extends StatefulWidget {
+  const _ExercisePickerScreen({
+    required this.customExercises,
+    required this.title,
+  });
+
+  final List<Exercise> customExercises;
+  final String title;
+
+  @override
+  State<_ExercisePickerScreen> createState() => _ExercisePickerScreenState();
+}
+
+class _ExercisePickerScreenState extends State<_ExercisePickerScreen> {
+  final _query = TextEditingController();
+  final Set<String> _groups = {};
+  bool _ascending = true;
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = filterExercises(
+      allExercises(widget.customExercises),
+      query: _query.text,
+      groups: _groups,
+      ascending: _ascending,
+    );
+    final typed = _query.text.trim();
+    final exists = options.any(
+      (e) => e.name.trim().toLowerCase() == typed.toLowerCase(),
+    );
+    return Scaffold(
+      backgroundColor: AppColor.bg,
+      appBar: AppBar(
+        backgroundColor: AppColor.bg,
+        title: Text(widget.title, style: AppText.bodyStrong),
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _query,
+                      autofocus: true,
+                      onChanged: (_) => setState(() {}),
+                      style: AppText.body,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppColor.surfaceRaised,
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        hintText: 'Zoek of typ een oefening',
+                        hintStyle: AppText.body.copyWith(
+                          color: AppColor.inkGhost,
+                        ),
+                        suffixIcon: typed.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Wissen',
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () => setState(_query.clear),
+                              ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  SortToggle(
+                    ascending: _ascending,
+                    onChanged: (v) => setState(() => _ascending = v),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: MuscleGroupFilter(
+                selected: _groups,
+                onToggle: (g) => setState(() {
+                  if (!_groups.remove(g)) _groups.add(g);
+                }),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: options.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          typed.isEmpty
+                              ? 'Geen oefeningen voor deze spiergroep.'
+                              : 'Niets gevonden — voeg "$typed" toe als '
+                                    'eigen oefening.',
+                          textAlign: TextAlign.center,
+                          style: AppText.caption,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      itemCount: options.length,
+                      itemBuilder: (context, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: ExerciseListTile(
+                          exercise: options[i],
+                          onTap: () => Navigator.pop(context, options[i].name),
+                        ),
+                      ),
+                    ),
+            ),
+            if (typed.isNotEmpty && !exists)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.pop(context, typed),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColor.teal,
+                    foregroundColor: AppColor.greenInk,
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: Text('"$typed" als eigen oefening'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

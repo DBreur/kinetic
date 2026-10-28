@@ -11,6 +11,7 @@ import '../models/combination.dart';
 import '../models/glucose.dart';
 import '../models/technique.dart';
 import '../models/training_session.dart';
+import '../repositories/agenda_repository.dart';
 import '../repositories/combination_repository.dart';
 import '../repositories/session_repository.dart';
 import '../repositories/technique_repository.dart';
@@ -151,10 +152,25 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     if (kind == TrainingKind.kracht) {
       await _startOrResumeStrength(initialReading: reading, title: title);
     } else {
+      // De technieken die je bij deze geplande training wilde oefenen.
+      var techniqueIds = const <String>{};
+      final client = widget.controller.client;
+      final userId = widget.controller.user?.id;
+      if (id.isNotEmpty && client != null && userId != null) {
+        try {
+          final all = await AgendaRepository(client).trainings(userId);
+          for (final t in all) {
+            if (t.id == id) techniqueIds = t.techniqueIds.toSet();
+          }
+        } catch (_) {
+          // Zonder planning starten gaat ook.
+        }
+      }
       await _startOrResumeMat(
         initialReading: reading,
         title: title,
         fromPlanned: true,
+        plannedTechniqueIds: techniqueIds,
       );
     }
   }
@@ -291,6 +307,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     required GlucoseReading? initialReading,
     String title = 'Combat sambo',
     bool fromPlanned = false,
+    Set<String> plannedTechniqueIds = const {},
   }) async {
     final existing = _liveMat;
     if (existing != null) return _openMat(existing);
@@ -307,6 +324,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       contextOf: () => context,
       provider: provider,
       initialReading: initialReading,
+      plannedTechniqueIds: plannedTechniqueIds,
     );
     return _openMat(ctrl);
   }
@@ -1023,7 +1041,20 @@ class _TechniqueStat implements TechniqueSortable {
   final String meta;
   Technique? technique;
   int count = 0;
+
+  /// De laatste échte beoordeling — een latere keer zónder sterren (bv. een
+  /// training waarin je niets invulde) wist die niet.
   int lastRating = 0;
+  DateTime? _lastRatedAt;
+
+  void offerRating(DateTime at, int rating) {
+    if (rating <= 0) return;
+    if (_lastRatedAt == null || at.isAfter(_lastRatedAt!)) {
+      _lastRatedAt = at;
+      lastRating = rating;
+    }
+  }
+
   @override
   DateTime? lastDate;
   final List<TechniqueOccurrence> occurrences = [];
@@ -1304,6 +1335,20 @@ class _TechniquesScreenState extends State<TechniquesScreen> {
           sessionOccurrences: stat.occurrences
               .where((o) => o.fromSession)
               .toList(),
+          onOpenSession: (session) async {
+            final client = widget.controller.client;
+            if (client == null) return;
+            await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SessionDetailScreen(
+                  session: session,
+                  repository: SessionRepository(client),
+                  controller: widget.controller,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -1349,18 +1394,32 @@ class _TechniquesScreenState extends State<TechniquesScreen> {
           () => _TechniqueStat(name: b.name, meta: b.meta),
         );
         stat.count += 1;
-        stat.occurrences.add(
-          TechniqueOccurrence(
-            date: s.startedAt,
-            rating: b.rating,
-            note: b.note,
-            fromSession: true,
-          ),
-        );
+        // Alleen als update tonen als er iets is beoordeeld of genoteerd —
+        // een gewiste beoordeling verdwijnt zo uit de geschiedenis (de
+        // training telt wel mee in het aantal keer geoefend).
+        final hasFeedback =
+            b.rating > 0 ||
+            b.note.trim().isNotEmpty ||
+            b.positions.isNotEmpty ||
+            b.reps > 0;
+        if (hasFeedback) {
+          stat.occurrences.add(
+            TechniqueOccurrence(
+              date: s.startedAt,
+              rating: b.rating,
+              note: b.note,
+              fromSession: true,
+              positions: b.positions,
+              reps: b.reps,
+              session: s,
+              blockIndex: s.blocks.indexOf(b),
+            ),
+          );
+        }
         if (stat.lastDate == null || s.startedAt.isAfter(stat.lastDate!)) {
           stat.lastDate = s.startedAt;
-          stat.lastRating = b.rating;
         }
+        stat.offerRating(s.startedAt, b.rating);
       }
     }
     for (final t in _techniques) {
@@ -1372,12 +1431,17 @@ class _TechniquesScreenState extends State<TechniquesScreen> {
       stat.count += t.updates.length;
       for (final u in t.updates) {
         stat.occurrences.add(
-          TechniqueOccurrence(date: u.at, rating: u.rating, note: u.note),
+          TechniqueOccurrence(
+            date: u.at,
+            rating: u.rating,
+            note: u.note,
+            positions: u.positions,
+          ),
         );
         if (stat.lastDate == null || u.at.isAfter(stat.lastDate!)) {
           stat.lastDate = u.at;
-          stat.lastRating = u.rating;
         }
+        stat.offerRating(u.at, u.rating);
       }
     }
     final query = _query.trim().toLowerCase();

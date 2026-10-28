@@ -52,7 +52,6 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
   late int _rounds;
   late bool _roundsPerBlock;
   late int _restSeconds;
-  bool _adding = false;
   bool _busy = false;
   final _query = TextEditingController();
   final _scroll = ScrollController();
@@ -225,11 +224,81 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                 reps: last.reps,
                 toBurn: last.toBurn,
                 extraTarget: last.extraTarget,
+                restSeconds: last.restSeconds,
               ),
       );
-      _adding = false;
       _query.clear();
     });
+  }
+
+  /// Eén paneel met alles wat je met een stap kunt doen.
+  Future<void> _stepActions(int i) async {
+    final inBlock =
+        blockRange(_blocks, i).end - blockRange(_blocks, i).start > 1;
+    Widget item(
+      BuildContext c,
+      String value,
+      IconData icon,
+      String label, {
+      String? subtitle,
+      Color? color,
+    }) => ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(label, style: color == null ? null : TextStyle(color: color)),
+      subtitle: subtitle == null ? null : Text(subtitle),
+      onTap: () => Navigator.pop(c, value),
+    );
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Text(_steps[i].name, style: AppText.cardTitle),
+            ),
+            item(c, 'target', Icons.tune, 'Doel, rust en video\'s'),
+            if (i > 0)
+              item(
+                c,
+                'link',
+                Icons.link,
+                'Koppel aan oefening erboven',
+                subtitle: 'Samen een blok met eigen rondes',
+              ),
+            if (inBlock && _roundsPerBlock)
+              item(c, 'rounds', Icons.repeat, 'Rondes van het blok'),
+            if (inBlock) item(c, 'unlink', Icons.link_off, 'Losmaken uit blok'),
+            item(
+              c,
+              'remove',
+              Icons.delete_outline,
+              'Verwijderen',
+              color: AppColor.redBright,
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'target':
+        await _editTarget(i);
+      case 'link':
+        _linkStep(i);
+      case 'unlink':
+        _unlinkStep(i);
+      case 'rounds':
+        await _editBlockRounds(i);
+      case 'remove':
+        setState(() {
+          _steps.removeAt(i);
+          _normalizeBlocks();
+        });
+    }
   }
 
   Future<void> _editTarget(int i) async {
@@ -528,62 +597,15 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                                 step: _steps[i],
                                 defaultRest: _restSeconds,
                                 onTarget: () => _editTarget(i),
-                                menu: PopupMenuButton<String>(
-                                  tooltip: 'Blok',
-                                  padding: EdgeInsets.zero,
-                                  iconSize: 18,
+                                menu: IconButton(
+                                  tooltip: 'Acties',
+                                  visualDensity: VisualDensity.compact,
                                   icon: const Icon(
                                     Icons.more_vert,
                                     color: AppColor.inkFaint,
                                   ),
-                                  onSelected: (a) => switch (a) {
-                                    'link' => _linkStep(i),
-                                    'unlink' => _unlinkStep(i),
-                                    _ => _editBlockRounds(i),
-                                  },
-                                  itemBuilder: (_) => [
-                                    if (i > 0)
-                                      const PopupMenuItem(
-                                        value: 'link',
-                                        child: ListTile(
-                                          dense: true,
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: Icon(Icons.link),
-                                          title: Text(
-                                            'Koppel aan oefening erboven',
-                                          ),
-                                          subtitle: Text(
-                                            'Samen een blok met eigen rondes',
-                                          ),
-                                        ),
-                                      ),
-                                    if (blocks[i].inBlock) ...[
-                                      if (_roundsPerBlock)
-                                        const PopupMenuItem(
-                                          value: 'rounds',
-                                          child: ListTile(
-                                            dense: true,
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(Icons.repeat),
-                                            title: Text('Rondes van het blok'),
-                                          ),
-                                        ),
-                                      const PopupMenuItem(
-                                        value: 'unlink',
-                                        child: ListTile(
-                                          dense: true,
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: Icon(Icons.link_off),
-                                          title: Text('Losmaken uit blok'),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                  onPressed: () => _stepActions(i),
                                 ),
-                                onRemove: () => setState(() {
-                                  _steps.removeAt(i);
-                                  _normalizeBlocks();
-                                }),
                                 dragHandle: ReorderableDragStartListener(
                                   index: i,
                                   child: const Padding(
@@ -602,24 +624,18 @@ class _CircuitEditScreenState extends State<CircuitEditScreen> {
                       ),
                   ],
                 ),
-              if (_adding)
-                _AddCircuitExerciseInline(
-                  query: _query,
-                  customExercises: _knownExercises,
-                  onPick: _addStep,
-                  onCancel: () => setState(() {
-                    _adding = false;
-                    _query.clear();
-                  }),
-                )
-              else
-                AddBlockButton(
-                  label: 'Oefening toevoegen',
-                  onTap: () {
-                    setState(() => _adding = true);
-                    _scrollToBottom();
-                  },
-                ),
+              AddBlockButton(
+                label: 'Oefening toevoegen',
+                onTap: () async {
+                  final name = await showExercisePickerScreen(
+                    context,
+                    customExercises: _knownExercises,
+                  );
+                  if (name == null || !mounted) return;
+                  _addStep(name);
+                  _scrollToBottom();
+                },
+              ),
               const SizedBox(height: 20),
               const KLabel("Video's (optioneel)"),
               const SizedBox(height: 8),
@@ -675,7 +691,6 @@ class _CircuitStepRow extends StatelessWidget {
     required this.step,
     required this.defaultRest,
     required this.onTarget,
-    required this.onRemove,
     this.dragHandle,
     this.menu,
   });
@@ -684,7 +699,6 @@ class _CircuitStepRow extends StatelessWidget {
   final CircuitStep step;
   final int defaultRest;
   final VoidCallback onTarget;
-  final VoidCallback onRemove;
   final Widget? dragHandle;
   final Widget? menu;
 
@@ -753,11 +767,6 @@ class _CircuitStepRow extends StatelessWidget {
               onPressed: onTarget,
             ),
             ?menu,
-            IconButton(
-              tooltip: 'Verwijderen',
-              onPressed: onRemove,
-              icon: const Icon(Icons.close, size: 16, color: AppColor.inkFaint),
-            ),
           ],
         ),
       ),
@@ -912,26 +921,4 @@ class _StepTargetSheetState extends State<_StepTargetSheet> {
       ),
     );
   }
-}
-
-class _AddCircuitExerciseInline extends StatelessWidget {
-  const _AddCircuitExerciseInline({
-    required this.query,
-    required this.customExercises,
-    required this.onPick,
-    required this.onCancel,
-  });
-
-  final TextEditingController query;
-  final List<Exercise> customExercises;
-  final ValueChanged<String> onPick;
-  final VoidCallback onCancel;
-
-  @override
-  Widget build(BuildContext context) => ExercisePicker(
-    query: query,
-    customExercises: customExercises,
-    onPick: onPick,
-    onCancel: onCancel,
-  );
 }

@@ -24,6 +24,7 @@ import '../services/food_wait_reminder_service.dart';
 import '../services/meal_reminder_service.dart';
 import '../state/app_controller.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/carb_calculator.dart';
 import '../widgets/food_preset_picker.dart';
 import 'food_presets_screen.dart';
 import '../widgets/kinetic.dart';
@@ -1246,6 +1247,24 @@ class _FoodLogSheetState extends State<_FoodLogSheet> {
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               suffixText: 'g',
+              // Rekenmachientje: + en − op wat er al staat; de uitkomst komt
+              // terug in dit veld en de insuline rekent opnieuw.
+              suffixIcon: IconButton(
+                tooltip: 'Rekenen',
+                icon: const Icon(Icons.calculate_outlined),
+                onPressed: () async {
+                  final result = await showCarbCalculator(
+                    context,
+                    _parsed(_carbsController) ?? 0,
+                  );
+                  if (result == null || !mounted) return;
+                  setState(
+                    () => _carbsController.text = result <= 0
+                        ? ''
+                        : carbsText(result),
+                  );
+                },
+              ),
               filled: true,
               fillColor: Colors.white.withValues(alpha: .05),
               border: OutlineInputBorder(

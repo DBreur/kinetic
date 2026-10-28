@@ -14,12 +14,15 @@
 //   focus — beoordeel/noteer één blok.
 
 import 'package:flutter/material.dart';
+
 import '../models/glucose.dart';
 import '../models/technique.dart';
 import '../models/training_session.dart';
 import '../state/mat_session_controller.dart';
 import '../services/system_bars.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/focus_picker.dart';
+import '../widgets/position_practice_editor.dart';
 import '../widgets/glucose_alarm.dart' show SnoozeBanner;
 import '../widgets/spotify_panel.dart';
 import '../widgets/kinetic.dart';
@@ -209,6 +212,16 @@ class _MatModeScreenState extends State<MatModeScreen> {
   /// sessie kunt bekijken — leeg als er geen (gekoppelde) video's zijn. Komt
   /// het blok uit een combinatie (zie `comboId`), dan tellen ook de video's
   /// van die combinatie mee.
+  /// De vaste posities van deze techniek uit de catalogus (op naam).
+  List<String> _suggestedPositions(TechniqueEntry entry) {
+    for (final t in _c.knownTechniques) {
+      if (t.name.toLowerCase() == entry.name.toLowerCase()) {
+        return t.groundPositions;
+      }
+    }
+    return const [];
+  }
+
   List<String> _matchingVideoUrls(TechniqueEntry entry) {
     if (entry.kind != BlockKind.technique) return const [];
     final urls = <String>[];
@@ -236,14 +249,67 @@ class _MatModeScreenState extends State<MatModeScreen> {
     final now = DateTime.now();
     bool isToday(DateTime d) =>
         d.year == now.year && d.month == now.month && d.day == now.day;
-    return _c.knownTechniques
+    final list = _c.knownTechniques
         .where(
           (t) =>
               t.practiceNext ||
+              _c.plannedTechniqueIds.contains(t.id) ||
               (t.plannedFor != null && isToday(t.plannedFor!)) ||
               t.learningStatus == LearningStatus.learning,
         )
         .toList();
+    // Technieken met focus bovenaan.
+    list.sort(
+      (a, b) => (b.isFocusActive(now) ? 1 : 0) - (a.isFocusActive(now) ? 1 : 0),
+    );
+    return list;
+  }
+
+  Technique? _catalogTechnique(String name) {
+    for (final t in _c.knownTechniques) {
+      if (t.name.trim().toLowerCase() == name.trim().toLowerCase()) return t;
+    }
+    return null;
+  }
+
+  /// Tijdens de training aangeven dat je op deze techniek wilt focussen.
+  Future<void> _chooseFocus(TechniqueEntry entry) async {
+    final technique = _catalogTechnique(entry.name);
+    final repo = _c.techniqueRepository;
+    if (technique == null || repo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Deze techniek staat nog niet in je technieken — sla de training '
+            'eerst op, dan kun je er focus op zetten.',
+          ),
+        ),
+      );
+      return;
+    }
+    final choice = await showFocusPicker(context, technique: technique);
+    if (choice == null || !mounted) return;
+    try {
+      await repo.setFocus(
+        technique.id,
+        choice.mode,
+        trainingsLeft: choice.trainings,
+        until: choice.until,
+      );
+      _c.replaceKnownTechnique(
+        technique.copyWith(
+          focusMode: choice.mode,
+          focusTrainingsLeft: choice.trainings,
+          focusUntil: choice.until,
+          clearFocusDetails: true,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Focus opslaan is niet gelukt.')),
+      );
+    }
   }
 
   /// Voegt een geplande techniek toe als blok — tikken op een techniek die
@@ -397,7 +463,10 @@ class _MatModeScreenState extends State<MatModeScreen> {
               ),
               if (_todaysPlanning().isNotEmpty) ...[
                 const SizedBox(height: 18),
-                Text('VANDAAG OP DE PLANNING', style: AppText.overline.copyWith(color: AppColor.ink)),
+                Text(
+                  'VANDAAG OP DE PLANNING',
+                  style: AppText.overline.copyWith(color: AppColor.ink),
+                ),
                 const SizedBox(height: 10),
                 for (final t in _todaysPlanning())
                   Padding(
@@ -416,16 +485,27 @@ class _MatModeScreenState extends State<MatModeScreen> {
                         ),
                         child: Row(
                           children: [
+                            if (t.isFocusActive(DateTime.now())) ...[
+                              const Icon(
+                                Icons.center_focus_strong,
+                                size: 16,
+                                color: AppColor.coral,
+                              ),
+                              const SizedBox(width: 6),
+                            ],
                             Expanded(
                               child: Text(
-                                t.name,
+                                t.isFocusActive(DateTime.now())
+                                    ? '${t.name} · focus'
+                                    : t.name,
                                 style: AppText.bodyStrong.copyWith(
                                   color: AppColor.tealBright,
                                 ),
                               ),
                             ),
                             if (blocks.every(
-                              (b) => b.name.toLowerCase() != t.name.toLowerCase(),
+                              (b) =>
+                                  b.name.toLowerCase() != t.name.toLowerCase(),
                             ))
                               const Icon(
                                 Icons.add,
@@ -439,7 +519,10 @@ class _MatModeScreenState extends State<MatModeScreen> {
                   ),
               ],
               const SizedBox(height: 18),
-              Text('TECHNIEKEN', style: AppText.overline.copyWith(color: AppColor.ink)),
+              Text(
+                'TECHNIEKEN',
+                style: AppText.overline.copyWith(color: AppColor.ink),
+              ),
               const SizedBox(height: 10),
               if (techniques.isEmpty)
                 Padding(
@@ -485,7 +568,10 @@ class _MatModeScreenState extends State<MatModeScreen> {
                   ],
                 ),
               const SizedBox(height: 18),
-              Text('WARMING-UP & SPARREN', style: AppText.overline.copyWith(color: AppColor.ink)),
+              Text(
+                'WARMING-UP & SPARREN',
+                style: AppText.overline.copyWith(color: AppColor.ink),
+              ),
               const SizedBox(height: 10),
               if (others.isEmpty)
                 Padding(
@@ -496,7 +582,38 @@ class _MatModeScreenState extends State<MatModeScreen> {
                   ),
                 )
               else
-                for (final i in others) _dismissibleRow(index: i),
+                // Ook warming-up en sparren zijn te verslepen; verwijderen
+                // via het kruisje (vegen botst met slepen).
+                ReorderableListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  onReorderItem: _c.reorderOther,
+                  children: [
+                    for (var pos = 0; pos < others.length; pos++)
+                      Padding(
+                        key: ValueKey(blocks[others[pos]].id),
+                        padding: EdgeInsets.zero,
+                        child: _BlockRow(
+                          entry: blocks[others[pos]],
+                          onToggle: () => _c.toggleCovered(others[pos]),
+                          onOpen: () => _c.openFocus(others[pos]),
+                          onDelete: () => _removeBlock(others[pos]),
+                          dragHandle: ReorderableDragStartListener(
+                            index: pos,
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.drag_handle,
+                                size: 18,
+                                color: AppColor.inkFaint,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               if (_c.adding)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -519,31 +636,6 @@ class _MatModeScreenState extends State<MatModeScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _dismissibleRow({Key? key, required int index, Widget? dragHandle}) {
-    final entry = _c.blocks[index];
-    return Dismissible(
-      key: key ?? ValueKey(entry.id),
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => _removeBlock(index),
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        alignment: Alignment.centerRight,
-        decoration: BoxDecoration(
-          color: AppColor.red.withValues(alpha: .18),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        child: const Icon(Icons.delete_outline, color: AppColor.redBright),
-      ),
-      child: _BlockRow(
-        entry: entry,
-        onToggle: () => _c.toggleCovered(index),
-        onOpen: () => _c.openFocus(index),
-        dragHandle: dragHandle,
-      ),
     );
   }
 
@@ -608,6 +700,23 @@ class _MatModeScreenState extends State<MatModeScreen> {
               },
               onMinutesChanged: (m) {
                 t.minutes = m;
+                _c.touch();
+              },
+              suggestedPositions: _suggestedPositions(t),
+              showPositions: _catalogTechnique(t.name)?.category != 'Takedown',
+              onFocus: t.kind == BlockKind.technique
+                  ? () => _chooseFocus(t)
+                  : null,
+              inFocus:
+                  _catalogTechnique(t.name)?.isFocusActive(DateTime.now()) ??
+                  false,
+              focusLabel: _catalogTechnique(t.name)?.focusLabel ?? '',
+              onRepsChanged: (r) {
+                t.reps = r;
+                _c.touch();
+              },
+              onPositionsChanged: (p) {
+                t.positions = p;
                 _c.touch();
               },
               onRestrictionsChanged: (r) {
@@ -859,25 +968,25 @@ class GlucoseBand extends StatelessWidget {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,
               child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                isPaused ? 'Gepauzeerd · $mm:$ss' : '$mm:$ss',
-                style: AppText.cardTitle.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color: isPaused ? AppColor.amber : AppColor.ink,
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  KClock(
-                    style: AppText.overline.copyWith(color: AppColor.ink),
+                  Text(
+                    isPaused ? 'Gepauzeerd · $mm:$ss' : '$mm:$ss',
+                    style: AppText.cardTitle.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: isPaused ? AppColor.amber : AppColor.ink,
+                    ),
                   ),
-                  const KLabel(' · sessie'),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      KClock(
+                        style: AppText.overline.copyWith(color: AppColor.ink),
+                      ),
+                      const KLabel(' · sessie'),
+                    ],
+                  ),
                 ],
-              ),
-            ],
               ),
             ),
           ),
@@ -922,6 +1031,17 @@ class _FocusCard extends StatelessWidget {
   final ValueChanged<int> onRate;
   final ValueChanged<String> onNote;
   final ValueChanged<int> onMinutesChanged;
+  final ValueChanged<int> onRepsChanged;
+  final ValueChanged<List<PositionPractice>> onPositionsChanged;
+  final List<String> suggestedPositions;
+
+  /// Posities kiezen — niet bij een takedown (staand).
+  final bool showPositions;
+
+  /// Focus op deze techniek zetten (null = niet in de catalogus).
+  final VoidCallback? onFocus;
+  final bool inFocus;
+  final String focusLabel;
   final void Function(List<int> minutes, List<List<SparGoal>> goals)
   onRoundsChanged;
   final ValueChanged<List<List<SparGoal>>> onRestrictionsChanged;
@@ -939,6 +1059,13 @@ class _FocusCard extends StatelessWidget {
     required this.onRate,
     required this.onNote,
     required this.onMinutesChanged,
+    required this.onRepsChanged,
+    required this.onPositionsChanged,
+    this.suggestedPositions = const [],
+    this.showPositions = true,
+    this.onFocus,
+    this.inFocus = false,
+    this.focusLabel = '',
     required this.onRoundsChanged,
     required this.onRestrictionsChanged,
     required this.onGoalsChanged,
@@ -981,12 +1108,7 @@ class _FocusCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        entry.name,
-                        style: AppText.display,
-                      ),
-                    ),
+                    Expanded(child: Text(entry.name, style: AppText.display)),
                     InkWell(
                       onTap: onRename,
                       borderRadius: BorderRadius.circular(20),
@@ -1040,21 +1162,60 @@ class _FocusCard extends StatelessWidget {
                       color: AppColor.surfaceRaised,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: NumberStepper(
-                      label: 'GEOEFEND',
-                      value: entry.minutes,
-                      suffix: ' min',
-                      accent: accent,
-                      onDown: () =>
-                          onMinutesChanged((entry.minutes - 1).clamp(0, 180)),
-                      onUp: () =>
-                          onMinutesChanged((entry.minutes + 1).clamp(0, 180)),
+                    child: Column(
+                      children: [
+                        NumberStepper(
+                          label: 'GEOEFEND',
+                          value: entry.minutes,
+                          suffix: ' min',
+                          accent: accent,
+                          onDown: () => onMinutesChanged(
+                            (entry.minutes - 1).clamp(0, 180),
+                          ),
+                          onUp: () => onMinutesChanged(
+                            (entry.minutes + 1).clamp(0, 180),
+                          ),
+                        ),
+                        const Divider(height: 16, color: AppColor.line),
+                        NumberStepper(
+                          label: 'AANTAL',
+                          value: entry.reps,
+                          suffix: '×',
+                          accent: accent,
+                          onDown: () =>
+                              onRepsChanged((entry.reps - 1).clamp(0, 999)),
+                          onUp: () =>
+                              onRepsChanged((entry.reps + 1).clamp(0, 999)),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 18),
                   Text('HOE GING HET?', style: AppText.overline),
                   const SizedBox(height: 12),
                   StarRow(rating: entry.rating, onRate: onRate),
+                  const SizedBox(height: 18),
+                  if (showPositions)
+                    PositionPracticeEditor(
+                      value: entry.positions,
+                      suggested: suggestedPositions,
+                      onChanged: onPositionsChanged,
+                    ),
+                  if (onFocus != null) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: onFocus,
+                      icon: Icon(
+                        Icons.center_focus_strong_outlined,
+                        color: inFocus ? AppColor.coral : null,
+                      ),
+                      label: Text(
+                        inFocus
+                            ? 'Focus: $focusLabel'
+                            : 'Focus op deze techniek leggen',
+                      ),
+                    ),
+                  ],
                 ] else if (entry.kind == BlockKind.warmup)
                   Container(
                     padding: const EdgeInsets.symmetric(

@@ -344,8 +344,14 @@ class _NowScreenState extends State<NowScreen> {
       final techniques = await _techniqueRepo.listForUser(userId);
       if (!mounted) return;
       setState(() {
+        // Gepland voor vandaag óf met actieve focus.
+        final now = DateTime.now();
         _plannedToday = techniques
-            .where((t) => t.plannedFor != null && _isToday(t.plannedFor!))
+            .where(
+              (t) =>
+                  (t.plannedFor != null && _isToday(t.plannedFor!)) ||
+                  t.isFocusActive(now),
+            )
             .length;
       });
     } catch (_) {

@@ -27,7 +27,6 @@ import '../widgets/manual_glucose.dart' show FingerHistoryStrip;
 import '../widgets/nutrition_log.dart';
 import '../widgets/set_outcome_sheet.dart';
 import '../widgets/spotify_panel.dart';
-import 'exercise_history_screen.dart';
 import 'mat_mode_screen.dart' show GlucoseBand;
 
 class StrengthModeScreen extends StatefulWidget {
@@ -145,6 +144,20 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
 
   void _onBlockAction(int ei, ExerciseBlockAction action) {
     switch (action) {
+      case ExerciseBlockAction.info:
+        final e = _c.exercises[ei];
+        final info = _c.matchingCustomExercise(e.name);
+        showInfoSheet(
+          context,
+          title: e.name,
+          description: (info?.description ?? '').isNotEmpty
+              ? info!.description
+              : e.description,
+          videoUrls: info?.videoUrls ?? const [],
+          onAddVideo: (url) => _c.addExerciseVideo(e.name, url),
+        );
+      case ExerciseBlockAction.remove:
+        _c.removeExercise(ei);
       case ExerciseBlockAction.link:
         _c.linkWithPrevious(ei);
       case ExerciseBlockAction.unlink:
@@ -152,18 +165,6 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
       case ExerciseBlockAction.rest:
         _editRest(ei);
     }
-  }
-
-  void _openHistory(String name) {
-    Navigator.push<void>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ExerciseHistoryScreen(
-          exerciseName: name,
-          controller: _c.appController,
-        ),
-      ),
-    );
   }
 
   Future<void> _pickExercise(String name) async {
@@ -308,7 +309,11 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
         0,
         (n, e) =>
             n +
-            e.sets.where((s) => s.done).fold(0, (m, s) => m + s.kg * s.reps),
+            // Alleen gewone reps-sets: een tijd- of verzuringsset heeft geen
+            // echte reps (het getal dat erin staat is overgebleven).
+            e.sets
+                .where((s) => s.done && s.seconds == null && !s.toBurn)
+                .fold(0, (m, s) => m + s.kg * s.reps),
       )
       .round();
 
@@ -479,10 +484,6 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
                                         info: blocks[ei],
                                         child: _ExerciseCard(
                                           exercise: _c.exercises[ei],
-                                          onOpenHistory: () => _openHistory(
-                                            _c.exercises[ei].name,
-                                          ),
-                                          onRemove: () => _c.removeExercise(ei),
                                           onRemoveSet: (si) =>
                                               _c.removeSet(ei, si),
                                           collapsed: _isCollapsed(
@@ -492,12 +493,16 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
                                               _toggleCollapsed(
                                                 _c.exercises[ei],
                                               ),
-                                          onAddVideo: (url) =>
-                                              _c.addExerciseVideo(
-                                                _c.exercises[ei].name,
-                                                url,
-                                              ),
                                           menu: ExerciseBlockMenu(
+                                            title: _c.exercises[ei].name,
+                                            hasVideos:
+                                                (_c
+                                                    .matchingCustomExercise(
+                                                      _c.exercises[ei].name,
+                                                    )
+                                                    ?.videoUrls
+                                                    .isNotEmpty ??
+                                                false),
                                             canLink: ei > 0,
                                             inBlock: blocks[ei].inBlock,
                                             onSelected: (a) =>
@@ -540,22 +545,18 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
                             ),
                           if (_c.circuitOnly)
                             const SizedBox.shrink()
-                          else if (_c.adding)
-                            _AddExerciseCard(
-                              query: _query,
-                              customExercises: _c.customExercises,
-                              onPick: _pickExercise,
-                              onCancel: () {
-                                _c.setAdding(false);
-                                _query.clear();
-                              },
-                            )
                           else
                             AddBlockButton(
                               label: 'Oefening toevoegen',
-                              onTap: () {
-                                _c.setAdding(true);
-                                _scrollToBottom();
+                              onTap: () async {
+                                final name = await showExercisePickerScreen(
+                                  context,
+                                  customExercises: _c.customExercises,
+                                );
+                                if (name != null) {
+                                  await _pickExercise(name);
+                                  _scrollToBottom();
+                                }
                               },
                             ),
                           const SizedBox(height: 14),
@@ -604,12 +605,8 @@ class _StrengthModeScreenState extends State<StrengthModeScreen> {
 
 class _ExerciseCard extends StatelessWidget {
   final LiveExercise exercise;
-  final VoidCallback onRemove;
   final ValueChanged<int> onRemoveSet;
   final Widget? menu;
-
-  /// Bewaart een nieuwe video bij deze oefening in je oefeningen.
-  final Future<void> Function(String url) onAddVideo;
 
   /// Eigen rust van een losse oefening, als die afwijkt van de standaard.
   final String? restHint;
@@ -619,7 +616,6 @@ class _ExerciseCard extends StatelessWidget {
   final bool collapsed;
   final VoidCallback onToggleCollapsed;
   final VoidCallback onAddSet;
-  final VoidCallback onOpenHistory;
   final void Function(int setIndex, LiveSet Function(LiveSet)) onSetChanged;
   final void Function(int setIndex) onStartSetTimer;
   final void Function(int setIndex, SetMode mode) onToggleSetMode;
@@ -630,33 +626,17 @@ class _ExerciseCard extends StatelessWidget {
   const _ExerciseCard({
     required this.exercise,
     this.info,
-    required this.onRemove,
     required this.onRemoveSet,
-    required this.onAddVideo,
     required this.collapsed,
     required this.onToggleCollapsed,
     this.menu,
     this.restHint,
     required this.onAddSet,
-    required this.onOpenHistory,
     required this.onSetChanged,
     required this.onStartSetTimer,
     required this.onToggleSetMode,
     this.dragHandle,
   });
-
-  String get _description => (info?.description ?? '').isNotEmpty
-      ? info!.description
-      : exercise.description;
-  List<String> get _videoUrls => info?.videoUrls ?? const [];
-
-  void _showDescription(BuildContext context) => showInfoSheet(
-    context,
-    title: exercise.name,
-    description: _description,
-    videoUrls: _videoUrls,
-    onAddVideo: onAddVideo,
-  );
 
   String _fmtKg(double kg) =>
       kg % 1 == 0 ? kg.toInt().toString() : kg.toString();
@@ -716,34 +696,6 @@ class _ExerciseCard extends StatelessWidget {
                   ),
                 ),
               ),
-              InkWell(
-                onTap: onOpenHistory,
-                borderRadius: BorderRadius.circular(99),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(
-                    Icons.show_chart,
-                    size: 16,
-                    color: AppColor.inkFaint,
-                  ),
-                ),
-              ),
-              InkWell(
-                onTap: () => _showDescription(context),
-                borderRadius: BorderRadius.circular(99),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(
-                    _videoUrls.isNotEmpty
-                        ? Icons.play_circle_outline
-                        : Icons.info_outline,
-                    size: 16,
-                    color: _videoUrls.isNotEmpty
-                        ? AppColor.ice
-                        : AppColor.inkFaint,
-                  ),
-                ),
-              ),
               Text(
                 '$done/${exercise.sets.length}',
                 style: AppText.caption.copyWith(
@@ -753,23 +705,6 @@ class _ExerciseCard extends StatelessWidget {
                 ),
               ),
               ?menu,
-              InkWell(
-                onTap: onRemove,
-                borderRadius: BorderRadius.circular(7),
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: AppColor.surfaceHigh,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 14,
-                    color: AppColor.inkFaint,
-                  ),
-                ),
-              ),
             ],
           ),
           if (!collapsed) ...[
@@ -1230,27 +1165,6 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-class _AddExerciseCard extends StatelessWidget {
-  final TextEditingController query;
-  final List<Exercise> customExercises;
-  final ValueChanged<String> onPick;
-  final VoidCallback onCancel;
-  const _AddExerciseCard({
-    required this.query,
-    required this.customExercises,
-    required this.onPick,
-    required this.onCancel,
-  });
-
-  @override
-  Widget build(BuildContext context) => ExercisePicker(
-    query: query,
-    customExercises: customExercises,
-    onPick: onPick,
-    onCancel: onCancel,
-  );
-}
-
 /// Grote aftelling van een tijd-set (bv. plank): eerst "Maak je klaar",
 /// daarna de tijd van de oefening zelf.
 class _TimedSetBanner extends StatelessWidget {
@@ -1480,42 +1394,58 @@ class _CircuitCardState extends State<_CircuitCard> {
           Row(
             children: [
               Expanded(child: Text(c.name, style: AppText.cardTitle)),
-              if (c.description.isNotEmpty || c.videoUrls.isNotEmpty)
-                InkWell(
-                  onTap: () => showInfoSheet(
-                    context,
-                    title: c.name,
-                    description: c.description,
-                    videoUrls: c.videoUrls,
-                  ),
-                  borderRadius: BorderRadius.circular(99),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: AppColor.inkFaint,
+              IconButton(
+                tooltip: 'Acties',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.more_vert, color: AppColor.inkFaint),
+                onPressed: () async {
+                  final canRemove = !lc.isRunning && widget.onRemove != null;
+                  final action = await showModalBottomSheet<String>(
+                    context: context,
+                    builder: (sc) => SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+                            child: Text(c.name, style: AppText.cardTitle),
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.info_outline),
+                            title: const Text("Uitleg en video's"),
+                            onTap: () => Navigator.pop(sc, 'info'),
+                          ),
+                          if (canRemove)
+                            ListTile(
+                              leading: const Icon(
+                                Icons.delete_outline,
+                                color: AppColor.redBright,
+                              ),
+                              title: const Text(
+                                'Verwijderen',
+                                style: TextStyle(color: AppColor.redBright),
+                              ),
+                              onTap: () => Navigator.pop(sc, 'remove'),
+                            ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              if (!lc.isRunning && widget.onRemove != null)
-                InkWell(
-                  onTap: widget.onRemove,
-                  borderRadius: BorderRadius.circular(7),
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: .06),
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 14,
-                      color: AppColor.inkFaint,
-                    ),
-                  ),
-                ),
+                  );
+                  if (!context.mounted) return;
+                  if (action == 'info') {
+                    showInfoSheet(
+                      context,
+                      title: c.name,
+                      description: c.description,
+                      videoUrls: c.videoUrls,
+                    );
+                  } else if (action == 'remove') {
+                    widget.onRemove?.call();
+                  }
+                },
+              ),
             ],
           ),
           const SizedBox(height: 4),

@@ -5,6 +5,7 @@
 // gewoon doorlopen terwijl MatModeScreen niet gemount is.
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/app_profile.dart';
@@ -40,6 +41,7 @@ class MatSessionController extends ChangeNotifier
     DateTime? pauseStartedAt,
     List<GlucosePoint> restoredSeries = const [],
     List<NutritionEntry> restoredNutrition = const [],
+    this.plannedTechniqueIds = const {},
   }) {
     blocks = List<TechniqueEntry>.from(planned);
     for (final b in blocks) {
@@ -111,6 +113,25 @@ class MatSessionController extends ChangeNotifier
   int focusIndex = 0;
   bool adding = false;
   List<Technique> knownTechniques = [];
+
+  /// Technieken die bij de geplande training horen (agenda) — staan bovenaan
+  /// "vandaag op de planning".
+  final Set<String> plannedTechniqueIds;
+
+  /// Voor focus zetten tijdens de training (null zonder verbinding).
+  TechniqueRepository? get techniqueRepository {
+    final client = appController.client;
+    return client == null ? null : TechniqueRepository(client);
+  }
+
+  /// Een catalogus-techniek bijwerken (bv. na het zetten van focus).
+  void replaceKnownTechnique(Technique next) {
+    knownTechniques = [
+      for (final t in knownTechniques) t.id == next.id ? next : t,
+    ];
+    notifyListeners();
+  }
+
   List<Combination> knownCombinations = [];
   List<ManualGlucoseEntry> fingerEntries = [];
   final List<NutritionEntry> nutrition = [];
@@ -224,9 +245,8 @@ class MatSessionController extends ChangeNotifier
     final client = appController.client;
     if (userId == null || client == null) return;
     try {
-      final entries = await GlucoseEntryRepository(
-        client,
-      ).recentForUser(userId);
+      final entries = await GlucoseEntryRepository(client)
+          .recentForUser(userId);
       fingerEntries = entries;
       notifyListeners();
     } catch (_) {
@@ -243,9 +263,8 @@ class MatSessionController extends ChangeNotifier
     final client = appController.client;
     if (userId == null || client == null) return;
     try {
-      final entry = await GlucoseEntryRepository(
-        client,
-      ).create(userId, value, now);
+      final entry = await GlucoseEntryRepository(client)
+          .create(userId, value, now);
       fingerEntries = [entry, ...fingerEntries].take(5).toList();
       notifyListeners();
     } catch (_) {
@@ -417,19 +436,32 @@ class MatSessionController extends ChangeNotifier
   /// [newIndex] zijn indices binnen de subset van technieken, zoals
   /// ReorderableListView.onReorderItem ze doorgeeft (newIndex is al
   /// gecorrigeerd voor het verwijderde item op oldIndex).
-  void reorderTechnique(int oldIndex, int newIndex) {
-    final techIdx = [
+  void reorderTechnique(int oldIndex, int newIndex) =>
+      _reorderWithin((b) => b.kind == BlockKind.technique, oldIndex, newIndex);
+
+  /// Warming-up en sparren onderling verslepen.
+  void reorderOther(int oldIndex, int newIndex) =>
+      _reorderWithin((b) => b.kind != BlockKind.technique, oldIndex, newIndex);
+
+  /// Verplaatst binnen de blokken die aan [test] voldoen ([oldIndex] en
+  /// [newIndex] tellen alleen die blokken).
+  void _reorderWithin(
+    bool Function(TechniqueEntry) test,
+    int oldIndex,
+    int newIndex,
+  ) {
+    final idx = [
       for (var i = 0; i < blocks.length; i++)
-        if (blocks[i].kind == BlockKind.technique) i,
+        if (test(blocks[i])) i,
     ];
-    final moved = blocks.removeAt(techIdx[oldIndex]);
-    final techIdxAfter = [
+    final moved = blocks.removeAt(idx[oldIndex]);
+    final after = [
       for (var i = 0; i < blocks.length; i++)
-        if (blocks[i].kind == BlockKind.technique) i,
+        if (test(blocks[i])) i,
     ];
-    final target = newIndex >= techIdxAfter.length
-        ? blocks.length
-        : techIdxAfter[newIndex];
+    final target = newIndex >= after.length
+        ? (after.isEmpty ? blocks.length : after.last + 1)
+        : after[newIndex];
     blocks.insert(target, moved);
     notifyListeners();
   }
@@ -493,10 +525,14 @@ class MatSessionController extends ChangeNotifier
     provider: provider,
     planned: [
       for (final b in (json['blocks'] as List? ?? const []))
-        TechniqueEntry.fromBlock(SessionBlock.fromJson(b as Map<String, dynamic>)),
+        TechniqueEntry.fromBlock(
+          SessionBlock.fromJson(b as Map<String, dynamic>),
+        ),
     ],
     startedAt: DateTime.parse(json['startedAt'] as String).toLocal(),
-    pausedAccum: Duration(milliseconds: (json['pausedAccumMs'] as num?)?.toInt() ?? 0),
+    pausedAccum: Duration(
+      milliseconds: (json['pausedAccumMs'] as num?)?.toInt() ?? 0,
+    ),
     pauseStartedAt: json['pauseStartedAt'] == null
         ? null
         : DateTime.parse(json['pauseStartedAt'] as String).toLocal(),
@@ -571,11 +607,15 @@ class MatSessionController extends ChangeNotifier
           ),
         );
       }
-      // "Oefenen bij de eerstvolgende training": die training is nu geweest.
+      // Focus telt af — alleen voor technieken die je in déze training
+      // echt hebt geoefend (vroeger werd álle focus gewist).
       try {
-        await techniqueRepo.clearPracticeNext([
+        final practiced = {
+          for (final n in coveredTechniqueNames) n.trim().toLowerCase(),
+        };
+        await techniqueRepo.consumeFocus([
           for (final t in knownTechniques)
-            if (t.practiceNext) t.id,
+            if (practiced.contains(t.name.trim().toLowerCase())) t,
         ]);
       } catch (_) {
         // Niet erg: dan staat hij er de volgende keer nog.

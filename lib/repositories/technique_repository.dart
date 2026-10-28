@@ -57,22 +57,49 @@ class TechniqueRepository {
     return Technique.fromJson(row);
   }
 
-  /// Zet of wist "oefenen bij de eerstvolgende training".
-  Future<void> setPracticeNext(String id, bool value) async {
+  /// Zet de focus (of wist hem met [FocusMode.none]). practice_next volgt
+  /// mee, voor andere apps die alleen dat veld kennen.
+  Future<void> setFocus(
+    String id,
+    FocusMode mode, {
+    int? trainingsLeft,
+    DateTime? until,
+  }) async {
     await _client
         .from('techniques')
-        .update({'practice_next': value})
+        .update({
+          'focus_mode': mode.name,
+          'focus_trainings_left': mode == FocusMode.count
+              ? trainingsLeft
+              : null,
+          'focus_until': mode == FocusMode.until
+              ? until?.toUtc().toIso8601String()
+              : null,
+          'focus_started_at': mode == FocusMode.none
+              ? null
+              : DateTime.now().toUtc().toIso8601String(),
+          'practice_next': mode != FocusMode.none,
+        })
         .eq('id', id);
   }
 
-  /// Wist "oefenen bij de eerstvolgende training" voor deze technieken
-  /// (na een opgeslagen training).
-  Future<void> clearPracticeNext(List<String> ids) async {
-    if (ids.isEmpty) return;
-    await _client
-        .from('techniques')
-        .update({'practice_next': false})
-        .inFilter('id', ids);
+  /// Na een opgeslagen training: alleen de technieken die je écht oefende
+  /// tellen af (eerstvolgende → klaar, aantal → één minder).
+  Future<void> consumeFocus(List<Technique> practiced) async {
+    for (final t in practiced) {
+      if (t.focusMode == FocusMode.none || t.focusMode == FocusMode.until) {
+        continue;
+      }
+      final after = t.focusAfterTraining();
+      await _client
+          .from('techniques')
+          .update({
+            'focus_mode': after.mode.name,
+            'focus_trainings_left': after.left,
+            'practice_next': after.mode != FocusMode.none,
+          })
+          .eq('id', t.id);
+    }
   }
 
   Future<void> delete(String id) async {

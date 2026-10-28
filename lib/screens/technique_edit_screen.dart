@@ -97,9 +97,8 @@ class _TechniqueEditScreenState extends State<TechniqueEditScreen> {
     if (url.isEmpty) return;
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasScheme) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Ongeldige videolink.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Ongeldige videolink.')));
       return;
     }
     setState(() {
@@ -204,12 +203,11 @@ class _TechniqueEditScreenState extends State<TechniqueEditScreen> {
     }
     setState(() => _busy = true);
     final transition = (_van != null && _naar != null) ? '$_van -> $_naar' : '';
-    // Alleen relevant bij categorie Submission — anders niet bewaren, zodat
-    // er geen verweesde waarden achterblijven nadat de categorie is
-    // gewijzigd.
-    final groundPositions = _category == 'Submission'
-        ? _groundPositions
-        : <String>[];
+    // Bij elke categorie behalve Takedown (staand, geen grondposities): ook
+    // een sweep of overgang kun je vanuit vaste posities oefenen.
+    final groundPositions = _category == 'Takedown'
+        ? <String>[]
+        : _groundPositions;
     try {
       final Technique saved;
       if (_isNew) {
@@ -376,7 +374,7 @@ class _TechniqueEditScreenState extends State<TechniqueEditScreen> {
                     ),
                 ],
               ),
-              if (_category == 'Submission') ...[
+              if (_category != 'Takedown') ...[
                 const SizedBox(height: 14),
                 Text(
                   'Vanuit welke positie(s) (optioneel)',
@@ -446,7 +444,8 @@ class _TechniqueEditScreenState extends State<TechniqueEditScreen> {
                   options: kAllNodes,
                   selected: _naar,
                   disabled: _van,
-                  onSelect: (p) => setState(() => _naar = _naar == p ? null : p),
+                  onSelect: (p) =>
+                      setState(() => _naar = _naar == p ? null : p),
                 ),
               ],
               const SizedBox(height: 20),

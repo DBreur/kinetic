@@ -91,4 +91,45 @@ void main() {
       contains('afspelen'),
     );
   });
+
+  group('volgorde en sorteren', () {
+    SpotifyPlaylistResult pl(String id) =>
+        SpotifyPlaylistResult(uri: 'p:$id', name: id, owner: '', tracks: 0);
+
+    test('opgeslagen volgorde; nieuwe playlists achteraan', () {
+      final ordered = applyPlaylistOrder(
+        [pl('a'), pl('b'), pl('c'), pl('d')],
+        ['p:c', 'p:a', 'p:weg'],
+      );
+      expect([for (final p in ordered) p.name], ['c', 'a', 'b', 'd']);
+    });
+
+    const tracks = [
+      SpotifyTrackResult(uri: 't1', name: 'Zebra', artists: 'B'),
+      SpotifyTrackResult(uri: 't2', name: 'alpha', artists: 'C'),
+      SpotifyTrackResult(uri: 't3', name: 'Mango', artists: 'A'),
+    ];
+
+    test('titel en artiest, met de echte positie erbij', () {
+      final byTitle = sortTracks(tracks, TrackSort.title);
+      expect([for (final e in byTitle) e.$2.name], ['alpha', 'Mango', 'Zebra']);
+      expect(byTitle.first.$1, 1, reason: 'alpha stond op plek 1');
+      final byArtist = sortTracks(tracks, TrackSort.artist);
+      expect([for (final e in byArtist) e.$2.artists], ['A', 'B', 'C']);
+    });
+
+    test('recent toegevoegd: nieuwste eerst', () {
+      final dated = [
+        tracks[0].withAddedAt(DateTime(2026, 1, 1)),
+        tracks[1].withAddedAt(DateTime(2026, 6, 1)),
+        tracks[2],
+      ];
+      final recent = sortTracks(dated, TrackSort.recent);
+      expect([for (final e in recent) e.$2.uri], ['t2', 't1', 't3']);
+      expect(
+        [for (final e in sortTracks(dated, TrackSort.custom)) e.$1],
+        [0, 1, 2],
+      );
+    });
+  });
 }

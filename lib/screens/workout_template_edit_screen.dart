@@ -94,7 +94,6 @@ class _TemplateEditExercise implements BlockMember {
 class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
   late final TextEditingController _name;
   late List<_TemplateEditExercise> _exercises;
-  bool _adding = false;
   bool _busy = false;
   final _query = TextEditingController();
   final _scroll = ScrollController();
@@ -356,6 +355,13 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
 
   void _onBlockAction(int ei, ExerciseBlockAction action) {
     switch (action) {
+      case ExerciseBlockAction.info:
+        _showExerciseInfo(_exercises[ei].name);
+      case ExerciseBlockAction.remove:
+        setState(() {
+          _exercises.removeAt(ei);
+          normalizeBlocksIn(_exercises);
+        });
       case ExerciseBlockAction.link:
         setState(() => linkWithPreviousIn(_exercises, ei));
       case ExerciseBlockAction.unlink:
@@ -566,14 +572,13 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                             info: blocks[ei],
                             child: _TemplateExerciseCard(
                               exercise: _exercises[ei],
-                              hasVideos:
-                                  _known(_exercises[ei].name)
-                                      ?.videoUrls
-                                      .isNotEmpty ??
-                                  false,
-                              onInfo: () =>
-                                  _showExerciseInfo(_exercises[ei].name),
                               menu: ExerciseBlockMenu(
+                                title: _exercises[ei].name,
+                                hasVideos:
+                                    _known(_exercises[ei].name)
+                                        ?.videoUrls
+                                        .isNotEmpty ??
+                                    false,
                                 canLink: ei > 0,
                                 inBlock: blocks[ei].inBlock,
                                 onSelected: (a) => _onBlockAction(ei, a),
@@ -584,10 +589,6 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                                   ? null
                                   : '${formatRest(_exercises[ei].restSeconds!)} '
                                         'rust na elke set',
-                              onRemove: () => setState(() {
-                                _exercises.removeAt(ei);
-                                normalizeBlocksIn(_exercises);
-                              }),
                               onAddSet: () => setState(
                                 () => _exercises[ei].sets.add(
                                   _exercises[ei].sets.isEmpty
@@ -618,33 +619,25 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
                       ),
                   ],
                 ),
-              if (_adding)
-                _AddTemplateExerciseInline(
-                  query: _query,
-                  customExercises: _knownExercises,
-                  onPick: (name) => setState(() {
-                    _exercises.add(
+              AddBlockButton(
+                label: 'Oefening toevoegen',
+                onTap: () async {
+                  final name = await showExercisePickerScreen(
+                    context,
+                    customExercises: _knownExercises,
+                  );
+                  if (name == null || !mounted) return;
+                  setState(
+                    () => _exercises.add(
                       _TemplateEditExercise(
                         name: name,
                         sets: [_TemplateEditSet()],
                       ),
-                    );
-                    _adding = false;
-                    _query.clear();
-                  }),
-                  onCancel: () => setState(() {
-                    _adding = false;
-                    _query.clear();
-                  }),
-                )
-              else
-                AddBlockButton(
-                  label: 'Oefening toevoegen',
-                  onTap: () {
-                    setState(() => _adding = true);
-                    _scrollToBottom();
-                  },
-                ),
+                    ),
+                  );
+                  _scrollToBottom();
+                },
+              ),
               const SizedBox(height: 22),
               Text('CIRCUITS', style: AppText.overline),
               const SizedBox(height: 10),
@@ -725,23 +718,17 @@ class _WorkoutTemplateEditScreenState extends State<WorkoutTemplateEditScreen> {
 class _TemplateExerciseCard extends StatelessWidget {
   const _TemplateExerciseCard({
     required this.exercise,
-    required this.onRemove,
     required this.onAddSet,
     required this.onRemoveSet,
     required this.onSetChanged,
     this.dragHandle,
     this.menu,
     this.restHint,
-    this.onInfo,
-    this.hasVideos = false,
   });
 
   final _TemplateEditExercise exercise;
   final Widget? menu;
-  final VoidCallback? onInfo;
-  final bool hasVideos;
   final String? restHint;
-  final VoidCallback onRemove;
   final VoidCallback onAddSet;
   final ValueChanged<int> onRemoveSet;
   final void Function(int setIndex, void Function(_TemplateEditSet) patch)
@@ -898,39 +885,7 @@ class _TemplateExerciseCard extends StatelessWidget {
             children: [
               ?dragHandle,
               Expanded(child: Text(exercise.name, style: AppText.cardTitle)),
-              if (onInfo != null)
-                InkWell(
-                  onTap: onInfo,
-                  borderRadius: BorderRadius.circular(99),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Icon(
-                      hasVideos
-                          ? Icons.play_circle_outline
-                          : Icons.info_outline,
-                      size: 16,
-                      color: hasVideos ? AppColor.ice : AppColor.inkFaint,
-                    ),
-                  ),
-                ),
               ?menu,
-              InkWell(
-                onTap: onRemove,
-                borderRadius: BorderRadius.circular(7),
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .06),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 14,
-                    color: AppColor.inkFaint,
-                  ),
-                ),
-              ),
             ],
           ),
           if (restHint != null) ...[
@@ -1082,24 +1037,3 @@ class _TemplateExerciseCard extends StatelessWidget {
   }
 }
 
-class _AddTemplateExerciseInline extends StatelessWidget {
-  const _AddTemplateExerciseInline({
-    required this.query,
-    required this.customExercises,
-    required this.onPick,
-    required this.onCancel,
-  });
-
-  final TextEditingController query;
-  final List<Exercise> customExercises;
-  final ValueChanged<String> onPick;
-  final VoidCallback onCancel;
-
-  @override
-  Widget build(BuildContext context) => ExercisePicker(
-    query: query,
-    customExercises: customExercises,
-    onPick: onPick,
-    onCancel: onCancel,
-  );
-}

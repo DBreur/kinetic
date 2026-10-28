@@ -25,12 +25,25 @@ class SpotifyTrackResult {
   final String name;
   final String artists;
   final String? imageUrl;
+
+  /// Wanneer het nummer aan de playlist (of je gelikte nummers) is
+  /// toegevoegd — voor "Recent toegevoegd".
+  final DateTime? addedAt;
   const SpotifyTrackResult({
     required this.uri,
     required this.name,
     required this.artists,
     this.imageUrl,
+    this.addedAt,
   });
+
+  SpotifyTrackResult withAddedAt(DateTime? at) => SpotifyTrackResult(
+    uri: uri,
+    name: name,
+    artists: artists,
+    imageUrl: imageUrl,
+    addedAt: at,
+  );
 
   /// Null voor iets dat geen nummer is (bv. een lege plek in de lijst).
   static SpotifyTrackResult? tryFromJson(Object? json) =>
@@ -423,7 +436,14 @@ class SpotifyService extends ChangeNotifier {
           final track = SpotifyTrackResult.tryFromJson(
             item['item'] ?? item['track'],
           );
-          if (track != null) result.add(track);
+          if (track != null) {
+            final added = item['added_at'];
+            result.add(
+              track.withAddedAt(
+                added is String ? DateTime.tryParse(added) : null,
+              ),
+            );
+          }
         }
       }
       offset += items.length;
@@ -545,6 +565,50 @@ class SpotifyService extends ChangeNotifier {
     );
   }
 
+  // ── Eigen volgorde van de playlists en sortering per playlist ──
+  static const _orderKey = 'spotify_playlist_order';
+  static const _sortKeyPrefix = 'spotify_track_sort_';
+
+  Future<List<String>> playlistOrder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getStringList(_orderKey) ?? const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> setPlaylistOrder(List<String> uris) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_orderKey, uris);
+    } catch (_) {
+      // Niet bewaard; blijft voor deze sessie staan.
+    }
+  }
+
+  Future<TrackSort> trackSort(String playlistUri) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final name = prefs.getString('$_sortKeyPrefix$playlistUri');
+      return TrackSort.values.firstWhere(
+        (v) => v.name == name,
+        orElse: () => TrackSort.custom,
+      );
+    } catch (_) {
+      return TrackSort.custom;
+    }
+  }
+
+  Future<void> setTrackSort(String playlistUri, TrackSort sort) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_sortKeyPrefix$playlistUri', sort.name);
+    } catch (_) {
+      // Niet bewaard.
+    }
+  }
+
   // ── Vastgepinde playlists (op deze telefoon) ──
   static const _pinnedKey = 'spotify_pinned_playlists';
 
@@ -572,4 +636,60 @@ class SpotifyService extends ChangeNotifier {
     final items = (body['items'] as List?) ?? const [];
     return [for (final item in items) ?SpotifyPlaylistResult.tryFromJson(item)];
   }
+}
+
+/// Volgorde van de nummers in een geopende playlist, zoals in Spotify.
+enum TrackSort {
+  custom('Eigen volgorde'),
+  title('Titel'),
+  artist('Artiest'),
+  recent('Recent toegevoegd');
+
+  const TrackSort(this.label);
+  final String label;
+}
+
+/// Sorteert [tracks] volgens [sort], met hun oorspronkelijke positie erbij
+/// (die is nodig om vanaf dat nummer in de playlist af te spelen).
+List<(int, SpotifyTrackResult)> sortTracks(
+  List<SpotifyTrackResult> tracks,
+  TrackSort sort,
+) {
+  final indexed = [for (var i = 0; i < tracks.length; i++) (i, tracks[i])];
+  int text(String a, String b) => a.toLowerCase().compareTo(b.toLowerCase());
+  switch (sort) {
+    case TrackSort.custom:
+      break;
+    case TrackSort.title:
+      indexed.sort((a, b) => text(a.$2.name, b.$2.name));
+    case TrackSort.artist:
+      indexed.sort((a, b) {
+        final c = text(a.$2.artists, b.$2.artists);
+        return c != 0 ? c : text(a.$2.name, b.$2.name);
+      });
+    case TrackSort.recent:
+      final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+      indexed.sort(
+        (a, b) => (b.$2.addedAt ?? epoch).compareTo(a.$2.addedAt ?? epoch),
+      );
+  }
+  return indexed;
+}
+
+/// Zet [items] in de opgeslagen volgorde [order] (URI's); wat daar niet in
+/// staat (nieuwe playlists) komt achteraan, in de volgorde van Spotify.
+List<SpotifyPlaylistResult> applyPlaylistOrder(
+  List<SpotifyPlaylistResult> items,
+  List<String> order,
+) {
+  final rank = {for (var i = 0; i < order.length; i++) order[i]: i};
+  final known = [
+    for (final p in items)
+      if (rank.containsKey(p.uri)) p,
+  ]..sort((a, b) => rank[a.uri]!.compareTo(rank[b.uri]!));
+  return [
+    ...known,
+    for (final p in items)
+      if (!rank.containsKey(p.uri)) p,
+  ];
 }

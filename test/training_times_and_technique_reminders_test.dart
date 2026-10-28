@@ -176,6 +176,7 @@ void main() {
       'practice_next': true,
     });
     expect(t.practiceNext, isTrue);
-    expect(t.copyWith(practiceNext: false).practiceNext, isFalse);
+    // practiceNext volgt nu de focus; focus uit = niet meer "eerstvolgende".
+    expect(t.copyWith(focusMode: FocusMode.none).practiceNext, isFalse);
   });
 }
