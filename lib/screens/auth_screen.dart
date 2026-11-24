@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
+// auth_screen.dart: inloggen/registreren met Supabase Auth.
 
-import '../state/app_controller.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../core/auth_validation.dart';
 import '../theme/kinetic_theme.dart';
-import '../widgets/kinetic.dart';
+import '../widgets/kinetic_widgets.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key, required this.controller});
-
-  final AppController controller;
+  const AuthScreen({super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -17,13 +17,8 @@ class _AuthScreenState extends State<AuthScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _register = false;
-
-  /// Uitleg na registreren (geen fout): bv. "check je mail".
+  String? _localError;
   String? _info;
-
-  /// E-mailadres dat nog bevestigd moet worden — dan tonen we "opnieuw
-  /// sturen".
-  String? _awaitingConfirm;
 
   @override
   void dispose() {
@@ -33,213 +28,108 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
-    final email = _email.text.trim();
-    setState(() => _info = null);
+    final store = KineticScope.read(context);
+    final error = validateCredentials(_email.text, _password.text, register: _register);
+    setState(() {
+      _localError = error;
+      _info = null;
+    });
+    if (error != null) return;
     if (_register) {
-      final outcome = await widget.controller.register(email, _password.text);
+      final signedIn = await store.register(_email.text, _password.text);
       if (!mounted) return;
-      setState(() {
-        switch (outcome) {
-          case RegisterOutcome.confirmEmail:
-            _register = false;
-            _awaitingConfirm = email;
-            _info =
-                'Je account is aangemaakt. We hebben een bevestigingsmail '
-                'gestuurd naar $email — klik op de link in die mail (kijk '
-                'ook in je spam) en log daarna hier in.';
-          case RegisterOutcome.alreadyExists:
-            _register = false;
-            _info =
-                'Er bestaat al een account met $email. Log in, of gebruik '
-                '"Wachtwoord vergeten".';
-          case RegisterOutcome.signedIn || RegisterOutcome.failed:
-            break;
-        }
-      });
-    } else {
-      await widget.controller.signIn(email, _password.text);
-      if (!mounted) return;
-      // Nog niet bevestigd? Dan meteen de knop om de mail opnieuw te sturen.
-      final error = widget.controller.authError ?? '';
-      if (error.startsWith('Bevestig eerst')) {
-        setState(() => _awaitingConfirm = email);
+      if (signedIn == false) {
+        setState(() => _info = 'Check je mail en klik op de bevestigingslink. Log daarna hier in.');
       }
+    } else {
+      await store.signIn(_email.text, _password.text);
     }
   }
 
-  Future<void> _resend() async {
-    final email = _awaitingConfirm;
-    if (email == null) return;
-    final ok = await widget.controller.resendConfirmation(email);
-    if (!mounted || !ok) return;
-    setState(
-      () => _info =
-          'Nieuwe bevestigingsmail verstuurd naar $email. Klik op de link en '
-          'log daarna in.',
-    );
-  }
-
-  Future<void> _reset() async {
+  Future<void> _forgot() async {
+    final store = KineticScope.read(context);
     if (_email.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vul eerst je e-mailadres in.')),
-      );
+      setState(() => _localError = 'Vul eerst je e-mailadres in.');
       return;
     }
-    await widget.controller.resetPassword(_email.text.trim());
-    if (!mounted || widget.controller.authError != null) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Reset-link verstuurd als dit account bestaat.'),
-      ),
-    );
+    final ok = await store.resetPassword(_email.text);
+    if (!mounted) return;
+    setState(() => _info = ok ? 'Als dit adres bestaat, staat er een resetlink in je mail.' : null);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        final error = widget.controller.authError;
-        return Scaffold(
-          backgroundColor: AppColor.bg,
-          body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-              children: [
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: KLogo(size: 56),
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  'KINETIC',
-                  style: AppText.display.copyWith(fontSize: 40, letterSpacing: 2),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _register
-                      ? 'Maak je account aan. Daarna verschijnt onboarding precies één keer.'
-                      : 'Log in om je glucose, instellingen en trainingen te laden.',
-                  style: AppText.body.copyWith(
-                    color: AppColor.inkMuted,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 30),
-                _Field(
-                  controller: _email,
-                  label: 'E-mail',
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                _Field(
-                  controller: _password,
-                  label: 'Wachtwoord',
-                  obscureText: true,
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    error,
-                    style: AppText.caption.copyWith(color: AppColor.redBright),
-                  ),
-                ],
-                if (_info != null && error == null) ...[
-                  const SizedBox(height: 14),
+    final store = KineticScope.of(context);
+    final error = _localError ?? store.authError;
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 64,
+                    height: 64,
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColor.greenWash,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      color: KColor.teal.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(KRadius.lg),
+                      border: Border.all(color: KColor.teal),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.mark_email_unread_outlined,
-                          size: 18,
-                          color: AppColor.ice,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(_info!, style: AppText.body),
-                        ),
-                      ],
-                    ),
+                    child: const Icon(Icons.bolt, color: KColor.teal, size: 36),
                   ),
-                ],
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: widget.controller.busy ? null : _submit,
-                  child: widget.controller.busy
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(_register ? 'Account maken' : 'Inloggen'),
-                ),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: widget.controller.busy
-                      ? null
-                      : () => setState(() {
-                          _register = !_register;
-                          _info = null;
-                        }),
-                  child: Text(
-                    _register
-                        ? 'Ik heb al een account'
-                        : 'Nieuw account aanmaken',
+                  const SizedBox(height: 20),
+                  Text('Kinetic', style: KText.display.copyWith(fontSize: 34)),
+                  const SizedBox(height: 6),
+                  Text('Combat sports • atletische telemetrie • T1D/CGM', style: KText.caption),
+                  const SizedBox(height: 28),
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    style: KText.body,
+                    decoration: const InputDecoration(labelText: 'E-mail'),
                   ),
-                ),
-                if (_awaitingConfirm != null && !_register)
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    autofillHints: [_register ? AutofillHints.newPassword : AutofillHints.password],
+                    style: KText.body,
+                    onSubmitted: (_) => _submit(),
+                    decoration: const InputDecoration(labelText: 'Wachtwoord'),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(error, style: KText.caption.copyWith(color: KColor.danger)),
+                  ],
+                  if (_info != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_info!, style: KText.caption.copyWith(color: KColor.tealLight)),
+                  ],
+                  const SizedBox(height: 20),
+                  BigButton(
+                    label: store.busy ? 'Even geduld…' : (_register ? 'Account aanmaken' : 'Inloggen'),
+                    onPressed: store.busy ? null : _submit,
+                  ),
+                  const SizedBox(height: 8),
                   TextButton(
-                    onPressed: widget.controller.busy ? null : _resend,
-                    child: const Text('Bevestigingsmail opnieuw sturen'),
+                    onPressed: () => setState(() {
+                      _register = !_register;
+                      _localError = null;
+                      _info = null;
+                    }),
+                    child: Text(_register ? 'Ik heb al een account' : 'Nieuw account aanmaken'),
                   ),
-                TextButton(
-                  onPressed: widget.controller.busy ? null : _reset,
-                  child: const Text('Wachtwoord vergeten'),
-                ),
-              ],
+                  if (!_register) TextButton(onPressed: _forgot, child: const Text('Wachtwoord vergeten')),
+                ],
+              ),
             ),
           ),
-        );
-      },
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.controller,
-    required this.label,
-    this.obscureText = false,
-    this.keyboardType,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: AppText.body.copyWith(fontSize: 15),
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: AppColor.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: const BorderSide(color: AppColor.line),
         ),
       ),
     );

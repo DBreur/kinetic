@@ -1,406 +1,235 @@
-// kinetic_theme.dart
-//
-// Design tokens + ThemeData voor Kinetic ("Kinetic Sambo Metric", zie
-// design/stitch_sambo_diabetic_fitness_tracker/kinetic_sambo_metric/DESIGN.md).
-//
-// De namen in AppColor/AppText zijn bewust gelijk aan die van Uchivo, zodat
-// alle bestaande schermen meteen in de Kinetic-stijl renderen:
-//   green  = Electric Ice  — in bereik, stabiel, glucose, herstel
-//   teal   = Kinetic Pink  — techniek / training / belasting
-//   amber  = afwijking glucose (alleen glucose)
-//   red    = hypo-alarm (alleen hypo)
-// Nieuwe Kinetic-schermen gebruiken daarnaast de expliciete tokens
-// (coral, ice, slate, surfaceHigh, …).
+// kinetic_theme.dart: het Kinetic Dark Palette uit de spec, één-op-één als
+// Dart-constanten, plus de ThemeData en tekststijlen die alle schermen delen.
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
-class AppColor {
-  // Ondergronden — matte carbon, diepte via kleurstappen, geen schaduw.
-  static const bg = Color(0xFF10141A); // surface
-  static const bgDeep = Color(0xFF0A0E14); // surface-container-lowest
-  static const surface = Color(0xFF181C22); // surface-container-low (kaart)
-  static const surfaceRaised = Color(0xFF1C2026); // surface-container
-  static const surfaceMuted = Color(0xFF262A31); // surface-container-high
-  static const surfaceHigh = Color(0xFF262A31);
-  static const surfaceHighest = Color(0xFF31353C);
-  static const navBar = Color(0xFF0D1117);
+/// Design tokens (zie CLAUDE.md §3).
+abstract final class KColor {
+  // Achtergrond & surface (obsidian)
+  static const bg = Color(0xFF101419);
+  static const surface = Color(0xFF181C21);
+  static const surfaceContainer = Color(0xFF1E2329);
+  static const surfaceHigh = Color(0xFF262C33);
+  static const surfaceElevated = Color(0xFF2D333B);
 
-  // Lijnen — haarlijnen, spaarzaam.
-  static const line = Color(0x14FFFFFF);
-  static const lineSoft = Color(0x0DFFFFFF);
-  static const lineStrong = Color(0x24FFFFFF);
+  // Primary kinetic teal
+  static const teal = Color(0xFF14B8A6);
+  static const tealLight = Color(0xFF5EEAD4);
+  static const tealGlow = Color(0x4014B8A6); // rgba(20,184,166,0.25)
 
-  // Inkt
-  static const ink = Color(0xFFDFE2EB); // on-surface
-  static const inkMuted = Color(0xFFB9C8DE); // tertiary
-  static const inkFaint = Color(0xFF8392A6); // tertiary-container
-  static const inkGhost = Color(0xFF5A6577);
+  // Biometrische & status-alerts
+  static const warning = Color(0xFFF59E0B);
+  static const danger = Color(0xFFEF4444);
+  static const success = Color(0xFF10B981);
+  static const purple = Color(0xFFA855F7);
+  static const blue = Color(0xFF3B82F6);
 
-  // Kinetic-tokens
-  static const coral = Color(0xFFFF516A); // primary-container — kernactie
-  static const coralSoft = Color(0xFFFFB2B7); // primary
-  static const coralFixed = Color(0xFFFFDADB); // primary-fixed
-  static const coralInk = Color(0xFF40000D); // tekst op koraal/roze
-  static const coralWash = Color(0x33FF516A);
-  static const ice = Color(0xFF7BD0FF); // secondary
-  static const iceDeep = Color(0xFF00A6E0); // secondary-container
-  static const iceInk = Color(0xFF001E2C);
-  static const slate = Color(0xFFB9C8DE);
-  static const slateDim = Color(0xFF8392A6);
-
-  // Status — in bereik (Electric Ice)
-  static const green = iceDeep;
-  static const greenBright = ice;
-  static const greenInk = iceInk;
-  static const greenWash = Color(0x1A38BDF8); // 10% vulling
-  static const greenEdge = Color(0x5938BDF8); // 35% rand
-
-  // Secundair — techniek / training (Kinetic Pink)
-  static const teal = coralSoft;
-  static const tealBright = coralFixed;
-  static const tealWash = Color(0x1FFFB2B7);
-
-  // Waarschuwing — alleen glucose
-  static const amber = Color(0xFFF5B83D);
-  static const amberBright = Color(0xFFFFD27A);
-  static const amberInk = Color(0xFF2A1C05);
-  static const amberWash = Color(0x17F5B83D);
-
-  // Alarm — alleen hypo
-  static const red = Color(0xFFFF3B4E);
-  static const redBright = Color(0xFFFF8A95);
-  static const redGround = Color(0xFF2A0D12); // volledige alarm-sheet
+  // Typografie & randen
+  static const text = Color(0xFFF8FAFC);
+  static const textSecondary = Color(0xFF94A3B8);
+  static const textMuted = Color(0xFF64748B);
+  static const border = Color(0xFF262C33);
 }
 
-class AppRadius {
-  static const chip = 99.0; // statuspillen
-  static const sm = 4.0; // tags, inputvelden
-  static const md = 8.0; // knoppen, compacte rijen
-  static const lg = 8.0;
-  static const xl = 12.0; // standaard kaart
-  static const xxl = 12.0;
-  static const sheet = 16.0; // bottom sheet
-}
-
-class AppSpace {
-  static const xs = 4.0;
-  static const sm = 8.0;
+abstract final class KRadius {
   static const md = 12.0;
-  static const gutter = 16.0; // horizontale schermmarge
-  static const lg = 24.0;
-  static const xl = 40.0;
+  static const lg = 16.0;
+  static const full = 9999.0;
 }
 
-/// Typografie.
-///
-/// Space Grotesk = cijfers, koppen, alles wat je van een meter afleest.
-/// Geist = lopende tekst, labels en knoppen. Cijfers altijd tabulair.
-class AppText {
-  static const _tnum = [FontFeature.tabularFigures()];
+abstract final class KText {
+  static const family = 'Inter';
+  static const _tabular = [FontFeature.tabularFigures()];
 
-  /// Glucosewaarde op het dashboard.
-  static TextStyle get reading => GoogleFonts.spaceGrotesk(
-    fontSize: 56,
-    fontWeight: FontWeight.w700,
-    height: 1.0,
-    letterSpacing: -1.7,
-    color: AppColor.ink,
-    fontFeatures: _tnum,
-  );
-
-  /// Glucosewaarde in de alarm-sheet.
-  static TextStyle get readingAlarm => GoogleFonts.spaceGrotesk(
-    fontSize: 76,
-    fontWeight: FontWeight.w700,
-    height: 0.9,
-    letterSpacing: -2.5,
-    color: Colors.white,
-    fontFeatures: _tnum,
-  );
-
-  /// headline-lg-mobile
-  static TextStyle get display => GoogleFonts.spaceGrotesk(
-    fontSize: 30,
-    fontWeight: FontWeight.w600,
-    height: 1.2,
-    letterSpacing: -0.6,
-    color: AppColor.ink,
-  );
-
-  /// headline-md
-  static TextStyle get title => GoogleFonts.spaceGrotesk(
-    fontSize: 24,
-    fontWeight: FontWeight.w500,
-    height: 1.33,
-    letterSpacing: -0.24,
-    color: AppColor.ink,
-  );
-
-  /// headline-sm
-  static TextStyle get cardTitle => GoogleFonts.spaceGrotesk(
-    fontSize: 18,
-    fontWeight: FontWeight.w500,
-    height: 1.33,
-    color: AppColor.ink,
-  );
-
-  /// label-metric — grote meetwaarde in een tegel.
-  static TextStyle get metric => GoogleFonts.spaceGrotesk(
+  static const display = TextStyle(
+    fontFamily: family,
     fontSize: 28,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.6,
+    height: 1.1,
+    color: KColor.text,
+  );
+  static const title = TextStyle(
+    fontFamily: family,
+    fontSize: 18,
     fontWeight: FontWeight.w700,
-    height: 1.15,
-    letterSpacing: -0.28,
-    color: AppColor.ink,
-    fontFeatures: _tnum,
+    letterSpacing: -0.2,
+    color: KColor.text,
   );
-
-  static TextStyle get bodyLarge => GoogleFonts.geist(
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
-    height: 1.5,
-    color: AppColor.ink,
+  static const subtitle = TextStyle(
+    fontFamily: family,
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    color: KColor.text,
   );
-
-  /// body-md
-  static TextStyle get body => GoogleFonts.geist(
+  static const body = TextStyle(
+    fontFamily: family,
     fontSize: 14,
-    fontWeight: FontWeight.w400,
-    height: 1.43,
-    color: AppColor.ink,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+    color: KColor.text,
   );
-
-  static TextStyle get bodyStrong => GoogleFonts.geist(
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    height: 1.3,
-    color: AppColor.ink,
-  );
-
-  /// body-sm
-  static TextStyle get caption => GoogleFonts.geist(
+  static const caption = TextStyle(
+    fontFamily: family,
     fontSize: 12,
-    fontWeight: FontWeight.w400,
-    height: 1.33,
-    letterSpacing: 0.12,
-    color: AppColor.inkFaint,
-  );
-
-  /// label-mono: klein, hoofdletters, ruime letterafstand.
-  static TextStyle get overline => GoogleFonts.geist(
-    fontSize: 11,
     fontWeight: FontWeight.w500,
-    height: 1.27,
-    letterSpacing: 1.3,
-    color: AppColor.inkFaint,
-    fontFeatures: _tnum,
+    height: 1.35,
+    color: KColor.textSecondary,
   );
 
-  static TextStyle get button => GoogleFonts.spaceGrotesk(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    height: 1.0,
-    color: AppColor.coralInk,
-  );
-
-  static TextStyle get tab => GoogleFonts.geist(
+  /// Kleine uppercase-labels boven kaarten ("DEXCOM G7", "POLAR H10").
+  static const eyebrow = TextStyle(
+    fontFamily: family,
     fontSize: 11,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.2,
+    color: KColor.textMuted,
+  );
+  static const metric = TextStyle(
+    fontFamily: family,
+    fontSize: 30,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.8,
     height: 1.0,
+    color: KColor.text,
+    fontFeatures: _tabular,
+  );
+  static const metricSmall = TextStyle(
+    fontFamily: family,
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.4,
+    height: 1.0,
+    color: KColor.text,
+    fontFeatures: _tabular,
+  );
+
+  /// De grote rondetimer: leesbaar van een paar meter afstand op de mat.
+  static const timer = TextStyle(
+    fontFamily: family,
+    fontSize: 104,
+    fontWeight: FontWeight.w900,
+    letterSpacing: -4,
+    height: 1.0,
+    color: KColor.text,
+    fontFeatures: _tabular,
   );
 }
 
-class KineticTheme {
-  static ThemeData get dark {
-    final base = ThemeData.dark(useMaterial3: true);
-    const controlShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
-    );
-    return base.copyWith(
-      scaffoldBackgroundColor: AppColor.bg,
-      colorScheme: const ColorScheme.dark(
-        surface: AppColor.bg,
-        surfaceContainerLowest: AppColor.bgDeep,
-        surfaceContainerLow: AppColor.surface,
-        surfaceContainer: AppColor.surfaceRaised,
-        surfaceContainerHigh: AppColor.surfaceHigh,
-        surfaceContainerHighest: AppColor.surfaceHighest,
-        primary: AppColor.coral,
-        onPrimary: AppColor.coralInk,
-        secondary: AppColor.ice,
-        onSecondary: AppColor.iceInk,
-        tertiary: AppColor.slate,
-        error: AppColor.red,
-        onError: AppColor.redGround,
-        onSurface: AppColor.ink,
-        onSurfaceVariant: AppColor.inkMuted,
-        outline: AppColor.lineStrong,
-        outlineVariant: AppColor.line,
+ThemeData kineticTheme() {
+  const scheme = ColorScheme.dark(
+    primary: KColor.teal,
+    onPrimary: KColor.bg,
+    secondary: KColor.tealLight,
+    onSecondary: KColor.bg,
+    surface: KColor.surface,
+    onSurface: KColor.text,
+    surfaceContainerLowest: KColor.bg,
+    surfaceContainerLow: KColor.surface,
+    surfaceContainer: KColor.surfaceContainer,
+    surfaceContainerHigh: KColor.surfaceHigh,
+    surfaceContainerHighest: KColor.surfaceElevated,
+    error: KColor.danger,
+    onError: KColor.text,
+    outline: KColor.border,
+    outlineVariant: KColor.border,
+  );
+  final base = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorScheme: scheme,
+    fontFamily: KText.family,
+    scaffoldBackgroundColor: KColor.bg,
+    canvasColor: KColor.bg,
+    splashFactory: InkSparkle.splashFactory,
+  );
+  return base.copyWith(
+    appBarTheme: const AppBarTheme(
+      backgroundColor: KColor.bg,
+      foregroundColor: KColor.text,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      titleTextStyle: KText.title,
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Color(0x00000000),
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: KColor.surface,
       ),
-      textTheme: GoogleFonts.geistTextTheme(
-        base.textTheme,
-      ).apply(bodyColor: AppColor.ink, displayColor: AppColor.ink),
-      appBarTheme: AppBarTheme(
-        backgroundColor: AppColor.bg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleTextStyle: AppText.cardTitle,
-        foregroundColor: AppColor.ink,
+    ),
+    dividerTheme: const DividerThemeData(color: KColor.border, thickness: 1),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: KColor.surfaceElevated,
+      contentTextStyle: KText.body,
+      actionTextColor: KColor.tealLight,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(KRadius.md),
       ),
-      cardTheme: const CardThemeData(
-        color: AppColor.surface,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.xl)),
-        ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: KColor.surface,
+      modalBackgroundColor: KColor.surface,
+      showDragHandle: true,
+      dragHandleColor: KColor.surfaceElevated,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColor.coral,
-          foregroundColor: AppColor.coralInk,
-          disabledBackgroundColor: AppColor.surfaceHigh,
-          minimumSize: const Size.fromHeight(52), // >= 44 dp raakvlak
-          textStyle: AppText.button,
-          shape: controlShape,
-        ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: KColor.surfaceContainer,
+      titleTextStyle: KText.title,
+      contentTextStyle: KText.body,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(KRadius.lg),
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColor.ice,
-          backgroundColor: AppColor.surface,
-          minimumSize: const Size.fromHeight(50),
-          side: const BorderSide(color: AppColor.ice),
-          textStyle: AppText.bodyStrong,
-          shape: controlShape,
-        ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: KColor.surfaceContainer,
+      labelStyle: KText.caption,
+      hintStyle: KText.body.copyWith(color: KColor.textMuted),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KRadius.md),
+        borderSide: const BorderSide(color: KColor.border),
       ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColor.inkMuted,
-          textStyle: AppText.bodyStrong,
-          shape: controlShape,
-        ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KRadius.md),
+        borderSide: const BorderSide(color: KColor.border),
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColor.bgDeep,
-        labelStyle: AppText.body.copyWith(color: AppColor.inkFaint),
-        hintStyle: AppText.body.copyWith(color: AppColor.inkGhost),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
-          borderSide: BorderSide(color: AppColor.surfaceHighest),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
-          borderSide: BorderSide(color: AppColor.surfaceHighest),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
-          borderSide: BorderSide(color: AppColor.ice),
-        ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KRadius.md),
+        borderSide: const BorderSide(color: KColor.teal, width: 1.5),
       ),
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected)
-              ? AppColor.iceInk
-              : AppColor.inkFaint,
-        ),
-        trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected)
-              ? AppColor.ice
-              : AppColor.surfaceHighest,
-        ),
-        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? KColor.bg
+            : KColor.textSecondary,
       ),
-      sliderTheme: const SliderThemeData(
-        activeTrackColor: AppColor.coralSoft,
-        inactiveTrackColor: AppColor.surfaceHighest,
-        thumbColor: AppColor.coralSoft,
-        trackHeight: 4,
+      trackColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? KColor.teal
+            : KColor.surfaceHigh,
       ),
-      chipTheme: ChipThemeData(
-        backgroundColor: AppColor.surfaceRaised,
-        side: BorderSide.none,
-        labelStyle: AppText.body,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
-        ),
+      trackOutlineColor: WidgetStateProperty.all(const Color(0x00000000)),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? KColor.teal
+            : const Color(0x00000000),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColor.coral,
-        foregroundColor: AppColor.coralInk,
-        elevation: 0,
-        focusElevation: 0,
-        hoverElevation: 0,
-        highlightElevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.xl)),
-        ),
-      ),
-      dividerTheme: const DividerThemeData(
-        color: AppColor.line,
-        thickness: 1,
-        space: 1,
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColor.surfaceHighest,
-        contentTextStyle: AppText.body,
-        behavior: SnackBarBehavior.floating,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColor.navBar,
-        indicatorColor: Colors.transparent,
-        height: 72,
-        iconTheme: WidgetStateProperty.resolveWith(
-          (s) => IconThemeData(
-            size: 24,
-            color: s.contains(WidgetState.selected)
-                ? AppColor.coral
-                : AppColor.inkFaint,
-          ),
-        ),
-        labelTextStyle: WidgetStateProperty.resolveWith(
-          (s) => AppText.tab.copyWith(
-            color: s.contains(WidgetState.selected)
-                ? AppColor.coral
-                : AppColor.inkFaint,
-          ),
-        ),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColor.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppRadius.sheet),
-          ),
-        ),
-      ),
-      dialogTheme: const DialogThemeData(
-        backgroundColor: AppColor.surfaceRaised,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.xl)),
-        ),
-      ),
-    );
-  }
+      checkColor: WidgetStateProperty.all(KColor.bg),
+      side: const BorderSide(color: KColor.textMuted, width: 1.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: KColor.teal,
+      linearTrackColor: KColor.surfaceHigh,
+    ),
+  );
 }
-
-/// Hoort een waarde binnen bereik, aan de rand, of is het alarm?
-/// Eén functie zodat kleurkeuze nooit per scherm afwijkt.
-enum GlucoseState { low, warning, inRange, high }
-
-GlucoseState glucoseStateFor(double mmol) {
-  if (mmol < 3.9) return GlucoseState.low;
-  if (mmol < 5.0) return GlucoseState.warning;
-  if (mmol <= 10.0) return GlucoseState.inRange;
-  return GlucoseState.high;
-}
-
-Color glucoseColor(GlucoseState s) => switch (s) {
-  GlucoseState.low => AppColor.red,
-  GlucoseState.warning => AppColor.amber,
-  GlucoseState.inRange => AppColor.ice,
-  GlucoseState.high => AppColor.amber,
-};

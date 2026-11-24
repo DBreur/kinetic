@@ -1,342 +1,191 @@
-// technique.dart — een techniek die je los van een training kunt bijhouden:
-// naam, categorie en een logboek van updates (hoe ging het, wanneer).
+// technique.dart: een techniek uit de bestaande tabel `techniques`, met
+// alleen de velden die de Technieken Vault en de live mat-tellers gebruiken.
 
-import 'training_session.dart' show PositionPractice;
+enum TechniqueGroup {
+  strikes('Strikes & Combinaties'),
+  throws('Throws & Takedowns'),
+  submissions('Submissions & Grondwerk'),
+  defense('Verdediging & Counters'),
+  other('Overig');
 
-/// Eén update over een techniek: een moment waarop je noteerde hoe het ging.
-/// Los toegevoegd (vanuit het Technieken-tabblad) of automatisch aangemaakt
-/// bij het opslaan van een sambo-sessie waarin de techniek behandeld werd.
-class TechniqueUpdate {
-  final DateTime at;
-  final int rating; // 0 = geen beoordeling, alleen een notitie
-  final String note;
+  const TechniqueGroup(this.label);
+  final String label;
 
-  /// Per positie hoe het ging (sterren, aantal, goed/beter).
-  final List<PositionPractice> positions;
+  /// Strikes tellen in de mat-teller als "Clean Hit / Geblokt / Tegenstoot",
+  /// de rest als "Geslaagd / Poging / Gecounterd".
+  bool get isStriking => this == TechniqueGroup.strikes;
 
-  const TechniqueUpdate({
-    required this.at,
-    this.rating = 0,
-    this.note = '',
-    this.positions = const [],
-  });
+  /// Wat in het categorieveld staat, vrij ingevuld in de oude app
+  /// (Takedown, Submission, Worp, Stoot...).
+  static TechniqueGroup fromCategory(String category) {
+    final c = category.toLowerCase();
+    bool has(List<String> words) => words.any(c.contains);
+    if (has(['strike', 'stoot', 'trap', 'kick', 'punch', 'combo', 'combinat', 'elleboog', 'knie'])) {
+      return TechniqueGroup.strikes;
+    }
+    if (has(['takedown', 'throw', 'worp', 'judo', 'leg', 'clinch'])) {
+      return TechniqueGroup.throws;
+    }
+    if (has(['submission', 'grond', 'choke', 'lock', 'armbar', 'guard', 'wurg', 'klem', 'pin', 'hold'])) {
+      return TechniqueGroup.submissions;
+    }
+    if (has(['verdedig', 'defen', 'counter', 'sprawl', 'escape', 'ontsnap'])) {
+      return TechniqueGroup.defense;
+    }
+    return TechniqueGroup.other;
+  }
 
-  factory TechniqueUpdate.fromJson(Map<String, dynamic> json) =>
-      TechniqueUpdate(
-        at: DateTime.parse(json['at'] as String).toLocal(),
-        rating: (json['rating'] as num?)?.toInt() ?? 0,
-        note: (json['note'] as String?) ?? '',
-        positions: ((json['positions'] as List?) ?? [])
-            .map(PositionPractice.fromJson)
-            .toList(),
-      );
-
-  Map<String, dynamic> toJson() => {
-    'at': at.toUtc().toIso8601String(),
-    'rating': rating,
-    'note': note,
-    if (positions.isNotEmpty)
-      'positions': positions.map((p) => p.toJson()).toList(),
+  /// Categorie die we opslaan als je in deze groep een techniek toevoegt.
+  String get defaultCategory => switch (this) {
+    TechniqueGroup.strikes => 'Strike',
+    TechniqueGroup.throws => 'Takedown',
+    TechniqueGroup.submissions => 'Submission',
+    TechniqueGroup.defense => 'Verdediging',
+    TechniqueGroup.other => 'Overig',
   };
-}
-
-/// Hoever je bent met het leren van een techniek — los van de losse
-/// updates/beoordelingen hieronder, die blijven gewoon bestaan.
-enum LearningStatus {
-  none,
-  planned,
-  learning,
-  mastered;
-
-  static LearningStatus fromName(String? name) => switch (name) {
-    'planned' => LearningStatus.planned,
-    'learning' => LearningStatus.learning,
-    'mastered' => LearningStatus.mastered,
-    _ => LearningStatus.none,
-  };
-
-  String get label => switch (this) {
-    LearningStatus.none => '—',
-    LearningStatus.planned => 'Gepland',
-    LearningStatus.learning => 'Bezig met leren',
-    LearningStatus.mastered => 'Beheerst',
-  };
-}
-
-/// Technieken die van `planned` naar `learning` gaan omdat hun naam
-/// voorkomt tussen de behandelde technieken van een sessie — losse, pure
-/// functie zodat deze regel apart van de opslaglogica (en zonder netwerk)
-/// te testen is. Vergelijkt namen hoofdletterongevoelig.
-List<Technique> techniquesToStartLearning(
-  List<Technique> knownTechniques,
-  List<String> coveredNames,
-) {
-  final covered = coveredNames.map((n) => n.toLowerCase()).toSet();
-  return knownTechniques
-      .where(
-        (t) =>
-            t.learningStatus == LearningStatus.planned &&
-            covered.contains(t.name.toLowerCase()),
-      )
-      .toList();
 }
 
 class Technique {
   final String id;
   final String name;
   final String category;
-
-  /// Bijv. "Staand -> Grond" — de positiewisseling die de techniek maakt.
-  /// Leeg als er geen transitie van toepassing is.
+  final String description;
+  final String learningGoal;
   final String transition;
   final bool favorite;
-
-  /// Uitleg over de techniek — hoe voer je hem uit, waar let je op.
-  final String description;
-
-  /// Links naar video's van de techniek, te bekijken binnen de app (zowel
-  /// bij het aanpassen van de techniek als tijdens een sessie) — meerdere
-  /// video's per techniek toegestaan.
-  final List<String> videoUrls;
-  final List<TechniqueUpdate> updates;
-
-  /// Volgorde in het tabblad Technieken en de "Lijst aanpassen"-weergave van
-  /// de techniekkaart — lager eerst. Los van `name`, zodat je zelf kunt
-  /// herordenen.
   final int sortOrder;
 
-  final LearningStatus learningStatus;
+  /// 'none' | 'next' | 'count' | 'until' (bestaande kolom focus_mode).
+  final String focusMode;
 
-  /// Datum waarop je gepland hebt deze techniek te oefenen — zetten terwijl
-  /// [learningStatus] nog `none` is, zet die status automatisch op `planned`.
-  final DateTime? plannedFor;
+  /// Beoordelingen (1-5) uit de updates-historie, oudste eerst.
+  final List<int> ratings;
 
-  /// Wat je met deze techniek wil bereiken — alleen relevant bij `planned`/
-  /// `learning`.
-  final String learningGoal;
-
-  /// Moment waarop de status `learning` werd (bv. doordat de techniek
-  /// "behandeld" is in een sessie terwijl hij gepland stond).
-  final DateTime? learningStartedAt;
-
-  /// Wanneer deze techniek is aangemaakt — voor het sorteren op "datum
-  /// toegevoegd" in het tabblad Technieken. Komt rechtstreeks uit de
-  /// database (`created_at`, al aanwezig sinds de eerste migratie), dus
-  /// alleen gezet bij het inlezen — niet handmatig aan te passen.
-  final DateTime? createdAt;
-
-  /// Specifiekere grondposities (bv. "Half guard", "Mount") waarvandaan deze
-  /// techniek werkt — alleen relevant bij een techniek die naar "Submission"
-  /// gaat, en altijd optioneel: leeg is een geldige, bewust gekozen waarde
-  /// ("niet gespecificeerd"). Meerdere mogelijk, want eenzelfde afwerking
-  /// lukt vaak vanuit meer dan één positie.
-  final List<String> groundPositions;
-
-  /// Focus op deze techniek: de eerstvolgende training, een aantal
-  /// trainingen, of tot een datum. Zie [isFocusActive].
-  final FocusMode focusMode;
-
-  /// Bij [FocusMode.count]: nog zoveel trainingen.
-  final int? focusTrainingsLeft;
-
-  /// Bij [FocusMode.until]: t/m deze dag.
-  final DateTime? focusUntil;
-
-  /// Staat de focus nu aan?
-  bool isFocusActive(DateTime now) => switch (focusMode) {
-    FocusMode.none => false,
-    FocusMode.next => true,
-    FocusMode.count => (focusTrainingsLeft ?? 0) > 0,
-    FocusMode.until =>
-      focusUntil != null &&
-          !DateTime(now.year, now.month, now.day).isAfter(
-            DateTime(focusUntil!.year, focusUntil!.month, focusUntil!.day),
-          ),
-  };
-
-  /// "Oefenen bij de eerstvolgende training": elke actieve focus telt
-  /// daarvoor mee (herinneringen, "vandaag op de planning").
-  bool get practiceNext => isFocusActive(DateTime.now());
-
-  /// "Eerstvolgende training", "Nog 3 trainingen", "T/m vr 7 nov".
-  String get focusLabel => switch (focusMode) {
-    FocusMode.none => '',
-    FocusMode.next => 'Eerstvolgende training',
-    FocusMode.count =>
-      'Nog ${focusTrainingsLeft ?? 0} '
-          '${focusTrainingsLeft == 1 ? 'training' : 'trainingen'}',
-    FocusMode.until =>
-      focusUntil == null ? '' : 'T/m ${_shortDate(focusUntil!)}',
-  };
-
-  /// Na een opgeslagen training waarin je deze techniek oefende: zo ziet de
-  /// focus er daarna uit (eerstvolgende → klaar; aantal → één minder).
-  ({FocusMode mode, int? left}) focusAfterTraining() => switch (focusMode) {
-    FocusMode.next => (mode: FocusMode.none, left: null),
-    FocusMode.count when (focusTrainingsLeft ?? 0) <= 1 => (
-      mode: FocusMode.none,
-      left: null,
-    ),
-    FocusMode.count => (mode: FocusMode.count, left: focusTrainingsLeft! - 1),
-    _ => (mode: focusMode, left: focusTrainingsLeft),
-  };
+  /// Totaal getelde herhalingen uit de updates-historie.
+  final int loggedReps;
 
   const Technique({
     required this.id,
     required this.name,
     this.category = 'Overig',
+    this.description = '',
+    this.learningGoal = '',
     this.transition = '',
     this.favorite = false,
-    this.description = '',
-    this.videoUrls = const [],
-    this.updates = const [],
     this.sortOrder = 0,
-    this.learningStatus = LearningStatus.none,
-    this.plannedFor,
-    this.groundPositions = const [],
-    this.focusMode = FocusMode.none,
-    this.focusTrainingsLeft,
-    this.focusUntil,
-    this.learningGoal = '',
-    this.learningStartedAt,
-    this.createdAt,
+    this.focusMode = 'none',
+    this.ratings = const [],
+    this.loggedReps = 0,
   });
 
-  factory Technique.fromJson(Map<String, dynamic> json) => Technique(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    category: (json['category'] as String?) ?? 'Overig',
-    transition: (json['transition'] as String?) ?? '',
-    favorite: (json['favorite'] as bool?) ?? false,
-    description: (json['description'] as String?) ?? '',
-    videoUrls: ((json['video_urls'] as List?) ?? [])
-        .map((e) => e as String)
-        .toList(),
-    updates: ((json['updates'] as List?) ?? [])
-        .map((e) => TechniqueUpdate.fromJson(e as Map<String, dynamic>))
-        .toList(),
-    sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
-    learningStatus: LearningStatus.fromName(json['learning_status'] as String?),
-    plannedFor: json['planned_for'] == null
-        ? null
-        : DateTime.parse(json['planned_for'] as String).toLocal(),
-    learningGoal: (json['learning_goal'] as String?) ?? '',
-    learningStartedAt: json['learning_started_at'] == null
-        ? null
-        : DateTime.parse(json['learning_started_at'] as String).toLocal(),
-    createdAt: json['created_at'] == null
-        ? null
-        : DateTime.parse(json['created_at'] as String).toLocal(),
-    groundPositions: ((json['ground_positions'] as List?) ?? [])
-        .map((e) => e as String)
-        .toList(),
-    focusMode: FocusMode.fromJson(
-      json['focus_mode'] as String?,
-      legacyPracticeNext: (json['practice_next'] as bool?) ?? false,
-    ),
-    focusTrainingsLeft: (json['focus_trainings_left'] as num?)?.toInt(),
-    focusUntil: json['focus_until'] == null
-        ? null
-        : DateTime.parse(json['focus_until'] as String).toLocal(),
-  );
+  factory Technique.fromJson(Map<String, dynamic> j) {
+    final updates = (j['updates'] as List?) ?? const [];
+    final ratings = <int>[];
+    var reps = 0;
+    for (final u in updates) {
+      if (u is! Map) continue;
+      final r = (u['rating'] as num?)?.toInt() ?? 0;
+      if (r > 0) ratings.add(r);
+      for (final p in (u['positions'] as List?) ?? const []) {
+        if (p is Map) reps += (p['reps'] as num?)?.toInt() ?? 0;
+      }
+    }
+    final practiceNext = (j['practice_next'] as bool?) ?? false;
+    var focus = (j['focus_mode'] as String?) ?? 'none';
+    if (focus == 'none' && practiceNext) focus = 'next';
+    return Technique(
+      id: j['id'] as String,
+      name: j['name'] as String,
+      category: (j['category'] as String?) ?? 'Overig',
+      description: (j['description'] as String?) ?? '',
+      learningGoal: (j['learning_goal'] as String?) ?? '',
+      transition: (j['transition'] as String?) ?? '',
+      favorite: (j['favorite'] as bool?) ?? false,
+      sortOrder: (j['sort_order'] as num?)?.toInt() ?? 0,
+      focusMode: focus,
+      ratings: ratings,
+      loggedReps: reps,
+    );
+  }
 
-  Map<String, dynamic> toInsertJson(String userId) => {
-    'user_id': userId,
-    'name': name,
-    'category': category,
-    'transition': transition,
-    'favorite': favorite,
-    'description': description,
-    'video_urls': videoUrls,
-    'updates': updates.map((u) => u.toJson()).toList(),
-    'sort_order': sortOrder,
-    'learning_status': learningStatus.name,
-    'planned_for': plannedFor?.toUtc().toIso8601String(),
-    'learning_goal': learningGoal,
-    'learning_started_at': learningStartedAt?.toUtc().toIso8601String(),
-    'ground_positions': groundPositions,
+  TechniqueGroup get group => TechniqueGroup.fromCategory(category);
+
+  bool get isInFocus => focusMode != 'none';
+
+  /// Mastery Index (0..100): gemiddelde van de laatste 5 beoordelingen,
+  /// of null als je de techniek nog nooit beoordeeld hebt.
+  int? get masteryPercent {
+    if (ratings.isEmpty) return null;
+    final recent = ratings.length > 5
+        ? ratings.sublist(ratings.length - 5)
+        : ratings;
+    final avg = recent.reduce((a, b) => a + b) / recent.length;
+    return (avg / 5 * 100).round();
+  }
+
+  /// "Target / Doelwit": je leerdoel, anders de overgang of de categorie.
+  String get targetLabel {
+    if (learningGoal.trim().isNotEmpty) return learningGoal.trim();
+    if (transition.trim().isNotEmpty) return transition.trim();
+    return category;
+  }
+
+  Technique copyWith({String? focusMode, bool? favorite}) => Technique(
+    id: id,
+    name: name,
+    category: category,
+    description: description,
+    learningGoal: learningGoal,
+    transition: transition,
+    favorite: favorite ?? this.favorite,
+    sortOrder: sortOrder,
+    focusMode: focusMode ?? this.focusMode,
+    ratings: ratings,
+    loggedReps: loggedReps,
+  );
+}
+
+/// De drie tellers per techniek tijdens een live sessie.
+class TechniqueCounts {
+  final int success;
+  final int attempts;
+  final int countered;
+  const TechniqueCounts({this.success = 0, this.attempts = 0, this.countered = 0});
+
+  TechniqueCounts add(TechniqueStat stat, int delta) {
+    int f(int v) => (v + delta).clamp(0, 9999);
+    return switch (stat) {
+      TechniqueStat.success => TechniqueCounts(success: f(success), attempts: attempts, countered: countered),
+      TechniqueStat.attempt => TechniqueCounts(success: success, attempts: f(attempts), countered: countered),
+      TechniqueStat.countered => TechniqueCounts(success: success, attempts: attempts, countered: f(countered)),
+    };
+  }
+
+  int operator [](TechniqueStat s) => switch (s) {
+    TechniqueStat.success => success,
+    TechniqueStat.attempt => attempts,
+    TechniqueStat.countered => countered,
   };
 
-  Technique copyWith({
-    String? name,
-    String? category,
-    String? transition,
-    bool? favorite,
-    String? description,
-    List<String>? videoUrls,
-    List<TechniqueUpdate>? updates,
-    int? sortOrder,
-    LearningStatus? learningStatus,
-    DateTime? plannedFor,
-    bool clearPlannedFor = false,
-    String? learningGoal,
-    DateTime? learningStartedAt,
-    bool clearLearningStartedAt = false,
-    List<String>? groundPositions,
-    FocusMode? focusMode,
-    int? focusTrainingsLeft,
-    DateTime? focusUntil,
-    bool clearFocusDetails = false,
-  }) => Technique(
-    id: id,
-    name: name ?? this.name,
-    category: category ?? this.category,
-    transition: transition ?? this.transition,
-    favorite: favorite ?? this.favorite,
-    description: description ?? this.description,
-    videoUrls: videoUrls ?? this.videoUrls,
-    updates: updates ?? this.updates,
-    sortOrder: sortOrder ?? this.sortOrder,
-    learningStatus: learningStatus ?? this.learningStatus,
-    plannedFor: clearPlannedFor ? null : (plannedFor ?? this.plannedFor),
-    groundPositions: groundPositions ?? this.groundPositions,
-    focusMode: focusMode ?? this.focusMode,
-    // clearFocusDetails: precies de meegegeven waarden (null = leeg), voor
-    // het wisselen van focus-soort.
-    focusTrainingsLeft: clearFocusDetails
-        ? focusTrainingsLeft
-        : (focusTrainingsLeft ?? this.focusTrainingsLeft),
-    focusUntil: clearFocusDetails
-        ? focusUntil
-        : (focusUntil ?? this.focusUntil),
-    learningGoal: learningGoal ?? this.learningGoal,
-    learningStartedAt: clearLearningStartedAt
-        ? null
-        : (learningStartedAt ?? this.learningStartedAt),
-    createdAt: createdAt,
+  int get total => success + attempts + countered;
+
+  Map<String, dynamic> toJson() => {
+    'success': success,
+    'attempts': attempts,
+    'countered': countered,
+  };
+
+  factory TechniqueCounts.fromJson(Map<String, dynamic> j) => TechniqueCounts(
+    success: (j['success'] as num?)?.toInt() ?? 0,
+    attempts: (j['attempts'] as num?)?.toInt() ?? 0,
+    countered: (j['countered'] as num?)?.toInt() ?? 0,
   );
 }
 
-enum FocusMode {
-  none,
-  next,
-  count,
-  until;
+enum TechniqueStat { success, attempt, countered }
 
-  static FocusMode fromJson(String? name, {bool legacyPracticeNext = false}) {
-    for (final v in FocusMode.values) {
-      if (v.name == name && v != FocusMode.none) return v;
-    }
-    // Oudere rijen (vóór focus_mode): practice_next = eerstvolgende.
-    return legacyPracticeNext ? FocusMode.next : FocusMode.none;
-  }
-}
-
-String _shortDate(DateTime d) {
-  const days = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
-  const months = [
-    'jan',
-    'feb',
-    'mrt',
-    'apr',
-    'mei',
-    'jun',
-    'jul',
-    'aug',
-    'sep',
-    'okt',
-    'nov',
-    'dec',
-  ];
-  return '${days[d.weekday - 1]} ${d.day} ${months[d.month - 1]}';
-}
+String statLabel(TechniqueStat stat, {required bool striking}) => switch (stat) {
+  TechniqueStat.success => striking ? 'Clean Hit' : 'Geslaagd',
+  TechniqueStat.attempt => striking ? 'Geblokt' : 'Poging',
+  TechniqueStat.countered => striking ? 'Tegenstoot' : 'Gecounterd',
+};

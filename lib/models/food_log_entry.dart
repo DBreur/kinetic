@@ -2,7 +2,10 @@
 // wanneer, welke presets met welk aantal je hebt gebruikt (om de +/-
 // tellers bij bewerken weer goed te tonen), hoeveel koolhydraten, hoeveel
 // insuline en of dat voor of na het eten was, en optioneel je glucosewaarde
-// op dat moment.
+// op dat moment. Sinds 2.0 ook eiwit, vet en de context (vóór/na training,
+// mat-interventie, herstel) voor de macrobarometer.
+
+import '../core/meal_impact.dart';
 
 enum InsulinTiming {
   before,
@@ -29,6 +32,9 @@ class FoodLogEntry {
   final Map<String, int> presetCounts;
 
   final double? carbs;
+  final double? protein;
+  final double? fat;
+  final MealContext? context;
   final double? mmol;
 
   final double? insulinUnits;
@@ -54,6 +60,9 @@ class FoodLogEntry {
     required this.description,
     this.presetCounts = const {},
     this.carbs,
+    this.protein,
+    this.fat,
+    this.context,
     this.mmol,
     this.insulinUnits,
     this.insulinTiming,
@@ -71,6 +80,9 @@ class FoodLogEntry {
       (k, v) => MapEntry(k as String, (v as num).toInt()),
     ),
     carbs: (json['carbs'] as num?)?.toDouble(),
+    protein: (json['protein'] as num?)?.toDouble(),
+    fat: (json['fat'] as num?)?.toDouble(),
+    context: MealContext.fromName(json['context'] as String?),
     mmol: (json['mmol'] as num?)?.toDouble(),
     insulinUnits: (json['insulin_units'] as num?)?.toDouble(),
     insulinTiming: InsulinTiming.fromName(json['insulin_timing'] as String?),
@@ -106,6 +118,9 @@ class FoodLogEntry {
     description: description ?? this.description,
     presetCounts: presetCounts ?? this.presetCounts,
     carbs: clearCarbs ? null : (carbs ?? this.carbs),
+    protein: protein,
+    fat: fat,
+    context: context,
     mmol: clearMmol ? null : (mmol ?? this.mmol),
     insulinUnits: clearInsulinUnits
         ? null

@@ -2,8 +2,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // spotify_sdk haalt een afhankelijkheid (kotlin-events) van JitPack.
-        maven { url = uri("https://jitpack.io") }
     }
 }
 

@@ -1,44 +1,65 @@
-import 'package:intl/intl.dart';
+// formatters.dart: Nederlandse notatie voor tijden, duur en getallen.
 
-String mmolText(double value) => value.toStringAsFixed(1).replaceAll('.', ',');
+String two(int n) => n.toString().padLeft(2, '0');
 
-/// Koolhydraten zijn meestal hele grammen — geen ",0" erbij als het niet
-/// nodig is.
-String carbsText(double value) => value % 1 == 0
-    ? value.toInt().toString()
-    : value.toStringAsFixed(1).replaceAll('.', ',');
-
-String dutchDateTime(DateTime dateTime) {
-  return DateFormat('EEEE d MMM · HH:mm', 'nl_NL').format(dateTime);
+/// 198 → "03:18".
+String mmss(int totalSeconds) {
+  final s = totalSeconds < 0 ? 0 : totalSeconds;
+  return '${two(s ~/ 60)}:${two(s % 60)}';
 }
 
-String dutchShortDate(DateTime dateTime) {
-  return DateFormat('EEE d MMM', 'nl_NL').format(dateTime);
+String hhmm(DateTime t) => '${two(t.hour)}:${two(t.minute)}';
+
+/// 525 → "8u 45m", 65 → "1u 05m", 40 → "40 min".
+String durationLabel(int minutes) {
+  if (minutes < 60) return '$minutes min';
+  return '${minutes ~/ 60}u ${two(minutes % 60)}m';
 }
 
-/// Label voor een geplande datum in de planning-sectie van het tabblad
-/// Technieken: "Vandaag"/"Morgen", anders een korte datum, en bij een
-/// verstreken datum "Te laat · N dagen" — bewust nooit rood/amber, dat is
-/// voorbehouden aan glucose.
-String planningLabel(DateTime date, {DateTime? now}) {
-  final current = now ?? DateTime.now();
-  final today = DateTime(current.year, current.month, current.day);
-  final target = DateTime(date.year, date.month, date.day);
-  final diff = target.difference(today).inDays;
-  if (diff == 0) return 'Vandaag';
-  if (diff == 1) return 'Morgen';
-  if (diff < 0) {
-    final days = -diff;
-    return 'Te laat · $days ${days == 1 ? 'dag' : 'dagen'}';
+/// 462 → "7h 42m" (slaap).
+String sleepLabel(int minutes) => '${minutes ~/ 60}h ${two(minutes % 60)}m';
+
+/// Eén decimaal met punt, zoals de spec (78.4 kg, 6.5 mmol/L).
+String dec1(double v) => v.toStringAsFixed(1);
+
+/// Gram zonder overbodige ".0".
+String grams(double v) =>
+    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+
+/// 2450 → "2.450" (Nederlandse duizendtallen).
+String thousands(int v) {
+  final s = v.abs().toString();
+  final b = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) b.write('.');
+    b.write(s[i]);
   }
-  return dutchShortDate(date);
+  return '${v < 0 ? '-' : ''}$b';
 }
 
-String relativeDutch(DateTime dateTime, {DateTime? now}) {
-  final current = now ?? DateTime.now();
-  final diff = current.difference(dateTime);
-  if (diff.inSeconds < 45) return 'Zojuist';
-  if (diff.inMinutes < 60) return '${diff.inMinutes} min geleden';
-  if (diff.inHours < 24) return '${diff.inHours} uur geleden';
-  return dutchShortDate(dateTime);
+const _days = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
+const _months = [
+  'jan', 'feb', 'mrt', 'apr', 'mei', 'jun',
+  'jul', 'aug', 'sep', 'okt', 'nov', 'dec',
+];
+const _monthsLong = [
+  'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+  'juli', 'augustus', 'september', 'oktober', 'november', 'december',
+];
+
+/// "ma 24 nov".
+String shortDate(DateTime d) =>
+    '${_days[d.weekday - 1]} ${d.day} ${_months[d.month - 1]}';
+
+/// "28 november".
+String longDate(DateTime d) => '${d.day} ${_monthsLong[d.month - 1]}';
+
+String monthShort(int month) => _months[month - 1];
+
+DateTime dayStart(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Hele kalenderdagen tot [target] (vandaag = 0).
+int daysUntil(DateTime target, {DateTime? now}) {
+  final n = now ?? DateTime.now();
+  return dayStart(target).difference(dayStart(n)).inDays;
 }

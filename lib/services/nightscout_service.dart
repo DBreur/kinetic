@@ -21,15 +21,26 @@ class NightscoutService implements GlucoseProvider {
 
     final cleanUrl = url.replaceFirst(RegExp(r'/$'), '');
 
-    final uri = Uri.parse('$cleanUrl/api/v1/entries.json?count=$count');
+    final uri = Uri.tryParse('$cleanUrl/api/v1/entries.json?count=$count');
+    if (uri == null || !isSafeNightscoutUri(uri)) {
+      return const GlucoseSnapshot(
+        reading: null,
+        history: [],
+        message:
+            'Nightscout-adres moet met https:// beginnen (je token wordt '
+            'anders onversleuteld verstuurd).',
+      );
+    }
 
     try {
-      final response = await http.get(
-        uri,
-        headers: token != null && token!.isNotEmpty
-            ? {'Authorization': 'Bearer $token'}
-            : null,
-      );
+      final response = await http
+          .get(
+            uri,
+            headers: token != null && token!.isNotEmpty
+                ? {'Authorization': 'Bearer $token'}
+                : null,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode != 200) {
         return GlucoseSnapshot(
@@ -124,3 +135,7 @@ class NightscoutService implements GlucoseProvider {
     }
   }
 }
+
+/// Alleen https: het API-token gaat mee in de header en mag nooit
+/// onversleuteld over het netwerk (Android blokkeert http ook standaard).
+bool isSafeNightscoutUri(Uri uri) => uri.scheme == 'https' && uri.host.isNotEmpty;

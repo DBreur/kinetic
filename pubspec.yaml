@@ -1,5 +1,5 @@
 name: kinetic
-description: "Kinetic - sambo training & glucose HUD."
+description: "Kinetic - combat sports, atletische telemetrie & T1D/CGM monitoring."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,10 +16,12 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+19
+# Build-nummer moet hoger blijven dan wat op de telefoon staat (was +20),
+# anders weigert Android de update en wist `flutter run` de app-data.
+version: 2.0.0+21
 
 environment:
-  sdk: ^3.13.3
+  sdk: ^3.14.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -30,30 +32,22 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.1.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  google_fonts: ^8.2.1
-  supabase_flutter: ^2.17.2
+  supabase_flutter: ^2.18.3
   http: ^1.6.0
   intl: ^0.20.3
-  pdf: ^3.13.1
-  printing: ^5.15.1
-  share_plus: ^13.3.0
-  url_launcher: ^6.3.2
-  flutter_local_notifications: ^22.3.1
-  flutter_foreground_task: ^11.0.3
-  webview_flutter: ^4.13.0
-  timezone: ^0.11.1
+  # Zelfde major als de vorige app: het Dexcom-wachtwoord staat al in deze
+  # opslag op de telefoon en moet na een update leesbaar blijven.
   flutter_secure_storage: ^11.2.0
-  image_picker: ^1.2.4
-  image: ^4.12.0
-  flutter_localizations:
-    sdk: flutter
   shared_preferences: ^2.5.6
-  spotify_sdk: ^4.3.3
-  flutter_svg: ^2.3.0
+  share_plus: ^13.3.1
+  path_provider: ^2.1.6
+  wakelock_plus: ^1.8.2
+  record: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -65,7 +59,6 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -77,6 +70,23 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Inter, gebundeld zodat de app ook offline op de mat meteen goed oogt.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-400.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-500.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-600.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-700.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-800.ttf
+          weight: 800
+        - asset: assets/fonts/Inter-900.ttf
+          weight: 900
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -108,13 +118,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
-flutter_launcher_icons:
-  android: true
-  ios: true
-  remove_alpha_ios: true
-  image_path: "assets/icon/kinetic_icon.png"
-  # Android 8+ (adaptive icon): donkere achtergrond + transparant logo, zodat
-  # het startscherm-icoon bij de app past in plaats van op wit te staan.
-  adaptive_icon_background: "#10141A"
-  adaptive_icon_foreground: "assets/icon/kinetic_icon_foreground.png"

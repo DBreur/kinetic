@@ -1,104 +1,104 @@
-import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart';
+// main.dart: Kinetic 2.0. Start Supabase, het Kinetic Dark Theme en de
+// routes uit de spec: 5 tabs in de shell plus de full-screen stack-schermen.
 
-import 'core/kinetic_localizations.dart';
-import 'services/system_bars.dart';
+import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
+
 import 'screens/auth_screen.dart';
-import 'screens/onboarding_screen.dart';
+import 'screens/competitions_screen.dart';
+import 'screens/live_session_screen.dart';
+import 'screens/ronde_rust_screen.dart';
 import 'screens/shell_screen.dart';
-import 'state/app_controller.dart';
-import 'theme/kinetic_theme.dart' as color;
+import 'screens/telemetrie_export_screen.dart';
+import 'state/kinetic_store.dart';
+import 'theme/kinetic_theme.dart';
+import 'widgets/kinetic_widgets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Zonder dit toont een widget die niet kan renderen (een bug) een volledig
-  // lege/grijze vlek in een release-build — dit geeft in plaats daarvan
-  // altijd een zichtbare, begrijpelijke melding, met de technische details
-  // in de devconsole voor het debuggen.
-  ErrorWidget.builder = (FlutterErrorDetails details) {
+  // Een widget die niet kan renderen toont een begrijpelijke melding in
+  // plaats van een grijze vlek in een release-build.
+  ErrorWidget.builder = (details) {
     debugPrint('Widget kon niet worden weergegeven: ${details.exception}');
     return Container(
-      color: color.AppColor.bg,
+      color: KColor.bg,
       alignment: Alignment.center,
       padding: const EdgeInsets.all(20),
       child: Text(
         'Er ging iets mis bij het weergeven van dit onderdeel.',
         textAlign: TextAlign.center,
-        style: color.AppText.caption,
+        style: KText.caption,
       ),
     );
   };
-  await initializeDateFormatting('nl_NL');
-  final controller = AppController();
-  await controller.boot();
-  runApp(MyApp(controller: controller));
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Color(0x00000000),
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: KColor.surface,
+  ));
+  final store = KineticStore();
+  runApp(KineticApp(store: store));
+  await store.boot();
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.controller});
-
-  final AppController controller;
+class KineticApp extends StatelessWidget {
+  const KineticApp({super.key, required this.store});
+  final KineticStore store;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        return MaterialApp(
-          navigatorKey: controller.navigatorKey,
-          debugShowCheckedModeBanner: false,
-          title: 'Kinetic',
-          theme: color.KineticTheme.dark,
-          locale: kineticLocale,
-          supportedLocales: const [kineticLocale],
-          localizationsDelegates: kineticLocalizationsDelegates(
-            controller.profile?.weekStart ?? 1,
-          ),
-          // Tijden altijd als 19:00, niet 7:00 PM — ook in tijdkiezers.
-          builder: kineticAppBuilder,
-          home: _Home(controller: controller),
-        );
-      },
+    return KineticScope(
+      store: store,
+      child: MaterialApp(
+        title: 'Kinetic',
+        debugShowCheckedModeBanner: false,
+        theme: kineticTheme(),
+        darkTheme: kineticTheme(),
+        themeMode: ThemeMode.dark,
+        home: const _Home(),
+        onGenerateRoute: (settings) {
+          final Widget? page = switch (settings.name) {
+            '/live-session' => const LiveSessionScreen(),
+            '/ronde-rust' => const RondeRustScreen(),
+            '/competitions' => const CompetitionsScreen(),
+            '/telemetrie-export' => const TelemetrieExportScreen(),
+            _ => null,
+          };
+          if (page == null) return null;
+          // Live-schermen schuiven als full-screen modal van onderen in.
+          final modal = settings.name == '/live-session' || settings.name == '/ronde-rust';
+          return MaterialPageRoute<void>(
+            settings: settings,
+            fullscreenDialog: modal,
+            builder: (_) => page,
+          );
+        },
+      ),
     );
   }
 }
 
 class _Home extends StatelessWidget {
-  const _Home({required this.controller});
-
-  final AppController controller;
+  const _Home();
 
   @override
   Widget build(BuildContext context) {
-    return switch (controller.state) {
-      AppBootState.loading => const _BootLoading(),
-      AppBootState.needsConfig => const _MissingConfigScreen(),
-      AppBootState.signedOut => AuthScreen(controller: controller),
-      AppBootState.needsOnboarding => OnboardingScreen(controller: controller),
-      AppBootState.ready => ShellScreen(controller: controller),
+    final store = KineticScope.of(context);
+    return switch (store.state) {
+      BootState.loading => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      BootState.needsConfig => const _MissingConfig(),
+      BootState.signedOut => const AuthScreen(),
+      BootState.ready => const ShellScreen(),
     };
   }
 }
 
-class _BootLoading extends StatelessWidget {
-  const _BootLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: color.AppColor.bg,
-      body: Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
-class _MissingConfigScreen extends StatelessWidget {
-  const _MissingConfigScreen();
+class _MissingConfig extends StatelessWidget {
+  const _MissingConfig();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: color.AppColor.bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -106,14 +106,12 @@ class _MissingConfigScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Supabase configureren', style: color.AppText.display),
+              Text('Supabase configureren', style: KText.display),
               const SizedBox(height: 12),
               Text(
-                'Start de app met --dart-define-from-file=dart_defines.json (SUPABASE_URL en SUPABASE_PUBLISHABLE_KEY). '
-                'Zonder deze waarden worden er geen wachtwoorden of sessies lokaal opgeslagen.',
-                style: color.AppText.body.copyWith(
-                  color: color.AppColor.inkMuted,
-                ),
+                'Start de app met --dart-define-from-file=dart_defines.json '
+                '(SUPABASE_URL en SUPABASE_PUBLISHABLE_KEY).',
+                style: KText.body.copyWith(color: KColor.textSecondary),
               ),
             ],
           ),

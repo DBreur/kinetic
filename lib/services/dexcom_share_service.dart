@@ -91,7 +91,7 @@ class DexcomShareService implements GlucoseProvider {
           'password': password,
           'applicationId': _applicationId,
         }),
-      );
+      ).timeout(_timeout);
       if (authResponse.statusCode != 200) return null;
       final accountId = _decodeGuid(authResponse.body);
       if (accountId == null) return null;
@@ -104,7 +104,7 @@ class DexcomShareService implements GlucoseProvider {
           'password': password,
           'applicationId': _applicationId,
         }),
-      );
+      ).timeout(_timeout);
       if (loginResponse.statusCode != 200) return null;
       return _decodeGuid(loginResponse.body);
     } catch (_) {
@@ -132,8 +132,10 @@ class DexcomShareService implements GlucoseProvider {
         'maxCount': '$count',
       }),
       headers: _headers,
-    );
+    ).timeout(_timeout);
   }
+
+  static const _timeout = Duration(seconds: 15);
 
   /// Een verlopen/ongeldige sessie geeft geen gewone HTTP-foutcode terug,
   /// maar 200 met een foutobject zoals `{"Code":"SessionNotValid",...}`.
