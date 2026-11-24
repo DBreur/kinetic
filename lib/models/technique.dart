@@ -1,45 +1,57 @@
 // technique.dart: een techniek uit de bestaande tabel `techniques`, met
 // alleen de velden die de Technieken Vault en de live mat-tellers gebruiken.
 
+/// Hoofdcategorieën van de Technique Vault (namen volgens kinetic-design:
+/// expliciet "Striking", niet "Strikes").
 enum TechniqueGroup {
-  strikes('Strikes & Combinaties'),
-  throws('Throws & Takedowns'),
-  submissions('Submissions & Grondwerk'),
-  defense('Verdediging & Counters'),
-  other('Overig');
+  throws('Throws', 'Worpen & takedowns'),
+  striking('Striking', 'Stoten, trappen & combinaties'),
+  submissions('Submissions & Locks', 'Klemmen, armbars & chokes'),
+  sweeps('Sweeps & Guard Passes', 'Reversals & passes'),
+  control('Controle & Pins', 'Posities en houdgrepen'),
+  defense('Verdediging & Counters', 'Escapes, sprawls & counters'),
+  other('Overig', 'Overige technieken');
 
-  const TechniqueGroup(this.label);
+  const TechniqueGroup(this.label, this.description);
   final String label;
+  final String description;
 
-  /// Strikes tellen in de mat-teller als "Clean Hit / Geblokt / Tegenstoot",
-  /// de rest als "Geslaagd / Poging / Gecounterd".
-  bool get isStriking => this == TechniqueGroup.strikes;
+  /// Striking telt op de mat als "Clean Hit / Geblokt / Tegenstoot", de rest
+  /// als "Geslaagd / Poging / Gecounterd".
+  bool get isStriking => this == TechniqueGroup.striking;
 
-  /// Wat in het categorieveld staat, vrij ingevuld in de oude app
-  /// (Takedown, Submission, Worp, Stoot...).
-  static TechniqueGroup fromCategory(String category) {
+  /// Indeling op basis van categorie (Takedown/Submission/Strike/Overig) en
+  /// subcategorie uit de bibliotheek, of vrije tekst uit de oude app.
+  static TechniqueGroup classify(String category, [String subcategory = '']) {
     final c = category.toLowerCase();
-    bool has(List<String> words) => words.any(c.contains);
-    if (has(['strike', 'stoot', 'trap', 'kick', 'punch', 'combo', 'combinat', 'elleboog', 'knie'])) {
-      return TechniqueGroup.strikes;
+    final sub = subcategory.toLowerCase();
+    bool has(String s, List<String> words) => words.any(s.contains);
+    if (sub.isNotEmpty) {
+      if (has(sub, ['defense', 'escape', 'counter'])) return TechniqueGroup.defense;
+      if (has(sub, ['sweep', 'pass'])) return TechniqueGroup.sweeps;
+      if (has(sub, ['control', 'pin', 'hold'])) return TechniqueGroup.control;
     }
-    if (has(['takedown', 'throw', 'worp', 'judo', 'leg', 'clinch'])) {
-      return TechniqueGroup.throws;
+    if (has(c, ['strike', 'stoot', 'trap', 'kick', 'punch', 'combo', 'combinat', 'elleboog', 'knie', 'boks'])) {
+      return TechniqueGroup.striking;
     }
-    if (has(['submission', 'grond', 'choke', 'lock', 'armbar', 'guard', 'wurg', 'klem', 'pin', 'hold'])) {
-      return TechniqueGroup.submissions;
-    }
-    if (has(['verdedig', 'defen', 'counter', 'sprawl', 'escape', 'ontsnap'])) {
-      return TechniqueGroup.defense;
-    }
+    if (has(c, ['takedown', 'throw', 'worp', 'judo', 'leg entry', 'clinch'])) return TechniqueGroup.throws;
+    if (has(c, ['submission', 'choke', 'lock', 'armbar', 'wurg', 'klem'])) return TechniqueGroup.submissions;
+    if (has(c, ['sweep', 'pass', 'guard'])) return TechniqueGroup.sweeps;
+    if (has(c, ['verdedig', 'defen', 'counter', 'sprawl', 'escape', 'ontsnap'])) return TechniqueGroup.defense;
+    if (has(c, ['control', 'pin', 'hold', 'grond', 'mount'])) return TechniqueGroup.control;
     return TechniqueGroup.other;
   }
 
+  /// Alias voor oudere code.
+  static TechniqueGroup fromCategory(String category) => classify(category);
+
   /// Categorie die we opslaan als je in deze groep een techniek toevoegt.
   String get defaultCategory => switch (this) {
-    TechniqueGroup.strikes => 'Strike',
+    TechniqueGroup.striking => 'Strike',
     TechniqueGroup.throws => 'Takedown',
     TechniqueGroup.submissions => 'Submission',
+    TechniqueGroup.sweeps => 'Sweep',
+    TechniqueGroup.control => 'Control',
     TechniqueGroup.defense => 'Verdediging',
     TechniqueGroup.other => 'Overig',
   };
@@ -64,6 +76,9 @@ class Technique {
   /// Totaal getelde herhalingen uit de updates-historie.
   final int loggedReps;
 
+  /// Bibliotheektechniek waar deze eigen techniek een kopie van is.
+  final String? libraryId;
+
   const Technique({
     required this.id,
     required this.name,
@@ -76,6 +91,7 @@ class Technique {
     this.focusMode = 'none',
     this.ratings = const [],
     this.loggedReps = 0,
+    this.libraryId,
   });
 
   factory Technique.fromJson(Map<String, dynamic> j) {
@@ -105,10 +121,11 @@ class Technique {
       focusMode: focus,
       ratings: ratings,
       loggedReps: reps,
+      libraryId: j['library_id'] as String?,
     );
   }
 
-  TechniqueGroup get group => TechniqueGroup.fromCategory(category);
+  TechniqueGroup get group => TechniqueGroup.classify(category);
 
   bool get isInFocus => focusMode != 'none';
 
@@ -130,7 +147,7 @@ class Technique {
     return category;
   }
 
-  Technique copyWith({String? focusMode, bool? favorite}) => Technique(
+  Technique copyWith({String? focusMode, bool? favorite, int? loggedReps}) => Technique(
     id: id,
     name: name,
     category: category,
@@ -141,7 +158,8 @@ class Technique {
     sortOrder: sortOrder,
     focusMode: focusMode ?? this.focusMode,
     ratings: ratings,
-    loggedReps: loggedReps,
+    loggedReps: loggedReps ?? this.loggedReps,
+    libraryId: libraryId,
   );
 }
 

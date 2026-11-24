@@ -26,11 +26,15 @@ import '../models/competition.dart';
 import '../models/food_log_entry.dart';
 import '../models/glucose.dart';
 import '../models/kinetic_profile.dart';
+import '../models/library.dart';
+import '../models/planned_training.dart';
 import '../models/technique.dart';
+import '../models/technique_system.dart';
 import '../models/training_session.dart';
 import '../models/weigh_in.dart';
 import '../repositories/food_log_repository.dart';
 import '../repositories/kinetic_repositories.dart';
+import '../repositories/system_repository.dart';
 import '../repositories/weigh_in_repository.dart';
 import '../services/dexcom_credentials.dart';
 import '../services/glucose_provider.dart';
@@ -78,6 +82,40 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
   String? get email => _demoEmail ?? user?.email;
   String? get _uid => profile?.id ?? user?.id;
   bool get isConnected => _client != null;
+
+  /// Gebruikersnaam uit het profiel, anders het deel voor de @.
+  String get displayName {
+    final u = profile?.username.trim() ?? '';
+    if (u.isNotEmpty) return u;
+    final local = (email ?? '').split('@').first;
+    if (local.isEmpty) return '';
+    final word = local
+        .split(RegExp(r'[._\-0-9]+'))
+        .firstWhere((w) => w.isNotEmpty, orElse: () => local);
+    return word[0].toUpperCase() + word.substring(1);
+  }
+
+  String get initials {
+    final n = displayName.trim();
+    if (n.isEmpty) return 'K';
+    final parts = n.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    return parts.length == 1
+        ? parts.first.substring(0, 1).toUpperCase()
+        : (parts.first[0] + parts.last[0]).toUpperCase();
+  }
+
+  // ------------------------------------------------------------------ thema
+  /// Dark = "Kinetic Metabolic Combat", light = "Kinetic". Standaard donker.
+  /// Apart luisterbaar, zodat alleen een themawissel de app herbouwt.
+  final ValueNotifier<bool> darkModeNotifier = ValueNotifier(true);
+  bool get darkMode => darkModeNotifier.value;
+  set darkMode(bool v) => darkModeNotifier.value = v;
+
+  Future<void> toggleTheme() async {
+    darkMode = !darkMode;
+    await _prefs?.setString('theme_mode', darkMode ? 'dark' : 'light');
+    notifyListeners();
+  }
 
   DateTime? lastSyncAt;
   String? syncError;
@@ -227,12 +265,23 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
         CompetitionRepository(c).upcoming(uid),
         TechniqueRepository(c).listForUser(uid),
         SessionRepository(c).listForUser(uid),
+        CompetitionRepository(c).all(uid),
+        PlannedTrainingRepository(c).upcoming(uid, start),
+        SystemRepository(c).listForUser(uid),
       ]);
       foodEntries = results[0] as List<FoodLogEntry>;
       weighIns = results[1] as List<WeighIn>;
       competitions = results[2] as List<Competition>;
       techniques = results[3] as List<Technique>;
       sessions = results[4] as List<TrainingSession>;
+      allCompetitions = results[5] as List<Competition>;
+      plannedTrainings = results[6] as List<PlannedTraining>;
+      systems = results[7] as List<TechniqueSystem>;
+      if (library.isEmpty) {
+        try {
+          library = await LibraryRepository(c).techniques();
+        } catch (_) {}
+      }
       _draftWeightKg = null;
       loadChecklist();
       lastSyncAt = now();
@@ -280,8 +329,9 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _fetchGlucose() async {
     final p = profile;
-    if (p == null) return;
-    final from = now().subtract(const Duration(hours: 12));
+    // Zonder Supabase (tests/screenshots) blijft de geseede data staan.
+    if (p == null || _client == null) return;
+    final from = now().subtract(const Duration(hours: 24));
     if (p.glucoseSource == GlucoseSource.finger) {
       final c = _client;
       if (c == null) return;
@@ -313,7 +363,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
       if (provider == null) {
         glucose = const GlucoseSnapshot.unconfigured();
       } else {
-        final snap = await provider.fetch(count: 144);
+        final snap = await provider.fetch(count: 288);
         glucose = snap;
         if (snap.history.isNotEmpty) {
           glucoseHistory = snap.history.where((g) => g.at.isAfter(from)).toList();
@@ -527,6 +577,10 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
                 weightLimitType: x.weightLimitType,
                 weightLimitKg: x.weightLimitKg,
                 targetWeightKg: kg,
+                resultPlace: x.resultPlace,
+                resultWins: x.resultWins,
+                resultLosses: x.resultLosses,
+                resultNote: x.resultNote,
               )
             : x,
     ];
@@ -580,8 +634,180 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// De gedeelde bibliotheek (134 technieken).
+  List<LibraryTechnique> library = const [];
+
+  /// Alle technieken: eigen + bibliotheek (zie [buildVault]).
+  List<VaultEntry> get vault => buildVault(techniques, library);
+
+  /// Zorgt dat een vault-regel een eigen techniek heeft (kopie van de
+  /// bibliotheek), zodat focus en herhalingen opgeslagen kunnen worden.
+  Future<Technique?> ensureOwnTechnique(VaultEntry e) async {
+    final own = e.own;
+    if (own != null) return own;
+    final lib = e.library!;
+    final uid = _uid;
+    final c = _client;
+    try {
+      final t = (uid == null || c == null)
+          ? Technique(
+              id: 'local-${now().microsecondsSinceEpoch}',
+              name: lib.name,
+              category: lib.category,
+              description: lib.description,
+              libraryId: lib.id,
+            )
+          : await TechniqueRepository(c).createFromLibrary(uid, lib);
+      techniques = [...techniques, t];
+      notifyListeners();
+      return t;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> toggleVaultFocus(VaultEntry e) async {
+    final t = await ensureOwnTechnique(e);
+    if (t == null) return false;
+    return toggleFocus(t);
+  }
+
+  /// "+1 Rep" (of meer) op een techniek in de vault.
+  Future<bool> addVaultReps(VaultEntry e, {int reps = 1}) async {
+    final t = await ensureOwnTechnique(e);
+    if (t == null) return false;
+    final c = _client;
+    try {
+      final saved = (c == null || t.id.startsWith('local-'))
+          ? t.copyWith(loggedReps: t.loggedReps + reps)
+          : await TechniqueRepository(c).addReps(t.id, reps, now());
+      techniques = [for (final x in techniques) x.id == t.id ? saved : x];
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------- systemen
+  List<TechniqueSystem> systems = const [];
+
+  /// Nieuw systeem (lege id) of bijwerken. Geeft de opgeslagen versie terug.
+  Future<TechniqueSystem?> saveSystem(TechniqueSystem system) async {
+    final uid = _uid;
+    final c = _client;
+    try {
+      TechniqueSystem saved;
+      if (uid == null || c == null) {
+        saved = system.id.isEmpty
+            ? TechniqueSystem(
+                id: 'local-${now().microsecondsSinceEpoch}',
+                name: system.name,
+                notes: system.notes,
+                nodes: system.nodes,
+                edges: system.edges,
+                tags: system.tags,
+                favorite: system.favorite,
+                createdAt: now(),
+              )
+            : system;
+      } else {
+        saved = system.id.isEmpty
+            ? await SystemRepository(c).create(system, uid)
+            : await SystemRepository(c).update(system);
+      }
+      final exists = systems.any((x) => x.id == saved.id);
+      systems = exists
+          ? [for (final x in systems) x.id == saved.id ? saved : x]
+          : [saved, ...systems];
+      notifyListeners();
+      return saved;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> deleteSystem(String id) async {
+    final c = _client;
+    try {
+      if (c != null && !id.startsWith('local-')) await SystemRepository(c).delete(id);
+      systems = systems.where((x) => x.id != id).toList();
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ------------------------------------------------------ agenda/planning
+  List<PlannedTraining> plannedTrainings = const [];
+  List<Competition> allCompetitions = const [];
+
+  /// Eerstvolgende geplande training (ook als die net begonnen is).
+  PlannedTraining? get nextPlannedTraining {
+    final from = now().subtract(const Duration(hours: 2));
+    for (final p in plannedTrainings) {
+      if (p.startsAt.isAfter(from)) return p;
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------- sessies
   List<TrainingSession> sessions = const [];
+
+  /// CGM-punten in een tijdvak (voor het glucoseverloop van een training).
+  List<GlucosePoint> glucoseBetween(DateTime from, DateTime to) => [
+    for (final g in glucoseHistory)
+      if (!g.at.isBefore(from) && !g.at.isAfter(to)) g,
+  ];
+
+  /// Training achteraf loggen ("Log Training"): discipline, focus, duur,
+  /// RPE, technieken en notities. Het glucoseverloop komt uit de CGM-data
+  /// van het tijdvak dat net is afgelopen.
+  Future<TrainingSession?> logTrainingSession({
+    required String discipline,
+    required String focus,
+    required int minutes,
+    int? rpe,
+    List<String> techniqueNames = const [],
+    String notes = '',
+  }) async {
+    final end = now();
+    final start = end.subtract(Duration(minutes: minutes));
+    final strength = discipline.toLowerCase().contains('kracht') ||
+        focus.toLowerCase().contains('condition');
+    final session = TrainingSession(
+      id: '',
+      kind: strength ? 'kracht' : 'sambo',
+      title: discipline,
+      startedAt: start,
+      durationMinutes: minutes,
+      note: [
+        'Focus: $focus${rpe == null ? '' : ' • RPE $rpe/5'}',
+        if (notes.trim().isNotEmpty) notes.trim(),
+      ].join('\n'),
+      glucoseSeries: glucoseBetween(start, end),
+      blocks: [
+        if (focus.toLowerCase().contains('sparring'))
+          {'kind': 'sparring', 'name': 'Sparring', 'meta': '', 'note': '', 'minutes': minutes, 'rounds': 0, 'covered': true},
+        for (final n in techniqueNames)
+          {'kind': 'technique', 'name': n, 'meta': '', 'note': '', 'covered': true, 'logged_at': end.toUtc().toIso8601String()},
+      ],
+    );
+    final uid = _uid;
+    final c = _client;
+    try {
+      final saved = (uid == null || c == null) ? session : await SessionRepository(c).create(session, uid);
+      sessions = [saved, ...sessions]..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+      lastSyncAt = now();
+      notifyListeners();
+      return saved;
+    } catch (_) {
+      syncError = 'Training kon niet worden opgeslagen.';
+      notifyListeners();
+      return null;
+    }
+  }
 
   /// Minuten op de mat vandaag (opgeslagen sessies + lopende sessie).
   int get matMinutesToday {
@@ -601,6 +827,9 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
   // ----------------------------------------------------------------- sparring
   SparringConfig sparringConfig = const SparringConfig();
   SparringTimer? sparring;
+
+  /// Naam van de lopende training ("Combat Sambo", "BJJ"...).
+  String sessionTitle = 'Live sparring';
   List<String> sessionTechniqueIds = const [];
   Map<String, TechniqueCounts> sessionCounts = {};
   List<GlucosePoint> sessionGlucose = [];
@@ -646,11 +875,14 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  void startSparring() {
+  /// Start een live sessie. Zonder argumenten: de standaard sparringsessie
+  /// met de focus-technieken uit de vault.
+  void startSparring({String? title, SparringConfig? config, List<String>? techniqueIds}) {
     if (isSparringActive) return;
     final t = now();
-    sparring = SparringTimer(config: sparringConfig, now: t);
-    sessionTechniqueIds = focusTechniques.map((x) => x.id).toList();
+    sessionTitle = (title == null || title.trim().isEmpty) ? 'Live sparring' : title.trim();
+    sparring = SparringTimer(config: config ?? sparringConfig, now: t);
+    sessionTechniqueIds = techniqueIds ?? focusTechniques.map((x) => x.id).toList();
     sessionCounts = {for (final id in sessionTechniqueIds) id: const TechniqueCounts()};
     sessionGlucose = [];
     coachFocus = {};
@@ -756,7 +988,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     if (custom != null && custom.trim().isNotEmpty) return custom;
     final names = sessionTechniques.map((t) => t.name).toList();
     if (names.isEmpty) return 'Tik om een instructie voor ronde $round te noteren';
-    return names.take(2).join(' ➔ ');
+    return names.take(2).join(' → ');
   }
 
   void addVoiceMemo(String path) {
@@ -817,8 +1049,8 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
       ];
       final session = TrainingSession(
         id: '',
-        kind: 'sambo',
-        title: 'Live sparring',
+        kind: sessionTitle.toLowerCase().contains('kracht') ? 'kracht' : 'sambo',
+        title: sessionTitle,
         startedAt: t.startedAt,
         durationMinutes: minutes,
         note: notes.join('\n'),
@@ -858,6 +1090,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     if (t == null || prefs == null) return;
     unawaited(prefs.setString('sparring_state', jsonEncode({
       'timer': t.toJson(),
+      'title': sessionTitle,
       'techniques': sessionTechniqueIds,
       'counts': sessionCounts.map((k, v) => MapEntry(k, v.toJson())),
       'glucose': sessionGlucose.map((g) => g.toJson()).toList(),
@@ -878,6 +1111,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
       sparring = t;
+      sessionTitle = (j['title'] as String?) ?? 'Live sparring';
       sessionTechniqueIds = ((j['techniques'] as List?) ?? []).cast<String>();
       sessionCounts = ((j['counts'] as Map?) ?? {}).map(
         (k, v) => MapEntry(k as String, TechniqueCounts.fromJson(v as Map<String, dynamic>)),
@@ -937,6 +1171,38 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Metabole drempels uit Instellingen (profiles.daily_low_below 3-6,
+  /// profiles.hyper_limit 7-20, zoals de database-constraints).
+  Future<bool> updateThresholds({double? lowBelow, double? hyperLimit}) async {
+    final p = profile;
+    if (p == null) return false;
+    final low = lowBelow == null ? null : double.parse(lowBelow.clamp(3.0, 6.0).toStringAsFixed(1));
+    final hyper = hyperLimit == null ? null : double.parse(hyperLimit.clamp(7.0, 20.0).toStringAsFixed(1));
+    try {
+      final c = _client;
+      if (c != null) {
+        await ProfileRepository(c).updateFields(p.id, {
+          'daily_low_below': ?low,
+          'hyper_limit': ?hyper,
+        });
+      }
+      profile = p.copyWith(dailyLowBelow: low, hyperLimit: hyper);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Grootte van de snelle-koolhydraten-noodknop (10/15/20 g).
+  int fastCarbGrams = 15;
+
+  Future<void> setFastCarbGrams(int grams) async {
+    fastCarbGrams = grams;
+    await _prefs?.setInt('fast_carb_grams', grams);
+    notifyListeners();
+  }
+
   // ------------------------------------------------------------- export
   /// Alle data vanaf [since] (null = alles), vers uit Supabase. Glucose
   /// combineert vingerprikken, de reeksen uit sessies en de CGM-tijdlijn.
@@ -982,6 +1248,8 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     final prefs = _prefs;
     if (prefs == null) return;
     waterMlToday = prefs.getInt(_waterKey) ?? 0;
+    darkMode = prefs.getString('theme_mode') != 'light';
+    fastCarbGrams = prefs.getInt('fast_carb_grams') ?? 15;
     try {
       final m = prefs.getString('macro_targets');
       if (m != null) {
@@ -1018,6 +1286,11 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     List<Competition> competitions = const [],
     List<Technique> techniques = const [],
     List<TrainingSession> sessions = const [],
+    List<LibraryTechnique> library = const [],
+    List<TechniqueSystem> systems = const [],
+    List<PlannedTraining> plannedTrainings = const [],
+    List<Competition>? allCompetitions,
+    bool darkMode = true,
     int waterMl = 0,
     String? email,
   }) {
@@ -1029,6 +1302,11 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     this.competitions = competitions;
     this.techniques = techniques;
     this.sessions = sessions;
+    this.library = library;
+    this.systems = systems;
+    this.plannedTrainings = plannedTrainings;
+    this.allCompetitions = allCompetitions ?? competitions;
+    this.darkMode = darkMode;
     waterMlToday = waterMl;
     _demoEmail = email;
     loadChecklist();
@@ -1044,6 +1322,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     _stopTicker();
     WidgetsBinding.instance.removeObserver(this);
     sparringEvents.dispose();
+    darkModeNotifier.dispose();
     super.dispose();
   }
 }

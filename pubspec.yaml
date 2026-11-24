@@ -18,7 +18,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 # Build-nummer moet hoger blijven dan wat op de telefoon staat (was +20),
 # anders weigert Android de update en wist `flutter run` de app-data.
-version: 2.0.0+21
+# 2.1.0+22: design-map, licht/donker, Systemen/Ontdekken (telefoon had +21).
+version: 2.1.0+22
 
 environment:
   sdk: ^3.14.0
@@ -70,6 +71,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/brand/
 
   # Inter, gebundeld zodat de app ook offline op de mat meteen goed oogt.
   fonts:

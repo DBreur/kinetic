@@ -1,5 +1,7 @@
-// vandaag_screen.dart: dashboard: fight-prep-banner, Dexcom G7-tijdlijn,
-// Start Live Sparring, snelle 1-tik-knoppen en de dagelijkse output.
+// vandaag_screen.dart: "Vandaag's protocol" (kinetic_today_1/2): fight-prep-
+// banner, Dexcom G7-kaart, glucosetrend met tijdvenster, de eerstvolgende
+// training met pre-training check, pre-sparring advies, snelle 1-tik-knoppen
+// en de dagelijkse output.
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,11 +10,14 @@ import '../core/formatters.dart';
 import '../core/glucose_rules.dart';
 import '../core/meal_impact.dart';
 import '../core/sparring_timer.dart';
+import '../models/glucose.dart';
 import '../models/kinetic_profile.dart';
+import '../models/planned_training.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/glucose_timeline.dart';
 import '../widgets/kinetic_widgets.dart';
 import '../widgets/sheets.dart';
+import '../widgets/start_training_sheet.dart';
 
 class VandaagScreen extends StatelessWidget {
   const VandaagScreen({super.key});
@@ -20,87 +25,98 @@ class VandaagScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
-    final now = store.now();
+    final k = context.k;
     final r = store.reading;
-    return SafeArea(
-      bottom: false,
-      child: RefreshIndicator(
-        color: KColor.teal,
-        backgroundColor: KColor.surfaceContainer,
-        onRefresh: store.refreshAll,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-          children: [
-            _Header(now: now),
-            const SizedBox(height: 16),
-            if (store.hypoAlert && r != null)
-              HypoBanner(
-                reading: r,
-                onDextrose: () => _logDextrose(context),
-              ),
-            const _FightPrepBanner(),
-            const SizedBox(height: 12),
-            const _DexcomCard(),
-            const SizedBox(height: 12),
-            const _SparringCta(),
-            const SizedBox(height: 12),
-            const _QuickButtons(),
-            const SizedBox(height: 20),
-            const SectionTitle('Dagelijkse output'),
-            const _DailyOutput(),
-          ],
-        ),
+    return RefreshIndicator(
+      color: k.primary,
+      backgroundColor: k.surface,
+      onRefresh: store.refreshAll,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: pagePadding(context, top: 16),
+        children: [
+          const _Header(),
+          const SizedBox(height: 16),
+          if (store.hypoAlert && r != null)
+            HypoBanner(
+              reading: r,
+              grams: store.fastCarbGrams,
+              onDextrose: () => _logFastCarbs(context),
+            ),
+          const _FightPrepBanner(),
+          const SizedBox(height: 16),
+          const _DexcomCard(),
+          const SizedBox(height: 16),
+          const _TrendCard(),
+          const SizedBox(height: 16),
+          const _TrainingCard(),
+          const SizedBox(height: 16),
+          const _AdviceCard(),
+          const SizedBox(height: 16),
+          const _QuickButtons(),
+          const SizedBox(height: 16),
+          const _DailyOutput(),
+        ],
       ),
     );
   }
 
-  static Future<void> _logDextrose(BuildContext context) async {
+  static Future<void> _logFastCarbs(BuildContext context) async {
     final store = KineticScope.read(context);
-    final e = await store.logFood(description: 'Dextrose (hypo)', carbs: 15, context: MealContext.acute);
+    final g = store.fastCarbGrams;
+    final e = await store.logFood(description: 'Dextrose (hypo)', carbs: g.toDouble(), context: MealContext.acute);
     if (!context.mounted) return;
-    showToast(context, e == null ? 'Opslaan mislukt' : '+15g dextrose gelogd. Meet over 15 min opnieuw.', error: e == null);
+    showToast(
+      context,
+      e == null ? 'Opslaan mislukt' : '+${g}g dextrose gelogd. Meet over 15 min opnieuw.',
+      error: e == null,
+    );
   }
 }
 
+// ------------------------------------------------------------------ header
+
 class _Header extends StatelessWidget {
-  const _Header({required this.now});
-  final DateTime now;
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
-    final h = now.hour;
-    final greeting = h < 6 ? 'Goedenacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond';
-    final name = (store.profile?.username.trim().isNotEmpty ?? false)
-        ? store.profile!.username.trim()
-        : (store.email ?? '').split('@').first;
-    final synced = store.syncError == null;
+    final h = store.now().hour;
+    final greeting = h < 6
+        ? 'Goedenacht'
+        : h < 12
+        ? 'Goedemorgen'
+        : h < 18
+        ? 'Goedemiddag'
+        : 'Goedenavond';
+    final name = store.displayName;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Eyebrow(shortDate(now)),
+              const Eyebrow("Vandaag's protocol"),
               const SizedBox(height: 4),
-              Text(name.isEmpty ? greeting : '$greeting, $name', style: KText.display, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(
+                name.isEmpty ? greeting : '$greeting, $name',
+                style: context.t.headline,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
-        IconButton.filledTonal(
-          tooltip: 'Instellingen & data export',
-          style: IconButton.styleFrom(backgroundColor: KColor.surfaceContainer, minimumSize: const Size(48, 48)),
-          onPressed: () => Navigator.of(context).pushNamed('/telemetrie-export'),
-          icon: Badge(
-            backgroundColor: synced ? KColor.success : KColor.warning,
-            smallSize: 8,
-            child: const Icon(Icons.tune, color: KColor.text),
-          ),
-        ),
+        const SizedBox(width: 12),
+        const KPill('T1D • Sambo', tone: KTone.primary, dot: true),
       ],
     );
   }
 }
+
+// --------------------------------------------------------------- fight prep
 
 class _FightPrepBanner extends StatelessWidget {
   const _FightPrepBanner();
@@ -108,61 +124,68 @@ class _FightPrepBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     final comp = store.nextCompetition;
     final weight = store.currentWeightKg;
     final target = store.targetWeightKg;
     final days = comp == null ? null : daysUntil(comp.startsAt, now: store.now());
-    String weightLine;
-    if (weight == null) {
-      weightLine = 'Nog geen weging';
-    } else if (target == null) {
-      weightLine = '${dec1(weight)} kg';
-    } else {
-      final d = target - weight;
-      final sign = d > 0 ? '+' : '';
-      weightLine = d.abs() < 0.05 ? '${dec1(weight)} kg (op gewicht)' : '${dec1(weight)} kg ($sign${dec1(d)} kg target)';
-    }
     final title = comp == null
         ? 'Geen wedstrijd gepland'
         : '${comp.name} • ${days == 0 ? 'Vandaag!' : 'Nog $days ${days == 1 ? 'dag' : 'dagen'}'}';
+    String? delta;
+    if (weight != null && target != null) {
+      final d = target - weight;
+      delta = d.abs() < 0.05 ? ' (op gewicht)' : ' (${d > 0 ? '+' : ''}${dec1(d)} kg target)';
+    }
+    void open() => Navigator.of(context).pushNamed('/competitions');
     return KCard(
-      onTap: () => Navigator.of(context).pushNamed('/competitions'),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [KColor.purple.withValues(alpha: 0.22), KColor.surfaceContainer],
-      ),
-      borderColor: KColor.purple.withValues(alpha: 0.35),
-      child: Row(
+      onTap: open,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Eyebrow(comp == null ? 'Fight prep' : '${comp.disciplineLabel} • fight prep', color: KColor.purple, icon: Icons.emoji_events_outlined),
-                const SizedBox(height: 8),
-                Text(title, style: KText.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(weightLine, style: KText.caption.copyWith(color: KColor.text)),
-              ],
-            ),
+          Row(
+            children: [
+              IconTile(icon: Icons.emoji_events_outlined, color: k.purple, size: 44),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow(comp == null ? 'Fight prep' : '${comp.disciplineLabel} • fight prep'),
+                    const SizedBox(height: 2),
+                    Text(title, style: context.t.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: weight == null ? 'Nog geen weging' : '${dec1(weight)} kg',
+                            style: context.t.bodyStrong,
+                          ),
+                          if (delta != null) TextSpan(text: delta, style: context.t.caption),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: k.textMuted),
+            ],
           ),
-          const SizedBox(width: 10),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: KColor.purple,
-              foregroundColor: KColor.text,
-              minimumSize: const Size(0, 48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KRadius.md)),
-            ),
-            onPressed: () => Navigator.of(context).pushNamed('/competitions'),
-            child: const Text('Inwegen & Prep ⚖️', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          BigButton(
+            label: 'Inwegen & Prep ⚖️',
+            style: KButtonStyle.secondary,
+            height: 48,
+            onPressed: open,
           ),
         ],
       ),
     );
   }
 }
+
+// ------------------------------------------------------------------ dexcom
 
 class _DexcomCard extends StatelessWidget {
   const _DexcomCard();
@@ -170,137 +193,483 @@ class _DexcomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     final r = store.reading;
     final now = store.now();
-    final source = store.profile?.glucoseSource ?? GlucoseSource.dexcomShare;
+    final finger = store.profile?.glucoseSource == GlucoseSource.finger;
     final age = r == null ? null : now.difference(r.at).inMinutes;
+    // Bij vingerprik is een oude meting normaal (je meet niet elke 15 min).
+    final stale = !finger && age != null && age >= 15;
     final message = store.glucose?.message;
     return KCard(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
+              IconTile(icon: finger ? Icons.water_drop_outlined : Icons.sensors, size: 32, color: k.accent),
+              const SizedBox(width: 10),
               Expanded(
-                child: Eyebrow(
-                  source == GlucoseSource.finger ? 'Glucose • vingerprik' : 'Dexcom G7 • 12u telemetrie',
-                  color: KColor.tealLight,
-                  icon: Icons.sensors,
-                ),
+                child: Text(finger ? 'Vingerprik' : 'Dexcom G7 Actief', style: context.t.bodyStrong),
               ),
               if (age != null)
-                Text(age <= 0 ? 'zojuist' : '$age min geleden', style: KText.caption.copyWith(color: r!.isStale ? KColor.warning : KColor.textMuted)),
+                Text(
+                  age <= 0 ? 'Zojuist bijgewerkt' : '$age min geleden',
+                  style: context.t.caption.copyWith(color: stale ? k.warningInk : null),
+                ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: GlucoseReadout(reading: r, size: 48, showArrow: false),
+                    ),
+                    const SizedBox(height: 4),
+                    Text('IOB ${store.iob.toStringAsFixed(1)} E actief', style: context.t.caption),
+                  ],
+                ),
+              ),
+              if (r != null) ...[
+                const SizedBox(width: 12),
+                KWell(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        trendArrow(r.trend),
+                        style: context.t.title.copyWith(color: isFalling(r.trend) ? k.warningInk : k.accent, height: 1),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(trendLabel(r.trend), style: context.t.bodyStrong),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (r != null)
+            _RangeWell(reading: r, stale: stale)
+          else ...[
+            Text(
+              message ?? 'Nog geen glucosewaarde.',
+              style: context.t.caption.copyWith(color: k.warningInk),
+            ),
+            const SizedBox(height: 10),
+            BigButton(
+              label: 'Vingerprik invoeren',
+              icon: Icons.water_drop_outlined,
+              style: KButtonStyle.secondary,
+              height: 48,
+              onPressed: () => showFingerstickSheet(context),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// "✓ In bereik  •  Doel: 4.2 – 9.0 mmol/L", per zone.
+class _RangeWell extends StatelessWidget {
+  const _RangeWell({required this.reading, required this.stale});
+  final GlucoseReading reading;
+  final bool stale;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final range = '${dec1(targetLow)} – ${dec1(targetHigh)} mmol/L';
+    final (IconData icon, String label, KTone tone, String detail) = stale
+        ? (Icons.schedule, 'Meting is oud', KTone.warning, 'Controleer de sensor')
+        : switch (zoneFor(reading.mmol)) {
+            GlucoseZone.inTarget => (Icons.check, 'In bereik', KTone.success, 'Doel: $range'),
+            GlucoseZone.hypo => (Icons.priority_high, 'Hypo', KTone.danger, 'Onder ${dec1(hypoBelow)} mmol/L'),
+            GlucoseZone.low => (Icons.south, 'Laag', KTone.warning, 'Doel: $range'),
+            GlucoseZone.high => (Icons.north, 'Hoog', KTone.warning, 'Doel: $range'),
+          };
+    final (_, fg) = toneColors(k, tone);
+    final solid = switch (tone) {
+      KTone.success => k.success,
+      KTone.danger => k.danger,
+      _ => k.warning,
+    };
+    return KWell(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(color: solid, shape: BoxShape.circle),
+            child: Icon(icon, size: 16, color: k.surface),
+          ),
+          const SizedBox(width: 10),
+          Text(label, style: context.t.bodyStrong.copyWith(color: fg)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              detail,
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.t.caption,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------- trend
+
+class _TrendCard extends StatefulWidget {
+  const _TrendCard();
+
+  @override
+  State<_TrendCard> createState() => _TrendCardState();
+}
+
+class _TrendCardState extends State<_TrendCard> {
+  int _hours = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = KineticScope.of(context);
+    final k = context.k;
+    final now = store.now();
+    final from = now.subtract(Duration(hours: _hours));
+    final window = store.glucoseHistory.where((g) => g.at.isAfter(from)).map((g) => g.mmol).toList();
+    final avg = window.isEmpty ? null : window.reduce((a, b) => a + b) / window.length;
+    final tir = timeInRange(window);
+    return KCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.ssid_chart, color: k.accent, size: 22),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Glucosetrend', style: context.t.title)),
+              if (avg != null) ...[
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: zoneInk(k, avg), shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Text('Gem. ${dec1(avg)} mmol/L', style: context.t.caption),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          KSegmented<int>(
+            options: const [(3, '3u'), (6, '6u'), (12, '12u'), (24, '24u')],
+            value: _hours,
+            onChanged: (h) => setState(() => _hours = h),
           ),
           const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          GlucoseTimeline(
+            points: store.glucoseHistory,
+            meals: store.foodEntries,
+            now: now,
+            windowHours: _hours,
+            height: 190,
+          ),
+          if (tir != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${(tir * 100).round()}% in doelbereik (laatste $_hours uur) • tik op de lijn voor details',
+              style: context.t.caption,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- training
+
+class _TrainingCard extends StatefulWidget {
+  const _TrainingCard();
+
+  @override
+  State<_TrainingCard> createState() => _TrainingCardState();
+}
+
+class _TrainingCardState extends State<_TrainingCard> {
+  bool? _expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = KineticScope.of(context);
+    final k = context.k;
+    final p = store.nextPlannedTraining;
+    final active = store.isSparringActive;
+    final cfg = store.sparringConfig;
+    final clearance = store.clearanceForNextRound();
+    final expanded = _expanded ?? clearance.level != ClearanceLevel.safe;
+    final (_, toneFg) = toneColors(k, clearanceTone(clearance.level));
+    final t = store.sparring;
+
+    final header = p == null
+        ? Row(
             children: [
-              Expanded(child: GlucoseReadout(reading: r, size: 40)),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('IOB', style: KText.eyebrow),
-                  const SizedBox(height: 2),
-                  Text('${store.iob.toStringAsFixed(1)} E', style: KText.metricSmall.copyWith(color: KColor.blue)),
-                ],
+              IconTile(icon: Icons.sports_kabaddi, size: 56, color: k.primary),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Geen training gepland', style: context.t.title),
+                    const SizedBox(height: 2),
+                    Text('Start een vrije training of plan er een in je agenda.', style: context.t.caption),
+                  ],
+                ),
               ),
             ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconTile(icon: _kindIcon(p.kind), size: 56, color: k.primary, filled: true),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        KPill(p.kind.label, tone: KTone.neutral, dense: true, uppercase: true),
+                        if (p.durationMinutes != null) Text('${p.durationMinutes} min', style: context.t.caption),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(p.displayTitle, style: context.t.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    if (p.location.trim().isNotEmpty)
+                      Text(p.location.trim(), style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              KPill(_timeLabel(p.startsAt, store.now()), tone: KTone.primary),
+            ],
+          );
+
+    return KCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          header,
+          const SizedBox(height: 16),
+          KWell(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Icon(active ? Icons.sports_mma : Icons.timer_outlined, color: k.accent, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    active && t != null
+                        ? '${store.sessionTitle} • ${t.phase == SparringPhase.rest ? 'Rust' : 'Ronde'} ${t.round}/${t.config.rounds}'
+                        : '${configShort(cfg)} Live Sparring',
+                    style: context.t.body.copyWith(color: k.text),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  active ? mmss(store.roundSecondsRemaining) : '${restClock(cfg)} rust',
+                  style: context.t.caption.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          if (r != null)
-            KBadge(
-              r.isStale
-                  ? 'Meting is oud: sensorverbinding controleren'
-                  : '${trendLabel(r.trend)} • ${_zoneText(r.mmol)}',
-              color: r.isStale ? KColor.warning : glucoseColor(r.mmol),
+          const SizedBox(height: 12),
+          // Pre-Training Check: status meteen zichtbaar, uitleg uitklapbaar.
+          Material(
+            color: k.primaryTint,
+            borderRadius: BorderRadius.circular(KRadius.md),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _expanded = !expanded);
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 32),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text('Pre-Training Check', style: context.t.bodyStrong.copyWith(color: k.accent)),
+                          ),
+                          KPill(
+                            clearanceShort(clearance.level),
+                            tone: clearanceTone(clearance.level),
+                            icon: clearanceIcon(clearance.level),
+                            dense: true,
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(expanded ? Icons.expand_less : Icons.expand_more, color: k.accent),
+                        ],
+                      ),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 180),
+                      alignment: Alignment.topCenter,
+                      child: expanded
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 8, right: 4),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(clearance.title, style: context.t.bodyStrong.copyWith(color: toneFg)),
+                                  const SizedBox(height: 2),
+                                  Text(clearance.detail, style: context.t.caption.copyWith(color: k.text)),
+                                ],
+                              ),
+                            )
+                          : const SizedBox(width: double.infinity),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (active)
+            BigButton(
+              label: 'Terug naar de mat',
+              icon: Icons.sports_mma,
+              height: 56,
+              onPressed: () {
+                HapticFeedback.heavyImpact();
+                openLiveSession(context);
+              },
             )
-          else if (message != null)
-            Text(message, style: KText.caption.copyWith(color: KColor.warning)),
-          const SizedBox(height: 10),
-          GlucoseTimeline(points: store.glucoseHistory, meals: store.foodEntries, now: now),
+          else
+            BigButton(
+              label: 'Training starten',
+              icon: Icons.play_arrow_rounded,
+              height: 56,
+              onPressed: () => showStartTrainingSheet(context, planned: p),
+            ),
         ],
       ),
     );
   }
 
-  static String _zoneText(double mmol) => switch (zoneFor(mmol)) {
-    GlucoseZone.hypo => 'Hypo < ${hypoBelow.toStringAsFixed(1)}',
-    GlucoseZone.low => 'Laag',
-    GlucoseZone.inTarget => 'In doelbereik ${targetLow.toStringAsFixed(1)} - ${targetHigh.toStringAsFixed(1)}',
-    GlucoseZone.high => 'Boven doelbereik',
+  static IconData _kindIcon(TrainingKind kind) => switch (kind) {
+    TrainingKind.kracht => Icons.fitness_center,
+    TrainingKind.overig => Icons.sports_martial_arts,
+    _ => Icons.sports_kabaddi,
   };
+
+  /// "18:30", of "morgen 18:30" / "do 18:30" als het niet vandaag is.
+  static String _timeLabel(DateTime at, DateTime now) {
+    final days = daysUntil(at, now: now);
+    if (days == 0) return hhmm(at);
+    if (days == 1) return 'morgen ${hhmm(at)}';
+    return '${shortDate(at).split(' ').first} ${hhmm(at)}';
+  }
 }
 
-class _SparringCta extends StatelessWidget {
-  const _SparringCta();
+// ------------------------------------------------------------------ advies
+
+class _AdviceCard extends StatelessWidget {
+  const _AdviceCard();
 
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
-    final active = store.isSparringActive;
-    final t = store.sparring;
-    final focus = store.focusTechniques.length;
-    final clearance = store.clearanceForNextRound();
+    final k = context.k;
+    final (title, text, tone) = _advice(store.clearanceForNextRound(), store.reading, store.iob, store.fastCarbGrams);
+    final (_, fg) = toneColors(k, tone);
     return KCard(
-      glow: true,
-      onTap: () {
-        HapticFeedback.heavyImpact();
-        openLiveSession(context);
-      },
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [KColor.teal, Color(0xFF0F766E)],
-      ),
-      borderColor: KColor.tealLight.withValues(alpha: 0.5),
-      padding: const EdgeInsets.all(18),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: KColor.bg.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(KRadius.lg),
-            ),
-            child: Icon(active ? Icons.play_circle_fill : Icons.sports_mma, color: KColor.text, size: 32),
-          ),
+          IconTile(icon: tone == KTone.primary ? Icons.bolt : Icons.warning_amber_rounded, size: 44, color: fg),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  active ? 'Terug naar de mat' : 'Start Live Sparring',
-                  style: KText.title.copyWith(color: KColor.text, fontWeight: FontWeight.w900),
-                ),
+                Text(title, style: context.t.bodyStrong),
                 const SizedBox(height: 4),
-                Text(
-                  active
-                      ? '${t!.phase == SparringPhase.rest ? 'Rust' : 'Ronde'} ${t.round}/${t.config.rounds} • ${mmss(store.roundSecondsRemaining)}'
-                      : '${store.sparringConfig.summary} • $focus focus-${focus == 1 ? 'techniek' : 'technieken'}',
-                  style: KText.caption.copyWith(color: KColor.text.withValues(alpha: 0.85)),
-                ),
-                if (!active && clearance.level != ClearanceLevel.safe) ...[
-                  const SizedBox(height: 6),
-                  Text('⚠ ${clearance.title}', style: KText.caption.copyWith(color: KColor.bg, fontWeight: FontWeight.w800)),
-                ],
+                Text(text, style: context.t.body.copyWith(color: k.textSecondary)),
               ],
             ),
           ),
-          if (!active)
-            IconButton(
-              tooltip: 'Rondes instellen',
-              onPressed: () => showSparringConfigSheet(context),
-              icon: const Icon(Icons.tune, color: KColor.text),
-            ),
         ],
       ),
     );
   }
+
+  /// Tip vóór de mat, afgeleid uit de clearance, de trend en de IOB.
+  static (String, String, KTone) _advice(MatClearance c, GlucoseReading? r, double iob, int fastCarbs) {
+    switch (c.level) {
+      case ClearanceLevel.danger:
+        return ('Pre-sparring alarm', 'Niet de mat op. ${c.detail}', KTone.danger);
+      case ClearanceLevel.unknown:
+        return ('Pre-sparring check', '${c.title}. ${c.detail}', KTone.warning);
+      case ClearanceLevel.caution:
+        return ('Pre-sparring let op', '${c.title}: ${c.detail}', KTone.warning);
+      case ClearanceLevel.safe:
+        break;
+    }
+    if (r != null && isFalling(r.trend)) {
+      return (
+        'Pre-sparring advies',
+        'Je glucose daalt (${trendLabel(r.trend).toLowerCase()}). Neem ${fastCarbs}g snelle koolhydraten 15-30 min vóór de eerste ronde.',
+        KTone.warning,
+      );
+    }
+    if (iob >= 1.0) {
+      return (
+        'Pre-sparring advies',
+        'Nog ${iob.toStringAsFixed(1)} E insuline actief: grotere kans op een dip tijdens het sparren. Houd dextrose binnen handbereik.',
+        KTone.warning,
+      );
+    }
+    if (r != null && (r.trend == Trend.up || r.trend == Trend.slightUp)) {
+      return (
+        'Pre-sparring advies',
+        'Stijgende trend. Combat-rondes geven adrenaline en laten je glucose eerst verder stijgen: corrigeer vóór de training voorzichtig.',
+        KTone.primary,
+      );
+    }
+    return (
+      'Pre-sparring advies',
+      'Combat-rondes verhogen de adrenaline. Verwacht eerst een stijging door glucose uit de lever en daarna een snelle daling rond ronde 4.',
+      KTone.primary,
+    );
+  }
 }
+
+// ------------------------------------------------------------ snelle knoppen
 
 class _QuickButtons extends StatelessWidget {
   const _QuickButtons();
@@ -308,6 +677,7 @@ class _QuickButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     final liters = store.waterMlToday / 1000;
     return IntrinsicHeight(
       child: Row(
@@ -322,7 +692,7 @@ class _QuickButtons extends StatelessWidget {
                 if (!context.mounted) return;
                 showToast(
                   context,
-                  'Vocht ${(before / 1000).toStringAsFixed(2)}L ➔ ${(store.waterMlToday / 1000).toStringAsFixed(2)}L',
+                  'Vocht ${(before / 1000).toStringAsFixed(2)}L → ${(store.waterMlToday / 1000).toStringAsFixed(2)}L',
                   actionLabel: 'Ongedaan',
                   onAction: () => store.addWater(-250),
                 );
@@ -330,11 +700,20 @@ class _QuickButtons extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Eyebrow('Vocht', color: KColor.blue, icon: Icons.water_drop),
-                  const SizedBox(height: 10),
-                  Text('${liters.toStringAsFixed(liters * 100 % 10 == 0 ? 1 : 2)}L', style: KText.metric),
-                  const SizedBox(height: 6),
-                  Text('Tik voor +250ml', style: KText.caption.copyWith(color: KColor.blue, fontWeight: FontWeight.w700)),
+                  Row(
+                    children: [
+                      IconTile(icon: Icons.water_drop_outlined, size: 32, color: k.blue),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Vocht', style: context.t.bodyStrong)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${liters.toStringAsFixed(store.waterMlToday % 100 == 0 ? 1 : 2)}L',
+                    style: context.t.metricMd,
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Tik voor +250ml', style: context.t.caption.copyWith(color: k.blue, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -346,16 +725,27 @@ class _QuickButtons extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Eyebrow('Eten & carbs', color: KColor.warning, icon: Icons.restaurant),
-                  const SizedBox(height: 10),
-                  Text.rich(
-                    TextSpan(children: [
-                      TextSpan(text: grams(store.carbsToday), style: KText.metric),
-                      TextSpan(text: ' / ${grams(store.carbsTarget)}g', style: KText.caption),
-                    ]),
+                  Row(
+                    children: [
+                      IconTile(icon: Icons.restaurant_outlined, size: 32, color: k.warningInk),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Eten & carbs', style: context.t.bodyStrong)),
+                    ],
                   ),
-                  const SizedBox(height: 6),
-                  Text('Maaltijd toevoegen', style: KText.caption.copyWith(color: KColor.warning, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: grams(store.carbsToday), style: context.t.metricMd),
+                        TextSpan(text: ' / ${grams(store.carbsTarget)}g', style: context.t.unit),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Maaltijd toevoegen',
+                    style: context.t.caption.copyWith(color: k.warningInk, fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
             ),
@@ -366,51 +756,73 @@ class _QuickButtons extends StatelessWidget {
   }
 }
 
+// --------------------------------------------------------- dagelijkse output
+
 class _DailyOutput extends StatelessWidget {
   const _DailyOutput();
 
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     final mat = store.matMinutesToday;
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.55,
-      children: [
-        MetricTile(
-          label: 'Verbranding',
-          value: mat == 0 ? '0 kcal' : '${store.kcalToday} kcal',
-          sub: 'schatting uit mat-tijd',
-          icon: Icons.local_fire_department,
-          accent: KColor.warning,
-        ),
-        MetricTile(
-          label: 'Tijd op mat',
-          value: '$mat min',
-          sub: store.isSparringActive ? 'sessie loopt' : 'vandaag',
-          icon: Icons.timer_outlined,
-        ),
-        const MetricTile(
-          label: 'HRV herstel',
-          value: '—',
-          sub: 'Koppel Polar H10',
-          icon: Icons.monitor_heart_outlined,
-          accent: KColor.blue,
-          subColor: KColor.textMuted,
-        ),
-        const MetricTile(
-          label: 'Slaap',
-          value: '—',
-          sub: 'Geen slaapbron gekoppeld',
-          icon: Icons.bedtime_outlined,
-          accent: KColor.purple,
-          subColor: KColor.textMuted,
-        ),
-      ],
+    Widget pair(Widget a, Widget b) => IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [Expanded(child: a), const SizedBox(width: 8), Expanded(child: b)],
+      ),
+    );
+    return KCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text('Dagelijkse output', style: context.t.title)),
+              Text(shortDate(store.now()), style: context.t.caption),
+            ],
+          ),
+          const SizedBox(height: 12),
+          pair(
+            MetricTile(
+              inWell: true,
+              label: 'Verbranding',
+              value: '${store.kcalToday} kcal',
+              sub: 'Schatting uit mat-tijd',
+              icon: Icons.local_fire_department_outlined,
+              accent: k.warningInk,
+            ),
+            MetricTile(
+              inWell: true,
+              label: 'Tijd op mat',
+              value: '$mat min',
+              sub: store.isSparringActive ? 'Sessie loopt' : 'Vandaag',
+              icon: Icons.timer_outlined,
+            ),
+          ),
+          const SizedBox(height: 8),
+          pair(
+            MetricTile(
+              inWell: true,
+              label: 'HRV herstel',
+              value: '—',
+              sub: 'Koppel Polar H10',
+              icon: Icons.monitor_heart_outlined,
+              accent: k.blue,
+              subColor: k.textMuted,
+            ),
+            MetricTile(
+              inWell: true,
+              label: 'Slaap',
+              value: '—',
+              sub: 'Geen slaapbron',
+              icon: Icons.bedtime_outlined,
+              accent: k.purple,
+              subColor: k.textMuted,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

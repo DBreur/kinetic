@@ -1,17 +1,18 @@
-# kinetic
+# Kinetic
 
-A new Flutter project.
+Combat sports, atletische telemetrie en Type 1 Diabetes/CGM-monitoring in één Flutter-app,
+met Supabase als backend. De specificatie staat in `CLAUDE.md`; build- en testcommando's staan in `RUN_COMMANDS.md`.
 
-## Getting Started
+## Structuur
 
-This project is a starting point for a Flutter application.
+| Map | Inhoud |
+| --- | --- |
+| `lib/state/kinetic_store.dart` | Centrale app-state (equivalent van `useKineticStore.ts` uit de spec) |
+| `lib/screens/` | Vandaag, Training, Technieken, Eten, Live sessie, Ronde rust, Wedstrijden, Instellingen & export |
+| `lib/core/` | Pure logica: glucoseregels/mat-clearance, IOB, maaltijd-impact, gewichtsplan, rondetimer |
+| `lib/repositories/` | Supabase-toegang (bestaand schema, RLS per gebruiker) |
+| `lib/services/` | Dexcom Share, Nightscout, Polar H10 (simulatie), spraakmemo, export |
+| `lib/theme/kinetic_theme.dart` | Kinetic Dark Theme-tokens |
+| `lib/supabase/migrations/` | SQL-migraties |
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Flutter 3.50+: Material komt uit `package:material_ui`. `package:flutter/material.dart` is deprecated.

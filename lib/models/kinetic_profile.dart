@@ -78,6 +78,8 @@ class KineticProfile {
     String? nightscoutUrl,
     String? nightscoutToken,
     double? weightKg,
+    double? dailyLowBelow,
+    double? hyperLimit,
   }) => KineticProfile(
     id: id,
     username: username,
@@ -88,8 +90,8 @@ class KineticProfile {
     nightscoutToken: nightscoutToken ?? this.nightscoutToken,
     weightKg: weightKg ?? this.weightKg,
     trainingLimit: trainingLimit,
-    dailyLowBelow: dailyLowBelow,
-    hyperLimit: hyperLimit,
+    dailyLowBelow: dailyLowBelow ?? this.dailyLowBelow,
+    hyperLimit: hyperLimit ?? this.hyperLimit,
     correctionFactor: correctionFactor,
   );
 }

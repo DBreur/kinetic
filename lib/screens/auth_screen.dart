@@ -1,4 +1,5 @@
-// auth_screen.dart: inloggen/registreren met Supabase Auth.
+// auth_screen.dart: inloggen/registreren met Supabase Auth, in de stijl van
+// het Kinetic design system (logo, vlakke kaart, één primaire knop).
 
 import 'package:material_ui/material_ui.dart';
 
@@ -17,6 +18,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _register = false;
+  bool _showPassword = false;
   String? _localError;
   String? _info;
 
@@ -60,77 +62,134 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     final error = _localError ?? store.authError;
+    final media = MediaQuery.of(context);
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(16, media.viewPadding.top + 24, 16, 24 + context.bottomInset),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: AutofillGroup(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: KColor.teal.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(KRadius.lg),
-                      border: Border.all(color: KColor.teal),
-                    ),
-                    child: const Icon(Icons.bolt, color: KColor.teal, size: 36),
+                  const Center(child: KineticLogo(size: 72)),
+                  const SizedBox(height: 16),
+                  Text('Kinetic', textAlign: TextAlign.center, style: context.t.headlineLg),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Combat sports • atletische telemetrie • T1D/CGM',
+                    textAlign: TextAlign.center,
+                    style: context.t.caption,
                   ),
-                  const SizedBox(height: 20),
-                  Text('Kinetic', style: KText.display.copyWith(fontSize: 34)),
-                  const SizedBox(height: 6),
-                  Text('Combat sports • atletische telemetrie • T1D/CGM', style: KText.caption),
                   const SizedBox(height: 28),
-                  TextField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    style: KText.body,
-                    decoration: const InputDecoration(labelText: 'E-mail'),
+                  KCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow(_register ? 'Nieuw account' : 'Welkom terug'),
+                        const SizedBox(height: 4),
+                        Text(_register ? 'Account aanmaken' : 'Inloggen', style: context.t.headline),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
+                          textInputAction: TextInputAction.next,
+                          style: context.t.body,
+                          decoration: const InputDecoration(labelText: 'E-mail', prefixIcon: Icon(Icons.mail_outline)),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _password,
+                          obscureText: !_showPassword,
+                          autofillHints: [_register ? AutofillHints.newPassword : AutofillHints.password],
+                          style: context.t.body,
+                          onSubmitted: (_) => _submit(),
+                          decoration: InputDecoration(
+                            labelText: 'Wachtwoord',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              tooltip: _showPassword ? 'Wachtwoord verbergen' : 'Wachtwoord tonen',
+                              onPressed: () => setState(() => _showPassword = !_showPassword),
+                              icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                            ),
+                          ),
+                        ),
+                        if (error != null) ...[
+                          const SizedBox(height: 12),
+                          _Notice(text: error, tone: KTone.danger, icon: Icons.error_outline),
+                        ],
+                        if (_info != null) ...[
+                          const SizedBox(height: 12),
+                          _Notice(text: _info!, tone: KTone.primary, icon: Icons.mark_email_read_outlined),
+                        ],
+                        const SizedBox(height: 20),
+                        BigButton(
+                          label: store.busy ? 'Even geduld…' : (_register ? 'Account aanmaken' : 'Inloggen'),
+                          icon: _register ? Icons.person_add_alt : Icons.login,
+                          onPressed: store.busy ? null : _submit,
+                        ),
+                        if (!_register) ...[
+                          const SizedBox(height: 4),
+                          TextButton(onPressed: _forgot, child: const Text('Wachtwoord vergeten')),
+                        ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _password,
-                    obscureText: true,
-                    autofillHints: [_register ? AutofillHints.newPassword : AutofillHints.password],
-                    style: KText.body,
-                    onSubmitted: (_) => _submit(),
-                    decoration: const InputDecoration(labelText: 'Wachtwoord'),
-                  ),
-                  if (error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(error, style: KText.caption.copyWith(color: KColor.danger)),
-                  ],
-                  if (_info != null) ...[
-                    const SizedBox(height: 12),
-                    Text(_info!, style: KText.caption.copyWith(color: KColor.tealLight)),
-                  ],
-                  const SizedBox(height: 20),
-                  BigButton(
-                    label: store.busy ? 'Even geduld…' : (_register ? 'Account aanmaken' : 'Inloggen'),
-                    onPressed: store.busy ? null : _submit,
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_register ? 'Al een account?' : 'Nog geen account?', style: context.t.caption),
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _register = !_register;
+                          _localError = null;
+                          _info = null;
+                        }),
+                        child: Text(_register ? 'Inloggen' : 'Nieuw account aanmaken'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _register = !_register;
-                      _localError = null;
-                      _info = null;
-                    }),
-                    child: Text(_register ? 'Ik heb al een account' : 'Nieuw account aanmaken'),
+                  Text(
+                    'Je data staat in je eigen Supabase-account, beveiligd met Row Level Security.',
+                    textAlign: TextAlign.center,
+                    style: context.t.caption.copyWith(color: k.textMuted),
                   ),
-                  if (!_register) TextButton(onPressed: _forgot, child: const Text('Wachtwoord vergeten')),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _Notice extends StatelessWidget {
+  const _Notice({required this.text, required this.tone, required this.icon});
+  final String text;
+  final KTone tone;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = toneColors(context.k, tone);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(KRadius.md)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: fg),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: context.t.body.copyWith(color: fg))),
+        ],
       ),
     );
   }

@@ -1,7 +1,8 @@
-// live_session_screen.dart: Live Sparring & Mat-Modus. Handschoenvriendelijk:
-// alle bedieningsknoppen zijn minstens 64px hoog, alles in hoog contrast.
-// Loopt een ronde af (of tik je op VOLGENDE), dan gaat het scherm vanzelf
-// naar /ronde-rust.
+// live_session_screen.dart: Live Sparring & Mat-Modus ("Actieve ronde-timer").
+// Handschoenvriendelijk: de rondeklok is minstens 88px en leesbaar vanaf een
+// paar meter, alle mat-bediening is minstens 64px. Loopt een ronde af (of tik
+// je op VOLGENDE), dan gaat het scherm vanzelf naar /ronde-rust; na de
+// laatste ronde volgt de opslaan/verwerpen-flow.
 
 import 'dart:async';
 
@@ -65,115 +66,71 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     if (t == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final r = store.reading;
     final paused = t.isPaused;
-    return PopScope(
-      canPop: true,
-      child: Scaffold(
-        backgroundColor: KColor.bg,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _TopBar(paused: paused),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                  children: [
-                    if (store.hypoAlert && r != null)
-                      HypoBanner(reading: r, onDextrose: () => logMatIntervention(context, dextrose: true)),
-                    _RoundHeader(timer: t),
-                    const SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: store.toggleSparringTimer,
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            mmss(store.roundSecondsRemaining),
-                            style: KText.timer.copyWith(
-                              color: paused ? KColor.textMuted : (store.roundSecondsRemaining <= 10 ? KColor.warning : KColor.text),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        '${mmss(t.config.workSeconds)} werk / ${mmss(t.config.restSeconds)} rust${paused ? ' • GEPAUZEERD' : ''}',
-                        style: KText.caption,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: DexcomLiveCard()),
-                          SizedBox(width: 10),
-                          Expanded(child: PolarLiveCard()),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const _TechniqueCounters(),
-                    const SizedBox(height: 12),
-                    const VoiceMemoButton(),
-                  ],
-                ),
-              ),
-              _BottomControls(paused: paused),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.paused});
-  final bool paused;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-      child: Row(
+    final hypo = liveHypo(store);
+    final r = store.reading;
+    return Scaffold(
+      body: Column(
         children: [
-          IconButton(
-            tooltip: 'Minimaliseren',
-            iconSize: 30,
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.keyboard_arrow_down, color: KColor.textSecondary),
+          SessionTopBar(
+            title: 'Actieve ronde-timer',
+            status: paused ? 'GEPAUZEERD' : 'ACTIEVE SPARRING • LIVE',
+            statusTone: paused ? KTone.warning : KTone.danger,
+            live: !paused,
           ),
           Expanded(
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: (paused ? KColor.warning : KColor.danger).withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(KRadius.full),
-                  border: Border.all(color: paused ? KColor.warning : KColor.danger),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    LiveDot(color: paused ? KColor.warning : KColor.danger, active: !paused),
-                    const SizedBox(width: 8),
-                    Text(
-                      paused ? 'GEPAUZEERD' : 'ACTIEVE SPARRING • LIVE',
-                      style: KText.eyebrow.copyWith(color: paused ? KColor.warning : KColor.danger, fontSize: 12),
-                    ),
+            // SingleChildScrollView: alles wordt gebouwd, zodat tellers en
+            // knoppen altijd vindbaar zijn. De onderste ruimte voor de
+            // systeemknoppen zit in de BottomActionBar hieronder.
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (hypo && r != null)
+                    HypoBanner(
+                      reading: r,
+                      grams: store.fastCarbGrams,
+                      onDextrose: () => logMatIntervention(context, dextrose: true),
+                    )
+                  else ...[
+                    const _GlucoseStrip(),
+                    const SizedBox(height: 12),
                   ],
-                ),
+                  _TimerCard(timer: t),
+                  const SizedBox(height: 12),
+                  const TelemetryRow(),
+                  const SizedBox(height: 12),
+                  const TechniqueFocusCard(),
+                  const SizedBox(height: 12),
+                  const _FastCarbCard(),
+                ],
               ),
             ),
           ),
-          IconButton(
-            tooltip: 'Sessie afronden',
-            iconSize: 28,
-            onPressed: () => finishSessionFlow(context, natural: false),
-            icon: const Icon(Icons.stop_circle_outlined, color: KColor.textSecondary),
+          BottomActionBar(
+            child: Row(
+              children: [
+                Expanded(
+                  child: MatControlButton(
+                    label: paused ? 'Hervat' : 'Pauze',
+                    icon: paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                    onPressed: store.toggleSparringTimer,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: MatControlButton(
+                    label: t.isLastRound ? 'Afronden' : 'Volgende',
+                    icon: t.isLastRound ? Icons.flag_rounded : Icons.skip_next_rounded,
+                    style: KButtonStyle.secondary,
+                    onPressed: store.advanceToRestPhase,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Expanded(child: VoiceMemoButton(compact: true)),
+              ],
+            ),
           ),
         ],
       ),
@@ -181,157 +138,610 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _RoundHeader extends StatelessWidget {
-  const _RoundHeader({required this.timer});
+// ------------------------------------------------------------- top bar
+
+/// Top bar van de mat-schermen: minimaliseren, logo, titel met live-status
+/// en een stopknop (afronden met opslaan/verwerpen).
+class SessionTopBar extends StatelessWidget {
+  const SessionTopBar({
+    super.key,
+    required this.title,
+    required this.status,
+    this.statusTone = KTone.danger,
+    this.live = true,
+    this.statusIcon,
+  });
+
+  final String title;
+  final String status;
+  final KTone statusTone;
+  final bool live;
+  final IconData? statusIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final fg = toneColors(k, statusTone).$2;
+    return Container(
+      decoration: BoxDecoration(
+        color: k.canvas,
+        border: Border(bottom: BorderSide(color: k.border)),
+      ),
+      padding: EdgeInsets.only(top: MediaQuery.viewPaddingOf(context).top),
+      child: SizedBox(
+        height: 64,
+        child: Row(
+          children: [
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Minimaliseren (sessie loopt door)',
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: Icon(Icons.arrow_back, color: k.text),
+            ),
+            const KineticLogo(size: 32),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: t.subtitle.copyWith(height: 1.15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      if (statusIcon != null)
+                        Icon(statusIcon, size: 12, color: fg)
+                      else
+                        LiveDot(color: toneSolid(k, statusTone), active: live, size: 7),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          status,
+                          style: t.labelSm.copyWith(color: fg, fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'Sessie afronden',
+              child: Material(
+                color: k.well,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(KRadius.md),
+                  side: BorderSide(color: k.border),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => finishSessionFlow(context, natural: false),
+                  child: SizedBox(
+                    height: 48,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.stop_rounded, size: 20, color: k.dangerInk),
+                          const SizedBox(width: 4),
+                          Text('Stop', style: t.bodyStrong.copyWith(color: k.text)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- glucose strip
+
+/// "Stabiel • 6.8 mmol/L ↗ / Optimale sparringzone" met snelle carbs-knop.
+class _GlucoseStrip extends StatelessWidget {
+  const _GlucoseStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final store = KineticScope.of(context);
+    final r = store.reading;
+    final c = store.clearanceForNextRound();
+    final tone = clearanceTone(c.level);
+    final (bg, fg) = toneColors(k, tone);
+    final word = switch (c.level) {
+      ClearanceLevel.safe => 'Stabiel',
+      ClearanceLevel.caution => 'Let op',
+      ClearanceLevel.danger => 'Hypo',
+      ClearanceLevel.unknown => 'Onzeker',
+    };
+    final sub = switch (c.level) {
+      ClearanceLevel.safe => 'Optimale sparringzone',
+      ClearanceLevel.danger => 'Stop: neem snelle koolhydraten',
+      _ => c.title,
+    };
+    final icon = switch (c.level) {
+      ClearanceLevel.safe => Icons.monitor_heart,
+      ClearanceLevel.caution => Icons.warning_amber_rounded,
+      ClearanceLevel.danger => Icons.dangerous,
+      ClearanceLevel.unknown => Icons.sensors_off,
+    };
+    return KCard(
+      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+            child: Icon(icon, size: 22, color: fg),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        r == null ? 'Geen glucosewaarde' : '$word • ${r.mmol.toStringAsFixed(1)} mmol/L',
+                        style: t.bodyStrong,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (r != null) ...[
+                      const SizedBox(width: 6),
+                      Icon(trendIcon(r.trend), size: 18, color: toneSolid(k, tone)),
+                    ],
+                  ],
+                ),
+                Text(sub, style: t.caption.copyWith(color: fg), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Semantics(
+            button: true,
+            label: '${store.fastCarbGrams} gram snelle koolhydraten loggen',
+            excludeSemantics: true,
+            child: Material(
+              color: k.well,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(KRadius.md),
+                side: BorderSide(color: k.border),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  logMatIntervention(context, dextrose: true);
+                },
+                child: SizedBox(
+                  height: 48,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.bolt, size: 18, color: k.accent),
+                        const SizedBox(width: 4),
+                        Text('+${store.fastCarbGrams}g', style: t.bodyStrong.copyWith(color: k.accent)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- timer
+
+String _disciplineLabel(String title) {
+  final t = title.trim();
+  return (t.toLowerCase().contains('sparring') ? t : '$t sparring').toUpperCase();
+}
+
+String _restLabel(int seconds) => '${seconds ~/ 60}:${two(seconds % 60)}';
+
+class _TimerCard extends StatelessWidget {
+  const _TimerCard({required this.timer});
   final SparringTimer timer;
 
   @override
   Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final store = KineticScope.of(context);
+    final paused = timer.isPaused;
+    final remaining = store.roundSecondsRemaining;
     final total = timer.config.rounds;
-    return Column(
-      children: [
-        Text('Ronde ${timer.round} / $total', style: KText.title.copyWith(fontSize: 22, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            for (var i = 1; i <= total; i++) ...[
-              if (i > 1) const SizedBox(width: 6),
-              Expanded(
-                child: Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(KRadius.full),
-                    color: i < timer.round
-                        ? KColor.teal
-                        : i == timer.round
-                        ? KColor.tealLight
-                        : KColor.surfaceHigh,
+    final last = timer.isLastRound;
+    final timeColor = paused
+        ? k.textMuted
+        : remaining <= 10
+        ? k.warningInk
+        : k.text;
+    return KCard(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      child: Column(
+        children: [
+          // Discipline + live/gepauzeerd.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: paused ? k.warningTint : k.primaryTint,
+              borderRadius: BorderRadius.circular(KRadius.full),
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (paused)
+                    Icon(Icons.pause_rounded, size: 14, color: k.warningInk)
+                  else
+                    LiveDot(color: k.accent, size: 7),
+                  const SizedBox(width: 8),
+                  Text(
+                    paused ? '${_disciplineLabel(store.sessionTitle)} • GEPAUZEERD' : _disciplineLabel(store.sessionTitle),
+                    style: t.label.copyWith(color: paused ? k.warningInk : k.accent, fontWeight: FontWeight.w700, letterSpacing: 0.9),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: 'Ronde ', style: t.title.copyWith(color: k.textSecondary)),
+                TextSpan(text: '${timer.round}', style: t.headline.copyWith(fontSize: 26, fontWeight: FontWeight.w800)),
+                TextSpan(text: ' / $total', style: t.title.copyWith(color: k.textSecondary)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          RoundSegments(
+            total: total,
+            done: timer.round - 1,
+            currentProgress: timer.phaseProgress(store.now()),
+          ),
+          const SizedBox(height: 8),
+          // De klok: tik = pauze/hervat.
+          Semantics(
+            button: true,
+            label: 'Resterende tijd ${mmss(remaining)}, tik om te ${paused ? 'hervatten' : 'pauzeren'}',
+            excludeSemantics: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                store.toggleSparringTimer();
+              },
+              child: SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(mmss(remaining), style: t.timer.copyWith(fontSize: 100, color: timeColor)),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: paused ? k.warningTint : k.well,
+              borderRadius: BorderRadius.circular(KRadius.full),
+              border: Border.all(color: paused ? k.warningTint : k.border),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  paused ? Icons.touch_app : (last ? Icons.flag_rounded : Icons.timelapse),
+                  size: 16,
+                  color: paused ? k.warningInk : k.accent,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    paused
+                        ? 'Gepauzeerd • tik de tijd om te hervatten'
+                        : last
+                        ? 'Laatste ronde • daarna afronden'
+                        : 'Rust: ${_restLabel(timer.config.restSeconds)} min hierna',
+                    style: t.bodyStrong.copyWith(fontSize: 13, color: paused ? k.warningInk : k.text),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          PhaseBar(value: timer.phaseProgress(store.now())),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _RoundCircle(
+                icon: Icons.stop_rounded,
+                label: 'Stop',
+                semantics: 'Sessie stoppen',
+                iconColor: k.dangerInk,
+                onTap: () => finishSessionFlow(context, natural: false),
+              ),
+              const SizedBox(width: 24),
+              _RoundCircle(
+                icon: paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                label: paused ? 'Hervat' : 'Pauze',
+                semantics: paused ? 'Timer hervatten' : 'Timer pauzeren',
+                size: 88,
+                filled: true,
+                onTap: store.toggleSparringTimer,
+              ),
+              const SizedBox(width: 24),
+              _RoundCircle(
+                icon: last ? Icons.flag_rounded : Icons.skip_next_rounded,
+                label: last ? 'Afronden' : 'Volgende',
+                semantics: last ? 'Laatste ronde afronden' : 'Naar de rust',
+                onTap: store.advanceToRestPhase,
+              ),
             ],
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _TechniqueCounters extends StatelessWidget {
-  const _TechniqueCounters();
+/// Voortgang van de huidige fase, links uitgelijnd (KProgressBar centreert
+/// zijn vulling).
+class PhaseBar extends StatelessWidget {
+  const PhaseBar({super.key, required this.value, this.color, this.height = 8});
+  final double value;
+  final Color? color;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    final store = KineticScope.of(context);
-    final list = store.sessionTechniques;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            const Expanded(child: Eyebrow('Techniek focus • mat-tap', color: KColor.tealLight, icon: Icons.touch_app)),
-            TextButton.icon(
-              onPressed: () => _pickTechniques(context),
-              icon: const Icon(Icons.edit, size: 16, color: KColor.textSecondary),
-              label: Text('Kiezen', style: KText.caption),
-            ),
-          ],
-        ),
-        if (list.isEmpty)
-          KCard(
-            onTap: () => _pickTechniques(context),
-            child: Text('Nog geen focus-technieken. Tik om technieken voor deze sessie te kiezen.', style: KText.body.copyWith(color: KColor.textSecondary)),
-          ),
-        for (final t in list) ...[
-          _CounterCard(technique: t),
-          const SizedBox(height: 10),
-        ],
-        if (list.isNotEmpty)
-          Text('Tik = +1 • lang indrukken = -1', textAlign: TextAlign.center, style: KText.caption.copyWith(color: KColor.textMuted)),
-      ],
-    );
-  }
-
-  Future<void> _pickTechniques(BuildContext context) {
-    final store = KineticScope.read(context);
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => KineticScope(
-        store: store,
-        child: Builder(
-          builder: (ctx) {
-            final s = KineticScope.of(ctx);
-            return DraggableScrollableSheet(
-              expand: false,
-              initialChildSize: 0.7,
-              builder: (_, scroll) => ListView(
-                controller: scroll,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                children: [
-                  Text('Technieken voor deze sessie', style: KText.title),
-                  const SizedBox(height: 12),
-                  for (final t in s.techniques)
-                    CheckboxListTile(
-                      value: s.sessionTechniqueIds.contains(t.id),
-                      onChanged: (_) => s.toggleSessionTechnique(t.id),
-                      title: Text(t.name, style: KText.body),
-                      subtitle: Text(t.group.label, style: KText.caption),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  if (s.techniques.isEmpty) Text('Voeg eerst technieken toe in de Technieken Vault.', style: KText.caption),
-                ],
-              ),
-            );
-          },
+    final k = context.k;
+    final v = value.isNaN ? 0.0 : value.clamp(0.0, 1.0);
+    return Container(
+      height: height,
+      decoration: BoxDecoration(color: k.well, borderRadius: BorderRadius.circular(KRadius.full)),
+      alignment: Alignment.centerLeft,
+      child: FractionallySizedBox(
+        widthFactor: v,
+        heightFactor: 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: color ?? k.primary, borderRadius: BorderRadius.circular(KRadius.full)),
         ),
       ),
     );
   }
 }
 
-class _CounterCard extends StatelessWidget {
-  const _CounterCard({required this.technique});
-  final Technique technique;
+/// Rondevoortgang als segmenten: klaar = vol, huidige ronde = deels gevuld.
+class RoundSegments extends StatelessWidget {
+  const RoundSegments({super.key, required this.total, required this.done, this.currentProgress = 0, this.nextHighlighted = false});
+
+  final int total;
+
+  /// Aantal volledig afgeronde rondes.
+  final int done;
+
+  /// Voortgang (0..1) van de ronde na [done], als die loopt.
+  final double currentProgress;
+
+  /// In de rust: de volgende ronde krijgt een rand.
+  final bool nextHighlighted;
 
   @override
   Widget build(BuildContext context) {
+    final k = context.k;
+    return Row(
+      children: [
+        for (var i = 1; i <= total; i++) ...[
+          if (i > 1) const SizedBox(width: 6),
+          Expanded(
+            child: Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color: i <= done ? k.primary : k.well,
+                borderRadius: BorderRadius.circular(KRadius.full),
+                border: nextHighlighted && i == done + 1 ? Border.all(color: k.primary) : null,
+              ),
+              child: i == done + 1 && !nextHighlighted && currentProgress > 0
+                  ? FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: currentProgress.clamp(0.0, 1.0),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(color: k.accent, borderRadius: BorderRadius.circular(KRadius.full)),
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _RoundCircle extends StatelessWidget {
+  const _RoundCircle({
+    required this.icon,
+    required this.label,
+    required this.semantics,
+    required this.onTap,
+    this.size = 64,
+    this.filled = false,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final String semantics;
+  final VoidCallback onTap;
+  final double size;
+  final bool filled;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Semantics(
+      button: true,
+      label: semantics,
+      excludeSemantics: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 88,
+            child: Center(
+              child: Material(
+                color: filled ? k.primary : k.well,
+                shape: CircleBorder(side: filled ? BorderSide.none : BorderSide(color: k.border)),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    onTap();
+                  },
+                  child: SizedBox(
+                    width: size,
+                    height: size,
+                    child: Icon(icon, size: size * 0.45, color: filled ? k.onPrimary : (iconColor ?? k.text)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: context.t.caption.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- techniek focus
+
+/// "TECHNIEK FOCUS DEZE SESSIE": per techniek drie grote mat-tellers.
+/// Tik = +1, lang indrukken = −1. Ook bruikbaar in de rust.
+class TechniqueFocusCard extends StatelessWidget {
+  const TechniqueFocusCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
     final store = KineticScope.of(context);
-    final striking = technique.group.isStriking;
-    final counts = store.sessionCounts[technique.id] ?? const TechniqueCounts();
-    final colors = {
-      TechniqueStat.success: KColor.success,
-      TechniqueStat.attempt: KColor.blue,
-      TechniqueStat.countered: KColor.danger,
-    };
+    final list = store.sessionTechniques;
+    final timer = store.sparring;
+    final total = timer?.config.rounds ?? 0;
+    // Tijdens de ronde en in de rust: wisselen geldt vanaf de volgende ronde.
+    final nextRound = (timer?.round ?? 0) + 1;
+    final upcoming = timer == null || nextRound > total
+        ? null
+        : nextRound == total
+        ? 'Voor R$total'
+        : 'Voor R$nextRound–R$total';
     return KCard(
-      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Expanded(child: Text(technique.name, style: KText.subtitle.copyWith(fontSize: 17))),
-              KBadge(striking ? 'Striking' : 'Grappling', color: striking ? KColor.danger : KColor.purple, dot: false),
+              IconTile(icon: Icons.track_changes, size: 36, filled: true),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TECHNIEK FOCUS DEZE SESSIE',
+                      style: t.label.copyWith(color: k.accent, fontWeight: FontWeight.w700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text('Direct aantikken vanaf de mat of in rust', style: t.caption, maxLines: 2),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              KPill('${list.length} actief', tone: KTone.primary),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              for (final stat in TechniqueStat.values) ...[
-                if (stat != TechniqueStat.success) const SizedBox(width: 8),
-                Expanded(
-                  child: _TapCounter(
-                    label: statLabel(stat, striking: striking),
-                    count: counts[stat],
-                    color: colors[stat]!,
-                    onTap: () => store.incrementTechniqueStat(technique.id, stat),
-                    onLongPress: () => store.incrementTechniqueStat(technique.id, stat, delta: -1),
+          const SizedBox(height: 14),
+          if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Nog geen focus-technieken voor deze sessie. Kies hieronder wat je wilt tellen.',
+                style: t.body.copyWith(color: k.textSecondary),
+              ),
+            ),
+          for (var i = 0; i < list.length; i++) ...[
+            if (i > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Divider(height: 1, color: k.border),
+              ),
+            _TechniqueBlock(technique: list[i]),
+          ],
+          if (list.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Tik = +1 • lang indrukken = −1',
+              textAlign: TextAlign.center,
+              style: t.caption.copyWith(color: k.textMuted),
+            ),
+            const SizedBox(height: 12),
+          ],
+          KWell(
+            onTap: () => showSessionTechniquePicker(context),
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 40),
+              child: Row(
+                children: [
+                  Icon(Icons.swap_horiz, color: k.accent, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Focus wisselen of toevoegen', style: t.bodyStrong),
+                        if (upcoming != null) Text(upcoming, style: t.caption),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ],
+                  Icon(Icons.chevron_right, color: k.textSecondary),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -339,25 +749,96 @@ class _CounterCard extends StatelessWidget {
   }
 }
 
-class _TapCounter extends StatelessWidget {
-  const _TapCounter({required this.label, required this.count, required this.color, required this.onTap, required this.onLongPress});
+class _TechniqueBlock extends StatelessWidget {
+  const _TechniqueBlock({required this.technique});
+  final Technique technique;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final store = KineticScope.of(context);
+    final striking = technique.group.isStriking;
+    final counts = store.sessionCounts[technique.id] ?? const TechniqueCounts();
+    final sub = [technique.learningGoal, technique.transition].map((s) => s.trim()).firstWhere(
+      (s) => s.isNotEmpty,
+      orElse: () => technique.group.description,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(striking ? Icons.sports_mma : Icons.sports_kabaddi, size: 24, color: k.accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(technique.name, style: t.title.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(sub, style: t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            KPill(technique.group.label, tone: striking ? KTone.primary : KTone.purple, dense: true),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (final stat in TechniqueStat.values) ...[
+              if (stat != TechniqueStat.success) const SizedBox(width: 8),
+              Expanded(
+                child: _CounterTile(
+                  stat: stat,
+                  label: statLabel(stat, striking: striking),
+                  count: counts[stat],
+                  onTap: () => store.incrementTechniqueStat(technique.id, stat),
+                  onLongPress: () => store.incrementTechniqueStat(technique.id, stat, delta: -1),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CounterTile extends StatelessWidget {
+  const _CounterTile({
+    required this.stat,
+    required this.label,
+    required this.count,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final TechniqueStat stat;
   final String label;
   final int count;
-  final Color color;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(KRadius.md);
+    final k = context.k;
+    final t = context.t;
+    final (icon, labelColor, valueColor) = switch (stat) {
+      TechniqueStat.success => (Icons.check_circle_outline, k.successInk, k.text),
+      TechniqueStat.attempt => (Icons.history, k.textSecondary, k.text),
+      TechniqueStat.countered => (Icons.cancel_outlined, k.dangerInk, k.dangerInk),
+    };
     return Semantics(
       button: true,
-      label: '$label, $count',
+      label: '$label, $count keer. Tik plus één, lang indrukken min één.',
+      excludeSemantics: true,
       child: Material(
-        color: color.withValues(alpha: 0.14),
-        shape: RoundedRectangleBorder(borderRadius: radius, side: BorderSide(color: color.withValues(alpha: 0.55), width: 1.5)),
+        color: k.well,
+        borderRadius: BorderRadius.circular(KRadius.md),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: radius,
           onTap: () {
             HapticFeedback.mediumImpact();
             onTap();
@@ -367,14 +848,27 @@ class _TapCounter extends StatelessWidget {
             onLongPress();
           },
           child: SizedBox(
-            height: 78,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('$count', style: KText.metric.copyWith(color: color, fontSize: 30)),
-                const SizedBox(height: 4),
-                Text(label, style: KText.caption.copyWith(color: KColor.text, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-              ],
+            height: 84,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 15, color: labelColor),
+                        const SizedBox(width: 4),
+                        Text(label, style: t.caption.copyWith(color: labelColor, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text('${count}x', style: t.metricMd.copyWith(fontWeight: FontWeight.w800, color: valueColor)),
+                ],
+              ),
             ),
           ),
         ),
@@ -383,9 +877,249 @@ class _TapCounter extends StatelessWidget {
   }
 }
 
-/// "Snelle Spraaknotitie Coach (REC)".
+/// Sheet om technieken aan de mat-tellers toe te voegen of weg te halen.
+/// Tellers van een weggehaalde techniek blijven bewaard.
+Future<void> showSessionTechniquePicker(BuildContext context) {
+  return showKineticSheet<void>(
+    context,
+    builder: (ctx) {
+      final k = ctx.k;
+      final t = ctx.t;
+      final s = KineticScope.of(ctx);
+      final groups = [
+        for (final g in TechniqueGroup.values)
+          if (s.techniques.any((x) => x.group == g)) g,
+      ];
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Focus wisselen of toevoegen', style: t.headline),
+          const SizedBox(height: 4),
+          Text(
+            'Tik een techniek om hem aan de mat-tellers toe te voegen of weg te halen. Tellers blijven bewaard.',
+            style: t.body.copyWith(color: k.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          if (s.techniques.isEmpty)
+            KWell(child: Text('Voeg eerst technieken toe in de Technieken Vault.', style: t.body.copyWith(color: k.textSecondary))),
+          for (final g in groups) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Eyebrow(g.label),
+            ),
+            for (final tech in s.techniques.where((x) => x.group == g)) ...[
+              _PickRow(
+                technique: tech,
+                selected: s.sessionTechniqueIds.contains(tech.id),
+                counts: s.sessionCounts[tech.id],
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  s.toggleSessionTechnique(tech.id);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+          const SizedBox(height: 8),
+          BigButton(label: 'Klaar', onPressed: () => Navigator.of(ctx).pop()),
+        ],
+      );
+    },
+  );
+}
+
+class _PickRow extends StatelessWidget {
+  const _PickRow({required this.technique, required this.selected, required this.counts, required this.onTap});
+  final Technique technique;
+  final bool selected;
+  final TechniqueCounts? counts;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final c = counts;
+    final striking = technique.group.isStriking;
+    final summary = c == null || c.total == 0
+        ? null
+        : '${c.success} ${statLabel(TechniqueStat.success, striking: striking).toLowerCase()} • ${c.total} totaal';
+    return Semantics(
+      selected: selected,
+      child: KWell(
+        onTap: onTap,
+        color: selected ? k.primaryTint : null,
+        borderColor: selected ? k.primary : k.border,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 40),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: selected ? k.primary : k.textMuted,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(technique.name, style: t.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      summary ?? (selected ? 'Actief op de mat' : 'Tik om toe te voegen'),
+                      style: t.caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- snelle carbs
+
+class _FastCarbCard extends StatelessWidget {
+  const _FastCarbCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final g = KineticScope.of(context).fastCarbGrams;
+    return Semantics(
+      button: true,
+      label: '$g gram snelle koolhydraten loggen',
+      excludeSemantics: true,
+      child: Material(
+        color: k.primary,
+        borderRadius: BorderRadius.circular(KRadius.lg),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            logMatIntervention(context, dextrose: true);
+          },
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 72),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: k.onPrimary.withValues(alpha: 0.14), shape: BoxShape.circle),
+                    child: Icon(Icons.medication_liquid, color: k.onPrimary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('+${g}g Snelle Koolhydraten', style: t.title.copyWith(color: k.onPrimary, fontWeight: FontWeight.w700)),
+                        Text(
+                          '1 tik: dextrose gel direct loggen',
+                          style: t.caption.copyWith(color: k.onPrimary.withValues(alpha: 0.85)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.add_circle, color: k.onPrimary, size: 28),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- mat-knoppen
+
+/// Grote bedieningsknop voor de mat (icoon boven een kort label in
+/// hoofdletters), minstens 64px hoog.
+class MatControlButton extends StatelessWidget {
+  const MatControlButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.style = KButtonStyle.primary,
+    this.height = 72,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final KButtonStyle style;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final (bg, fg, iconColor, side) = switch (style) {
+      KButtonStyle.primary => (k.primary, k.onPrimary, k.onPrimary, BorderSide.none),
+      KButtonStyle.secondary => (k.well, k.text, k.accent, BorderSide(color: k.border)),
+      KButtonStyle.critical => (k.danger, Colors.white, Colors.white, BorderSide.none),
+      KButtonStyle.ghost => (const Color(0x00000000), k.accent, k.accent, BorderSide(color: k.border)),
+    };
+    return Semantics(
+      button: true,
+      child: SizedBox(
+        height: height,
+        child: Material(
+          color: bg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KRadius.md), side: side),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed == null
+                ? null
+                : () {
+                    HapticFeedback.mediumImpact();
+                    onPressed!();
+                  },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 28, color: iconColor),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label.toUpperCase(),
+                      maxLines: 1,
+                      style: context.t.label.copyWith(color: fg, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- spraakmemo
+
+/// "Snelle Spraaknotitie Coach (REC)". Met [compact] als mat-knop
+/// ("FOCUS NOTITIE") voor de onderbalk.
 class VoiceMemoButton extends StatefulWidget {
-  const VoiceMemoButton({super.key});
+  const VoiceMemoButton({super.key, this.compact = false});
+  final bool compact;
 
   @override
   State<VoiceMemoButton> createState() => _VoiceMemoButtonState();
@@ -438,69 +1172,42 @@ class _VoiceMemoButtonState extends State<VoiceMemoButton> {
 
   @override
   Widget build(BuildContext context) {
+    final k = context.k;
     final store = KineticScope.of(context);
     final rec = _recorder.isRecording;
     final secs = rec ? DateTime.now().difference(_recorder.startedAt!).inSeconds : 0;
+    final n = store.voiceMemos.length;
+    if (widget.compact) {
+      return MatControlButton(
+        label: rec ? 'REC ${mmss(secs)}' : (n == 0 ? 'Focus notitie' : 'Notitie • $n'),
+        icon: rec ? Icons.stop_circle : Icons.mic_rounded,
+        style: rec ? KButtonStyle.critical : KButtonStyle.secondary,
+        onPressed: _toggle,
+      );
+    }
     return BigButton(
-      label: rec
-          ? 'REC ${mmss(secs)} • tik om te stoppen'
-          : 'Snelle Spraaknotitie Coach (REC)${store.voiceMemos.isEmpty ? '' : ' • ${store.voiceMemos.length}'}',
+      label: rec ? 'REC ${mmss(secs)} • tik om te stoppen' : 'Snelle Spraaknotitie Coach (REC)${n == 0 ? '' : ' • $n'}',
       icon: rec ? Icons.stop_circle : Icons.mic,
-      color: KColor.danger,
+      height: 64,
+      style: rec ? KButtonStyle.critical : KButtonStyle.secondary,
+      color: rec ? null : k.danger,
       outlined: !rec,
-      foreground: KColor.text,
+      foreground: rec ? null : k.text,
       onPressed: _toggle,
     );
   }
 }
 
-class _BottomControls extends StatelessWidget {
-  const _BottomControls({required this.paused});
-  final bool paused;
+// ------------------------------------------------------------- acties
 
-  @override
-  Widget build(BuildContext context) {
-    final store = KineticScope.read(context);
-    final last = store.sparring?.isLastRound ?? false;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: KColor.surface,
-        border: Border(top: BorderSide(color: KColor.border)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: BigButton(
-              height: 72,
-              label: paused ? 'HERVAT' : 'PAUZE',
-              icon: paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-              color: paused ? KColor.teal : KColor.surfaceElevated,
-              foreground: paused ? KColor.bg : KColor.text,
-              onPressed: store.toggleSparringTimer,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: BigButton(
-              height: 72,
-              label: last ? 'AFRONDEN' : 'VOLGENDE',
-              icon: last ? Icons.flag_rounded : Icons.skip_next_rounded,
-              onPressed: store.advanceToRestPhase,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Acute mat-interventie: +15g dextrose of +200ml isotone drank (14g koolh.).
+/// Acute mat-interventie: snelle koolhydraten (dextrose, grootte uit de
+/// instellingen, standaard 15g) of +200ml isotone drank (14g koolh.).
 Future<void> logMatIntervention(BuildContext context, {required bool dextrose}) async {
   final store = KineticScope.read(context);
+  final g = store.fastCarbGrams;
   final e = await store.logFood(
     description: dextrose ? 'Dextrose gel (mat-interventie)' : 'Isotone drank 200ml (mat-interventie)',
-    carbs: dextrose ? 15 : 14,
+    carbs: dextrose ? g.toDouble() : 14,
     context: MealContext.acute,
   );
   if (!dextrose) await store.addWater(200);
@@ -511,7 +1218,7 @@ Future<void> logMatIntervention(BuildContext context, {required bool dextrose}) 
   }
   showToast(
     context,
-    dextrose ? '+15g dextrose gelogd' : '+200ml isotoon (14g koolh.) gelogd',
+    dextrose ? '+${g}g dextrose gelogd' : '+200ml isotoon (14g koolh.) gelogd',
     actionLabel: 'Ongedaan',
     onAction: () {
       store.deleteFood(e);
@@ -534,31 +1241,36 @@ Future<void> finishSessionFlow(BuildContext context, {required bool natural}) as
   final choice = await showDialog<String>(
     context: context,
     barrierDismissible: !natural,
-    builder: (ctx) => AlertDialog(
-      title: Text(natural ? 'Sessie voltooid 🥋' : 'Sessie afronden?'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('${t.round} van ${t.config.rounds} rondes • ${durationLabel(minutes)}', style: KText.body),
-          if (totals.$2 > 0) Text('${totals.$1} geslaagd van ${totals.$2} acties', style: KText.body),
-          if (glucose.isNotEmpty)
-            Text(
-              'Glucose ${glucose.first.mmol.toStringAsFixed(1)} ➔ ${glucose.last.mmol.toStringAsFixed(1)} mmol/L',
-              style: KText.body.copyWith(color: glucoseColor(glucose.last.mmol)),
-            ),
-          if (store.voiceMemos.isNotEmpty) Text('${store.voiceMemos.length} spraakmemo(s) op dit toestel', style: KText.caption),
-        ],
-      ),
-      actions: [
-        if (!natural) TextButton(onPressed: () => Navigator.pop(ctx, 'continue'), child: const Text('Doorgaan')),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, 'discard'),
-          child: const Text('Verwerpen', style: TextStyle(color: KColor.danger)),
+    builder: (ctx) {
+      final k = ctx.k;
+      final tt = ctx.t;
+      return AlertDialog(
+        title: Text(natural ? 'Sessie voltooid 🥋' : 'Sessie afronden?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${t.round} van ${t.config.rounds} rondes • ${durationLabel(minutes)}', style: tt.body),
+            if (totals.$2 > 0) Text('${totals.$1} geslaagd van ${totals.$2} acties', style: tt.body),
+            if (glucose.isNotEmpty)
+              Text(
+                'Glucose ${glucose.first.mmol.toStringAsFixed(1)} → ${glucose.last.mmol.toStringAsFixed(1)} mmol/L',
+                style: tt.bodyStrong.copyWith(color: toneColors(k, glucoseZoneTone(glucose.last.mmol)).$2),
+              ),
+            if (store.voiceMemos.isNotEmpty) Text('${store.voiceMemos.length} spraakmemo(s) op dit toestel', style: tt.caption),
+          ],
         ),
-        FilledButton(onPressed: () => Navigator.pop(ctx, 'save'), child: const Text('Opslaan')),
-      ],
-    ),
+        actions: [
+          if (!natural) TextButton(onPressed: () => Navigator.pop(ctx, 'continue'), child: const Text('Doorgaan')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'discard'),
+            style: TextButton.styleFrom(foregroundColor: k.dangerInk),
+            child: const Text('Verwerpen'),
+          ),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'save'), child: const Text('Opslaan')),
+        ],
+      );
+    },
   );
   if (choice == null || choice == 'continue' || !context.mounted) return;
   if (choice == 'discard') {
@@ -570,7 +1282,7 @@ Future<void> finishSessionFlow(BuildContext context, {required bool natural}) as
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Terug')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: KColor.danger),
+            style: FilledButton.styleFrom(backgroundColor: ctx.k.danger, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Verwerpen'),
           ),

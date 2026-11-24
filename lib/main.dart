@@ -31,11 +31,9 @@ Future<void> main() async {
       ),
     );
   };
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Color(0x00000000),
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: KColor.surface,
-  ));
+  // Edge-to-edge: de app tekent achter status- en navigatiebalk; elke
+  // pagina houdt zelf rekening met de ruimte onderin (context.bottomInset).
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   final store = KineticStore();
   runApp(KineticApp(store: store));
   await store.boot();
@@ -49,30 +47,35 @@ class KineticApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return KineticScope(
       store: store,
-      child: MaterialApp(
-        title: 'Kinetic',
-        debugShowCheckedModeBanner: false,
-        theme: kineticTheme(),
-        darkTheme: kineticTheme(),
-        themeMode: ThemeMode.dark,
-        home: const _Home(),
-        onGenerateRoute: (settings) {
-          final Widget? page = switch (settings.name) {
-            '/live-session' => const LiveSessionScreen(),
-            '/ronde-rust' => const RondeRustScreen(),
-            '/competitions' => const CompetitionsScreen(),
-            '/telemetrie-export' => const TelemetrieExportScreen(),
-            _ => null,
-          };
-          if (page == null) return null;
-          // Live-schermen schuiven als full-screen modal van onderen in.
-          final modal = settings.name == '/live-session' || settings.name == '/ronde-rust';
-          return MaterialPageRoute<void>(
-            settings: settings,
-            fullscreenDialog: modal,
-            builder: (_) => page,
-          );
-        },
+      child: ValueListenableBuilder<bool>(
+        valueListenable: store.darkModeNotifier,
+        builder: (context, dark, _) => MaterialApp(
+          title: 'Kinetic',
+          debugShowCheckedModeBanner: false,
+          theme: kineticTheme(KineticColors.light),
+          darkTheme: kineticTheme(KineticColors.dark),
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+          home: const _Home(),
+          onGenerateRoute: (settings) {
+            final Widget? page = switch (settings.name) {
+              '/live-session' => const LiveSessionScreen(),
+              '/ronde-rust' => const RondeRustScreen(),
+              '/competitions' => const CompetitionsScreen(),
+              '/telemetrie-export' => const TelemetrieExportScreen(),
+              _ => null,
+            };
+            if (page == null) return null;
+            // Live-schermen schuiven als full-screen modal van onderen in.
+            final modal =
+                settings.name == '/live-session' ||
+                settings.name == '/ronde-rust';
+            return MaterialPageRoute<void>(
+              settings: settings,
+              fullscreenDialog: modal,
+              builder: (_) => page,
+            );
+          },
+        ),
       ),
     );
   }
@@ -85,7 +88,9 @@ class _Home extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
     return switch (store.state) {
-      BootState.loading => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      BootState.loading => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
       BootState.needsConfig => const _MissingConfig(),
       BootState.signedOut => const AuthScreen(),
       BootState.ready => const ShellScreen(),

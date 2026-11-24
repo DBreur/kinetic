@@ -7,6 +7,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/competition.dart';
 import '../models/glucose.dart';
 import '../models/kinetic_profile.dart';
+import '../models/library.dart';
+import '../models/planned_training.dart';
 import '../models/technique.dart';
 import '../models/training_session.dart';
 import '../services/nightscout_credentials.dart';
@@ -75,6 +77,19 @@ class CompetitionRepository {
         .toList();
   }
 
+  /// Alle wedstrijden (agenda + historie), nieuwste eerst.
+  Future<List<Competition>> all(String userId) async {
+    final rows = await _client
+        .from('competitions')
+        .select()
+        .eq('user_id', userId)
+        .order('starts_at', ascending: false)
+        .limit(100);
+    return (rows as List)
+        .map((r) => Competition.fromJson(r as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<void> setTargetWeight(String id, double? kg) async {
     await _client
         .from('competitions')
@@ -109,6 +124,47 @@ class TechniqueRepository {
         .select()
         .single();
     return Technique.fromJson(row);
+  }
+
+  /// Eigen kopie van een bibliotheektechniek (bij focus of +1 rep).
+  Future<Technique> createFromLibrary(String userId, LibraryTechnique lib) async {
+    final row = await _client
+        .from('techniques')
+        .insert({
+          'user_id': userId,
+          'name': lib.name,
+          'category': lib.category,
+          'description': lib.description,
+          'transition': lib.category == 'Strike' ? '' : lib.transition,
+          'video_urls': lib.videoUrls,
+          'tags': lib.tags.take(20).toList(),
+          'library_id': lib.id,
+        })
+        .select()
+        .single();
+    return Technique.fromJson(row);
+  }
+
+  /// Voegt een update met [reps] herhalingen toe aan de bestaande historie
+  /// (zelfde formaat als de oude app: {at, rating, note, positions}).
+  Future<Technique> addReps(String id, int reps, DateTime at) async {
+    final row = await _client.from('techniques').select('updates').eq('id', id).single();
+    final updates = [...((row['updates'] as List?) ?? const [])];
+    updates.add({
+      'at': at.toUtc().toIso8601String(),
+      'rating': 0,
+      'note': '',
+      'positions': [
+        {'position': '', 'rating': 0, 'reps': reps, 'went_well': '', 'to_improve': ''},
+      ],
+    });
+    final saved = await _client
+        .from('techniques')
+        .update({'updates': updates, 'updated_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id)
+        .select()
+        .single();
+    return Technique.fromJson(saved);
   }
 
   /// "Focus in Sessie" aan = focus_mode 'next' (eerstvolgende training),
@@ -181,5 +237,38 @@ class GlucoseEntryRepository {
       'mmol': double.parse(mmol.toStringAsFixed(1)),
       'at': at.toUtc().toIso8601String(),
     });
+  }
+}
+
+
+/// De gedeelde bibliotheek (alleen-lezen voor ingelogde gebruikers).
+class LibraryRepository {
+  LibraryRepository(this._client);
+  final SupabaseClient _client;
+
+  Future<List<LibraryTechnique>> techniques() async {
+    final rows = await _client.from('technique_library').select().order('name');
+    return (rows as List)
+        .map((r) => LibraryTechnique.fromJson(r as Map<String, dynamic>))
+        .toList();
+  }
+}
+
+class PlannedTrainingRepository {
+  PlannedTrainingRepository(this._client);
+  final SupabaseClient _client;
+
+  /// Geplande trainingen vanaf het begin van vandaag.
+  Future<List<PlannedTraining>> upcoming(String userId, DateTime from) async {
+    final rows = await _client
+        .from('planned_trainings')
+        .select()
+        .eq('user_id', userId)
+        .gte('starts_at', from.toUtc().toIso8601String())
+        .order('starts_at')
+        .limit(20);
+    return (rows as List)
+        .map((r) => PlannedTraining.fromJson(r as Map<String, dynamic>))
+        .toList();
   }
 }

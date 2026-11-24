@@ -1,5 +1,6 @@
 // sheets.dart: bottom sheets: maaltijd/snelle carbs, het centrale
-// '+'-actiemenu, vingerprik-kalibratie en de ronde-instellingen.
+// '+'-actiemenu, vingerprik-kalibratie en de ronde-instellingen. Allemaal via
+// showKineticSheet, zodat de onderkant nooit onder de systeemknoppen valt.
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -17,18 +18,8 @@ double? parseNum(String s) {
   return double.tryParse(t);
 }
 
-Future<void> showMealSheet(BuildContext context, {MealContext? initialContext}) {
-  final store = KineticScope.read(context);
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (_) => KineticScope(
-      store: store,
-      child: MealSheet(initialContext: initialContext),
-    ),
-  );
-}
+Future<void> showMealSheet(BuildContext context, {MealContext? initialContext}) =>
+    showKineticSheet<void>(context, builder: (_) => MealSheet(initialContext: initialContext));
 
 class MealSheet extends StatefulWidget {
   const MealSheet({super.key, this.initialContext});
@@ -52,8 +43,7 @@ class _MealSheetState extends State<MealSheet> {
   void initState() {
     super.initState();
     final store = KineticScope.read(context);
-    _context = widget.initialContext ??
-        (store.isSparringActive ? MealContext.acute : MealContext.recovery);
+    _context = widget.initialContext ?? (store.isSparringActive ? MealContext.acute : MealContext.recovery);
     for (final c in [_carbs, _insulin]) {
       c.addListener(() => setState(() {}));
     }
@@ -113,6 +103,7 @@ class _MealSheetState extends State<MealSheet> {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     final carbs = parseNum(_carbs.text) ?? 0;
     final insulin = parseNum(_insulin.text) ?? 0;
     final impact = predictGlucoseImpact(
@@ -122,97 +113,91 @@ class _MealSheetState extends State<MealSheet> {
       correctionFactor: store.profile?.correctionFactor ?? 2.0,
     );
     final r = store.reading;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    final fresh = r != null && !r.isStale;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Maaltijd of snelle carbs', style: context.t.headline),
+        const SizedBox(height: 4),
+        Text('Wordt opgeslagen in Supabase en meteen in je macrobarometer verwerkt.', style: context.t.caption),
+        const SizedBox(height: 20),
+        TextField(
+          controller: _name,
+          textCapitalization: TextCapitalization.sentences,
+          style: context.t.body,
+          decoration: const InputDecoration(labelText: 'Maaltijd / brandstof', hintText: 'Banaan + Dextrose Gel'),
+        ),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            Text('Maaltijd of snelle carbs', style: KText.title),
-            const SizedBox(height: 4),
-            Text('Wordt opgeslagen in Supabase en meteen in je macrobarometer verwerkt.', style: KText.caption),
-            const SizedBox(height: 18),
-            TextField(
-              controller: _name,
-              textCapitalization: TextCapitalization.sentences,
-              style: KText.body,
-              decoration: const InputDecoration(
-                labelText: 'Maaltijd / brandstof',
-                hintText: 'Banaan + Dextrose Gel',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: _macroField(_carbs, 'Koolh. (g)', KColor.warning)),
-                const SizedBox(width: 8),
-                Expanded(child: _macroField(_protein, 'Eiwit (g)', KColor.blue)),
-                const SizedBox(width: 8),
-                Expanded(child: _macroField(_fat, 'Vet (g)', KColor.purple)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _macroField(_insulin, 'Insuline (E, optioneel)', KColor.teal),
-            const SizedBox(height: 18),
-            const Eyebrow('Context'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final c in MealContext.values)
-                  KChip(label: c.label, selected: _context == c, onTap: () => setState(() => _context = c)),
-              ],
-            ),
-            const SizedBox(height: 18),
-            KCard(
-              color: KColor.surface,
-              borderColor: KColor.teal.withValues(alpha: 0.4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Eyebrow('Verwachte glucose impact', color: KColor.tealLight, icon: Icons.insights),
-                  const SizedBox(height: 8),
-                  Text(
-                    carbs <= 0 ? 'Vul koolhydraten in' : impact.format(),
-                    style: KText.metricSmall.copyWith(
-                      color: carbs <= 0 ? KColor.textMuted : (impact.high > 3 ? KColor.warning : KColor.tealLight),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text('Indicatief, binnen ~60-90 min. Geen medisch advies.', style: KText.caption),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      KBadge('Dexcom G7 ${_context.tag}', color: KColor.teal, dot: false),
-                      KBadge(
-                        r == null || r.isStale
-                            ? 'Geen actuele CGM-waarde'
-                            : 'Annotatie ${hhmm(store.now())} · ${r.mmol.toStringAsFixed(1)} ${trendArrow(r.trend)}',
-                        color: r == null || r.isStale ? KColor.textMuted : glucoseColor(r.mmol),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: KText.caption.copyWith(color: KColor.danger)),
-            ],
-            const SizedBox(height: 18),
-            BigButton(
-              label: _saving ? 'Opslaan…' : 'Opslaan in Dagoverzicht',
-              icon: Icons.check_rounded,
-              onPressed: _saving ? null : _save,
-            ),
+            Expanded(child: _macroField(_carbs, 'Koolh. (g)', k.warning)),
+            const SizedBox(width: 8),
+            Expanded(child: _macroField(_protein, 'Eiwit (g)', k.blue)),
+            const SizedBox(width: 8),
+            Expanded(child: _macroField(_fat, 'Vet (g)', k.purple)),
           ],
         ),
-      ),
+        const SizedBox(height: 8),
+        _macroField(_insulin, 'Insuline (E, optioneel)', k.accent),
+        const SizedBox(height: 20),
+        const Eyebrow('Context'),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final c in MealContext.values)
+              KChip(label: c.label, selected: _context == c, onTap: () => setState(() => _context = c)),
+          ],
+        ),
+        const SizedBox(height: 20),
+        KCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Eyebrow('Verwachte glucose impact', icon: Icons.insights, color: k.accent),
+              const SizedBox(height: 10),
+              Text(
+                carbs <= 0 ? 'Vul koolhydraten in' : impact.format(),
+                style: context.t.metricMd.copyWith(
+                  color: carbs <= 0 ? k.textMuted : (impact.high > 3 ? k.warning : k.accent),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text('Indicatief, binnen ~60-90 min. Geen medisch advies.', style: context.t.caption),
+              const SizedBox(height: 12),
+              KWell(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.sensors, size: 18, color: k.accent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        fresh
+                            ? 'Dexcom G7 ${_context.tag} • ${hhmm(store.now())} • ${r.mmol.toStringAsFixed(1)} ${trendArrow(r.trend)}'
+                            : 'Dexcom G7 ${_context.tag} • geen actuele CGM-waarde',
+                        style: context.t.caption.copyWith(color: k.text),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Text(_error!, style: context.t.caption.copyWith(color: k.danger)),
+        ],
+        const SizedBox(height: 20),
+        BigButton(
+          label: _saving ? 'Opslaan…' : 'Opslaan in Dagoverzicht',
+          icon: Icons.check_circle_outline,
+          height: 56,
+          onPressed: _saving ? null : _save,
+        ),
+      ],
     );
   }
 
@@ -221,7 +206,7 @@ class _MealSheetState extends State<MealSheet> {
       controller: c,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-      style: KText.subtitle.copyWith(color: accent),
+      style: context.t.subtitle.copyWith(color: accent, fontFeatures: const [FontFeature.tabularFigures()]),
       decoration: InputDecoration(labelText: label),
     );
   }
@@ -231,70 +216,59 @@ class _MealSheetState extends State<MealSheet> {
 
 Future<void> showQuickActions(BuildContext context) {
   final store = KineticScope.read(context);
-  return showModalBottomSheet<void>(
-    context: context,
-    useSafeArea: true,
+  return showKineticSheet<void>(
+    context,
     builder: (sheetContext) {
+      final k = sheetContext.k;
       Widget tile(String title, String sub, IconData icon, Color color, VoidCallback onTap) {
-        return KCard(
-          onTap: () {
-            Navigator.of(sheetContext).pop();
-            onTap();
-          },
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(KRadius.md),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: KCard(
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              onTap();
+            },
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                IconTile(icon: icon, color: color),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: sheetContext.t.subtitle),
+                      const SizedBox(height: 2),
+                      Text(sub, style: sheetContext.t.caption),
+                    ],
+                  ),
                 ),
-                child: Icon(icon, color: color, size: 26),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: KText.subtitle),
-                    const SizedBox(height: 2),
-                    Text(sub, style: KText.caption),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: KColor.textMuted),
-            ],
+                Icon(Icons.chevron_right, color: k.textMuted),
+              ],
+            ),
           ),
         );
       }
 
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Snelle actie', style: KText.title),
-            const SizedBox(height: 14),
-            tile(
-              store.isSparringActive ? 'Terug naar sparring' : 'Start Sparring',
-              store.isSparringActive ? 'Sessie loopt' : store.sparringConfig.summary,
-              Icons.sports_mma,
-              KColor.teal,
-              () => openLiveSession(context),
-            ),
-            const SizedBox(height: 10),
-            tile('Snelle Carbs', 'Maaltijd of dextrose loggen', Icons.bolt, KColor.warning, store.requestMealSheet),
-            const SizedBox(height: 10),
-            tile('Inwegen', 'Gewicht registreren & fight prep', Icons.monitor_weight_outlined, KColor.blue,
-                () => Navigator.of(context).pushNamed('/competitions')),
-            const SizedBox(height: 10),
-            tile('Sensor Kalibratie', 'Vingerprik vergelijken met je CGM', Icons.water_drop_outlined, KColor.purple,
-                () => showFingerstickSheet(context)),
-          ],
-        ),
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Snelle actie', style: sheetContext.t.headline),
+          const SizedBox(height: 16),
+          tile(
+            store.isSparringActive ? 'Terug naar sparring' : 'Start Sparring',
+            store.isSparringActive ? 'Sessie loopt' : store.sparringConfig.summary,
+            Icons.sports_mma,
+            k.primary,
+            () => openLiveSession(context),
+          ),
+          tile('Snelle Carbs', 'Maaltijd of dextrose loggen', Icons.bolt, k.warning, store.requestMealSheet),
+          tile('Inwegen', 'Gewicht registreren & fight prep', Icons.monitor_weight_outlined, k.blue,
+              () => Navigator.of(context).pushNamed('/competitions')),
+          tile('Sensor Kalibratie', 'Vingerprik vergelijken met je CGM', Icons.water_drop_outlined, k.purple,
+              () => showFingerstickSheet(context)),
+        ],
       );
     },
   );
@@ -310,15 +284,8 @@ void openLiveSession(BuildContext context) {
 
 // ------------------------------------------------------------- vingerprik
 
-Future<void> showFingerstickSheet(BuildContext context) {
-  final store = KineticScope.read(context);
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (_) => KineticScope(store: store, child: const _FingerstickSheet()),
-  );
-}
+Future<void> showFingerstickSheet(BuildContext context) =>
+    showKineticSheet<void>(context, builder: (_) => const _FingerstickSheet());
 
 class _FingerstickSheet extends StatefulWidget {
   const _FingerstickSheet();
@@ -331,7 +298,7 @@ class _FingerstickSheetState extends State<_FingerstickSheet> {
   final _value = TextEditingController();
   bool _saving = false;
   String? _result;
-  Color _resultColor = KColor.textSecondary;
+  KTone _tone = KTone.neutral;
 
   @override
   void dispose() {
@@ -342,7 +309,10 @@ class _FingerstickSheetState extends State<_FingerstickSheet> {
   Future<void> _save() async {
     final v = parseNum(_value.text);
     if (v == null || v < 1 || v > 33) {
-      setState(() => _result = 'Vul een waarde tussen 1 en 33 mmol/L in.');
+      setState(() {
+        _result = 'Vul een waarde tussen 1 en 33 mmol/L in.';
+        _tone = KTone.danger;
+      });
       return;
     }
     setState(() => _saving = true);
@@ -355,7 +325,7 @@ class _FingerstickSheetState extends State<_FingerstickSheet> {
       setState(() {
         _saving = false;
         _result = 'Opslaan mislukt.';
-        _resultColor = KColor.danger;
+        _tone = KTone.danger;
       });
       return;
     }
@@ -364,15 +334,16 @@ class _FingerstickSheetState extends State<_FingerstickSheet> {
       _saving = false;
       if (diff == null) {
         _result = 'Opgeslagen. Geen actuele CGM-waarde om mee te vergelijken.';
-        _resultColor = KColor.textSecondary;
+        _tone = KTone.neutral;
       } else {
         final pct = (diff.abs() / v * 100).round();
         // Dexcom-vuistregel: binnen 20% (of 1.1 mmol/L onder 5.6) is normaal.
         final off = v < 5.6 ? diff.abs() > 1.1 : pct > 20;
+        final d = '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(1)} mmol/L ($pct%)';
         _result = off
-            ? 'Verschil ${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(1)} mmol/L ($pct%). Groot verschil: kalibreer in de Dexcom G7-app (vochtverschuivingen bij gewichtscut beïnvloeden de sensor).'
-            : 'Verschil ${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(1)} mmol/L ($pct%). Sensor zit binnen de marge, geen kalibratie nodig.';
-        _resultColor = off ? KColor.warning : KColor.success;
+            ? 'Verschil $d. Groot verschil: kalibreer in de Dexcom G7-app (vochtverschuivingen bij een gewichtscut beïnvloeden de sensor).'
+            : 'Verschil $d. Sensor zit binnen de marge, geen kalibratie nodig.';
+        _tone = off ? KTone.warning : KTone.success;
       }
     });
   }
@@ -380,130 +351,137 @@ class _FingerstickSheetState extends State<_FingerstickSheet> {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
-    final r = store.reading;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Sensor kalibratie-check', style: KText.title),
-            const SizedBox(height: 4),
-            Text(
-              'Vergelijk een vingerprik met je Dexcom G7. De waarde wordt opgeslagen in je glucoselog.',
-              style: KText.caption,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Eyebrow('CGM nu'),
-                const SizedBox(width: 10),
-                GlucoseReadout(reading: r, size: 22),
-              ],
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _value,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-              style: KText.metricSmall,
-              decoration: const InputDecoration(labelText: 'Vingerprik (mmol/L)'),
-            ),
-            if (_result != null) ...[
-              const SizedBox(height: 12),
-              Text(_result!, style: KText.body.copyWith(color: _resultColor)),
+    final (bg, fg) = toneColors(context.k, _tone);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Sensor kalibratie-check', style: context.t.headline),
+        const SizedBox(height: 4),
+        Text('Vergelijk een vingerprik met je Dexcom G7. De waarde wordt opgeslagen in je glucoselog.', style: context.t.caption),
+        const SizedBox(height: 16),
+        KWell(
+          child: Row(
+            children: [
+              Text('CGM nu', style: context.t.caption),
+              const Spacer(),
+              GlucoseReadout(reading: store.reading, size: 24),
             ],
-            const SizedBox(height: 16),
-            BigButton(
-              label: _saving ? 'Opslaan…' : 'Vergelijken & opslaan',
-              icon: Icons.water_drop,
-              color: KColor.purple,
-              foreground: KColor.text,
-              onPressed: _saving ? null : _save,
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _value,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+          style: context.t.metricSm,
+          decoration: const InputDecoration(labelText: 'Vingerprik (mmol/L)'),
+        ),
+        if (_result != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(KRadius.md)),
+            child: Text(_result!, style: context.t.body.copyWith(color: fg)),
+          ),
+        ],
+        const SizedBox(height: 16),
+        BigButton(
+          label: _saving ? 'Opslaan…' : 'Vergelijken & opslaan',
+          icon: Icons.water_drop,
+          height: 56,
+          onPressed: _saving ? null : _save,
+        ),
+      ],
     );
   }
 }
 
 // --------------------------------------------------------- rondes instellen
 
-Future<void> showSparringConfigSheet(BuildContext context) {
-  final store = KineticScope.read(context);
-  return showModalBottomSheet<void>(
-    context: context,
-    useSafeArea: true,
-    builder: (_) => KineticScope(store: store, child: const _SparringConfigSheet()),
-  );
-}
+Future<void> showSparringConfigSheet(BuildContext context) =>
+    showKineticSheet<void>(context, builder: (_) => const SparringConfigEditor());
 
-class _SparringConfigSheet extends StatelessWidget {
-  const _SparringConfigSheet();
+/// Rondes / werk / rust instellen. Zonder [onChanged] past hij de
+/// standaardinstelling in de store aan.
+class SparringConfigEditor extends StatelessWidget {
+  const SparringConfigEditor({super.key, this.value, this.onChanged, this.showTitle = true});
+  final SparringConfig? value;
+  final ValueChanged<SparringConfig>? onChanged;
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
-    final c = store.sparringConfig;
-    void set({int? rounds, int? work, int? rest}) => store.setSparringConfig(
-      SparringConfig(
+    final c = value ?? store.sparringConfig;
+    void set({int? rounds, int? work, int? rest}) {
+      final next = SparringConfig(
         rounds: (rounds ?? c.rounds).clamp(1, 15),
         workSeconds: (work ?? c.workSeconds).clamp(30, 900),
         restSeconds: (rest ?? c.restSeconds).clamp(15, 300),
-      ),
-    );
-    Widget row(String label, String value, VoidCallback minus, VoidCallback plus) => Padding(
+      );
+      if (onChanged != null) {
+        onChanged!(next);
+      } else {
+        store.setSparringConfig(next);
+      }
+    }
+
+    Widget row(String label, String v, VoidCallback minus, VoidCallback plus) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: KText.subtitle)),
-          _StepButton(icon: Icons.remove, onTap: minus),
-          SizedBox(width: 84, child: Text(value, textAlign: TextAlign.center, style: KText.metricSmall)),
-          _StepButton(icon: Icons.add, onTap: plus),
-        ],
+      child: KWell(
+        padding: const EdgeInsets.all(6),
+        child: Row(
+          children: [
+            const SizedBox(width: 8),
+            Expanded(child: Text(label, style: context.t.bodyStrong)),
+            StepButton(icon: Icons.remove, onTap: minus),
+            SizedBox(width: 84, child: Text(v, textAlign: TextAlign.center, style: context.t.metricSm)),
+            StepButton(icon: Icons.add, onTap: plus),
+          ],
+        ),
       ),
     );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Rondes instellen', style: KText.title),
-          const SizedBox(height: 12),
-          row('Rondes', '${c.rounds}', () => set(rounds: c.rounds - 1), () => set(rounds: c.rounds + 1)),
-          row('Werk', mmss(c.workSeconds), () => set(work: c.workSeconds - 30), () => set(work: c.workSeconds + 30)),
-          row('Rust', mmss(c.restSeconds), () => set(rest: c.restSeconds - 15), () => set(rest: c.restSeconds + 15)),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showTitle) ...[Text('Rondes instellen', style: context.t.headline), const SizedBox(height: 12)],
+        row('Rondes', '${c.rounds}', () => set(rounds: c.rounds - 1), () => set(rounds: c.rounds + 1)),
+        row('Werk', mmss(c.workSeconds), () => set(work: c.workSeconds - 30), () => set(work: c.workSeconds + 30)),
+        row('Rust', mmss(c.restSeconds), () => set(rest: c.restSeconds - 15), () => set(rest: c.restSeconds + 15)),
+      ],
     );
   }
 }
 
-class _StepButton extends StatelessWidget {
-  const _StepButton({required this.icon, required this.onTap});
+/// Vierkante +/- knop (52px, handschoenvriendelijk).
+class StepButton extends StatelessWidget {
+  const StepButton({super.key, required this.icon, required this.onTap, this.size = 52});
   final IconData icon;
   final VoidCallback onTap;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
+    final k = context.k;
     return SizedBox(
-      width: 56,
-      height: 56,
+      width: size,
+      height: size,
       child: Material(
-        color: KColor.surfaceHigh,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KRadius.md)),
-        child: InkWell(
+        color: k.surface,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(KRadius.md),
+          side: BorderSide(color: k.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
           onTap: () {
             HapticFeedback.selectionClick();
             onTap();
           },
-          child: Icon(icon, color: KColor.text),
+          child: Icon(icon, color: k.text),
         ),
       ),
     );

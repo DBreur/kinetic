@@ -62,18 +62,22 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
     if (c.blocksNextRound) {
       final go = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(c.title, style: KText.title.copyWith(color: KColor.danger)),
-          content: Text('${c.detail}\n\nWeet je zeker dat je de volgende ronde wilt starten?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Nee, wachten')),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: KColor.danger),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Toch starten'),
-            ),
-          ],
-        ),
+        builder: (ctx) {
+          final k = ctx.k;
+          return AlertDialog(
+            icon: Icon(Icons.dangerous, color: k.danger, size: 32),
+            title: Text(c.title, style: ctx.t.title.copyWith(color: k.dangerInk, fontWeight: FontWeight.w700)),
+            content: Text('${c.detail}\n\nWeet je zeker dat je de volgende ronde wilt starten?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Nee, wachten')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: k.danger, foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Toch starten'),
+              ),
+            ],
+          );
+        },
       );
       if (go != true) return;
     }
@@ -87,139 +91,199 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
     if (t == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final next = t.round + 1;
     final clearance = store.clearanceForNextRound();
-    final remaining = store.roundSecondsRemaining;
-    final held = t.restHeld;
     final r = store.reading;
+    final hypo = liveHypo(store);
     return Scaffold(
-      backgroundColor: KColor.bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-              child: Row(
+      body: Column(
+        children: [
+          SessionTopBar(
+            title: 'Ronde rust',
+            status: t.restHeld ? 'WACHT OP GLUCOSE' : 'HERSTEL • R${t.round} VOLTOOID',
+            statusTone: t.restHeld ? KTone.danger : KTone.info,
+            live: !t.restHeld,
+          ),
+          Expanded(
+            // De ruimte voor de systeemknoppen zit in de BottomActionBar.
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  IconButton(
-                    tooltip: 'Minimaliseren',
-                    iconSize: 30,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.keyboard_arrow_down, color: KColor.textSecondary),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'RONDE RUST • R${t.round} VOLTOOID',
-                        style: KText.eyebrow.copyWith(color: KColor.tealLight, fontSize: 12),
-                      ),
+                  if (hypo && r != null)
+                    HypoBanner(
+                      reading: r,
+                      grams: store.fastCarbGrams,
+                      onDextrose: () => logMatIntervention(context, dextrose: true),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Sessie afronden',
-                    iconSize: 28,
-                    onPressed: () => finishSessionFlow(context, natural: false),
-                    icon: const Icon(Icons.stop_circle_outlined, color: KColor.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                children: [
-                  if (store.hypoAlert && r != null)
-                    HypoBanner(reading: r, onDextrose: () => logMatIntervention(context, dextrose: true)),
-                  Center(
-                    child: CountdownRing(
-                      progress: t.phaseProgress(store.now()),
-                      color: held ? KColor.danger : clearance.color == KColor.textSecondary ? KColor.teal : clearance.color,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            held ? 'WACHT' : mmss(remaining),
-                            style: KText.timer.copyWith(fontSize: held ? 48 : 64, color: held ? KColor.danger : KColor.text),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(held ? 'GLUCOSE EERST' : 'HERSTELTIJD', style: KText.eyebrow.copyWith(color: held ? KColor.danger : KColor.textSecondary)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Center(
-                    child: TextButton(
-                      onPressed: _startNext,
-                      style: TextButton.styleFrom(minimumSize: const Size(0, 52)),
-                      child: Text('⏩ Sla rust over • Start R$next direct', style: KText.body.copyWith(color: KColor.tealLight, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  _RestTimerCard(timer: t, clearance: clearance, onSkip: _startNext),
+                  const SizedBox(height: 12),
                   _ClearanceCard(clearance: clearance),
-                  const SizedBox(height: 10),
-                  const IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(child: DexcomLiveCard(showClearance: true)),
-                        SizedBox(width: 10),
-                        Expanded(child: PolarLiveCard(showRecovery: true)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
+                  const TelemetryRow(rest: true),
+                  const SizedBox(height: 12),
                   const _BreathingGuide(),
-                  const SizedBox(height: 16),
-                  const Eyebrow('Acute mat-interventies', color: KColor.warning, icon: Icons.medical_services_outlined),
-                  const SizedBox(height: 8),
-                  BigButton(
-                    label: '+15g Dextrose (Snelwerkende Gel)',
-                    icon: Icons.bolt,
-                    color: KColor.warning,
-                    onPressed: () => logMatIntervention(context, dextrose: true),
-                  ),
-                  const SizedBox(height: 8),
-                  BigButton(
-                    label: '+200ml Isotone Drank (14g Koolh.)',
-                    icon: Icons.local_drink,
-                    color: KColor.blue,
-                    outlined: true,
-                    onPressed: () => logMatIntervention(context, dextrose: false),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  _Interventions(urgent: clearance.level == ClearanceLevel.danger),
+                  const SizedBox(height: 20),
                   _CoachFocus(round: next),
+                  const SizedBox(height: 12),
+                  const TechniqueFocusCard(),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              decoration: const BoxDecoration(
-                color: KColor.surface,
-                border: Border(top: BorderSide(color: KColor.border)),
-              ),
-              child: Row(
+          ),
+          BottomActionBar(
+            child: Row(
+              children: [
+                Expanded(
+                  child: BigButton(
+                    height: 72,
+                    vertical: true,
+                    label: '+30s Rust',
+                    icon: Icons.more_time,
+                    style: KButtonStyle.secondary,
+                    onPressed: () => store.addRestSeconds(30),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: BigButton(
+                    height: 72,
+                    label: '🥋 KLAAR VOOR RONDE $next',
+                    style: clearance.blocksNextRound ? KButtonStyle.critical : KButtonStyle.primary,
+                    onPressed: _startNext,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- timer
+
+class _RestTimerCard extends StatelessWidget {
+  const _RestTimerCard({required this.timer, required this.clearance, required this.onSkip});
+  final SparringTimer timer;
+  final MatClearance clearance;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final store = KineticScope.of(context);
+    final held = timer.restHeld;
+    final next = timer.round + 1;
+    final total = timer.config.rounds;
+    final remaining = store.roundSecondsRemaining;
+    final ringColor = held
+        ? k.danger
+        : switch (clearance.level) {
+            ClearanceLevel.safe || ClearanceLevel.unknown => k.primary,
+            ClearanceLevel.caution => k.warning,
+            ClearanceLevel.danger => k.danger,
+          };
+    return KCard(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      child: Column(
+        children: [
+          KPill('Ronde ${timer.round} voltooid', tone: KTone.success, icon: Icons.check_circle, uppercase: true),
+          const SizedBox(height: 12),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: 'Rust voor ronde ', style: t.title.copyWith(color: k.textSecondary)),
+                TextSpan(text: '$next', style: t.headline.copyWith(fontSize: 26, fontWeight: FontWeight.w800)),
+                TextSpan(text: ' / $total', style: t.title.copyWith(color: k.textSecondary)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          RoundSegments(total: total, done: timer.round, nextHighlighted: true),
+          const SizedBox(height: 20),
+          Semantics(
+            label: held ? 'Rust vastgehouden: eerst glucose herstellen' : 'Hersteltijd ${mmss(remaining)}',
+            excludeSemantics: true,
+            child: CountdownRing(
+              size: 228,
+              stroke: 12,
+              // Vastgehouden: volle rode ring.
+              progress: held ? 0 : timer.phaseProgress(store.now()),
+              color: ringColor,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: BigButton(
-                      height: 72,
-                      label: '+30s Rust',
-                      icon: Icons.more_time,
-                      color: KColor.surfaceElevated,
-                      foreground: KColor.text,
-                      onPressed: () => store.addRestSeconds(30),
+                  if (held) ...[
+                    Icon(Icons.pan_tool_rounded, color: k.dangerInk, size: 28),
+                    const SizedBox(height: 4),
+                  ],
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      held ? 'WACHT' : mmss(remaining),
+                      style: t.timer.copyWith(fontSize: held ? 48 : 60, color: held ? k.dangerInk : k.text),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: BigButton(
-                      height: 72,
-                      label: '🥋 KLAAR VOOR RONDE $next',
-                      color: clearance.blocksNextRound ? KColor.danger : KColor.teal,
-                      foreground: clearance.blocksNextRound ? KColor.text : KColor.bg,
-                      onPressed: _startNext,
-                    ),
+                  const SizedBox(height: 6),
+                  Text(
+                    held ? 'GLUCOSE EERST' : 'HERSTELTIJD',
+                    style: t.label.copyWith(color: held ? k.dangerInk : k.textSecondary, fontWeight: FontWeight.w700, letterSpacing: 1.2),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: onSkip,
+            style: TextButton.styleFrom(minimumSize: const Size(0, 52), foregroundColor: k.accent),
+            icon: const Icon(Icons.fast_forward_rounded, size: 22),
+            label: Text('Sla rust over • Start R$next direct', style: t.bodyStrong.copyWith(color: k.accent)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------- clearance
+
+class _ClearanceCard extends StatelessWidget {
+  const _ClearanceCard({required this.clearance});
+  final MatClearance clearance;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
+    final tone = clearanceTone(clearance.level);
+    final (bg, ink) = toneColors(k, tone);
+    final solid = toneSolid(k, tone);
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: clearance.level == ClearanceLevel.unknown ? k.surface : bg,
+          borderRadius: BorderRadius.circular(KRadius.lg),
+          border: Border.all(color: clearance.level == ClearanceLevel.unknown ? k.borderStrong : solid),
+        ),
+        child: Row(
+          children: [
+            Icon(clearanceIcon(clearance.level), color: solid, size: 32),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(clearance.title, style: t.title.copyWith(color: ink, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(clearance.detail, style: t.body.copyWith(color: k.text)),
                 ],
               ),
             ),
@@ -230,44 +294,7 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
   }
 }
 
-class _ClearanceCard extends StatelessWidget {
-  const _ClearanceCard({required this.clearance});
-  final MatClearance clearance;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (clearance.level) {
-      ClearanceLevel.safe => Icons.verified,
-      ClearanceLevel.caution => Icons.warning_amber_rounded,
-      ClearanceLevel.danger => Icons.dangerous,
-      ClearanceLevel.unknown => Icons.help_outline,
-    };
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: clearance.color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(KRadius.lg),
-        border: Border.all(color: clearance.color.withValues(alpha: 0.6)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: clearance.color, size: 30),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(clearance.title, style: KText.subtitle.copyWith(color: clearance.color, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 2),
-                Text(clearance.detail, style: KText.caption.copyWith(color: KColor.text)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ------------------------------------------------------------- ademhaling
 
 /// Vagale ademhaling: 4s in, 6s uit.
 class _BreathingGuide extends StatefulWidget {
@@ -288,41 +315,42 @@ class _BreathingGuideState extends State<_BreathingGuide> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
     return KCard(
-      padding: const EdgeInsets.all(14),
       child: AnimatedBuilder(
         animation: _c,
         builder: (context, _) {
-          final t = _c.value * 10; // seconden in de cyclus
-          final inhale = t < 4;
-          final scale = inhale ? 0.55 + 0.45 * (t / 4) : 1.0 - 0.45 * ((t - 4) / 6);
-          final secsLeft = inhale ? (4 - t).ceil() : (10 - t).ceil();
+          final s = _c.value * 10; // seconden in de cyclus
+          final inhale = s < 4;
+          final scale = inhale ? 0.5 + 0.5 * (s / 4) : 1.0 - 0.5 * ((s - 4) / 6);
+          final secsLeft = inhale ? (4 - s).ceil() : (10 - s).ceil();
           return Row(
             children: [
               SizedBox(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 child: Center(
                   child: Container(
-                    width: 64 * scale,
-                    height: 64 * scale,
+                    width: 72 * scale,
+                    height: 72 * scale,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: KColor.blue.withValues(alpha: 0.25),
-                      border: Border.all(color: KColor.blue, width: 2),
+                      color: k.blue.withValues(alpha: k.isDark ? 0.2 : 0.12),
+                      border: Border.all(color: k.blue, width: 2),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Eyebrow('Vagale ademhaling', color: KColor.blue),
+                    Eyebrow('Vagale ademhaling', color: k.blue, icon: Icons.air),
                     const SizedBox(height: 4),
-                    Text(inhale ? 'Inademen • $secsLeft' : 'Uitademen • $secsLeft', style: KText.title),
-                    Text('Inademen 4s / Uitademen 6s', style: KText.caption),
+                    Text(inhale ? 'Inademen • $secsLeft' : 'Uitademen • $secsLeft', style: t.headline),
+                    Text('Inademen 4s / Uitademen 6s', style: t.caption),
                   ],
                 ),
               ),
@@ -334,29 +362,89 @@ class _BreathingGuideState extends State<_BreathingGuide> with SingleTickerProvi
   }
 }
 
+// ------------------------------------------------------------- interventies
+
+class _Interventions extends StatelessWidget {
+  const _Interventions({required this.urgent});
+
+  /// Hypo: dextrose wordt de rode hoofdactie.
+  final bool urgent;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final g = KineticScope.of(context).fastCarbGrams;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Eyebrow('Acute mat-interventies', color: k.warningInk, icon: Icons.medical_services_outlined),
+        const SizedBox(height: 10),
+        BigButton(
+          height: 64,
+          label: '+${g}g Dextrose (Snelwerkende Gel)',
+          icon: Icons.bolt,
+          style: urgent ? KButtonStyle.critical : KButtonStyle.primary,
+          color: urgent ? null : k.warning,
+          outlined: !urgent,
+          foreground: urgent ? null : k.warningInk,
+          onPressed: () => logMatIntervention(context, dextrose: true),
+        ),
+        const SizedBox(height: 10),
+        BigButton(
+          height: 64,
+          label: '+200ml Isotone Drank (14g Koolh.)',
+          icon: Icons.local_drink,
+          color: k.blue,
+          outlined: true,
+          onPressed: () => logMatIntervention(context, dextrose: false),
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------------------- coach focus
+
 class _CoachFocus extends StatelessWidget {
   const _CoachFocus({required this.round});
   final int round;
 
   @override
   Widget build(BuildContext context) {
+    final k = context.k;
+    final t = context.t;
     final store = KineticScope.of(context);
     final text = store.coachFocusFor(round);
-    return KCard(
-      borderColor: KColor.purple.withValues(alpha: 0.5),
-      onTap: () => _edit(context, store, text),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Eyebrow('Coach focus • ronde $round', color: KColor.purple, icon: Icons.record_voice_over)),
-              const Icon(Icons.edit, size: 16, color: KColor.textMuted),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(text, style: KText.title.copyWith(fontSize: 20)),
-        ],
+    final custom = (store.coachFocus[round] ?? '').trim().isNotEmpty;
+    return Semantics(
+      button: true,
+      label: 'Coach focus ronde $round: $text. Tik om te bewerken.',
+      excludeSemantics: true,
+      child: KCard(
+        onTap: () => _edit(context, store, text),
+        child: Row(
+          children: [
+            IconTile(icon: Icons.record_voice_over, color: k.purple, size: 44),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Eyebrow('Coach focus • ronde $round', color: k.purple),
+                  const SizedBox(height: 4),
+                  Text(
+                    text,
+                    style: store.sessionTechniques.isEmpty && !custom
+                        ? t.body.copyWith(color: k.textSecondary)
+                        : t.title.copyWith(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.edit_outlined, size: 20, color: k.textSecondary),
+          ],
+        ),
       ),
     );
   }

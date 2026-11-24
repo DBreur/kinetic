@@ -1,6 +1,7 @@
-// shell_screen.dart: 5-tabs bottom navigation (Vandaag, Training, '+',
-// Technieken, Eten) met de zwevende centrale quick-action-knop. Loopt er
-// een sparringsessie, dan staat er een "terug naar de mat"-balk boven.
+// shell_screen.dart: de app-shell uit kinetic-design: top app bar (logo,
+// "Kinetic" + schermnaam, thema-schakelaar, avatar) en de 5-tabs navigatie
+// (Vandaag, Training, '+', Technieken, Eten) met de centrale quick action.
+// Loopt er een sessie, dan staat er een "terug naar de mat"-balk boven.
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -26,109 +27,125 @@ class ShellScreen extends StatelessWidget {
     _ => 0,
   };
 
+  static String tabLabel(int tab) => switch (tab) {
+    KTab.training => 'Training',
+    KTab.technieken => 'Technieken',
+    KTab.eten => 'Eet Logboek',
+    _ => 'Vandaag',
+  };
+
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
     return Scaffold(
-      body: IndexedStack(
-        index: _stackIndex(store.tab),
-        children: const [VandaagScreen(), TrainingScreen(), TechniekenScreen(), EtenScreen()],
+      body: Column(
+        children: [
+          KineticTopBar(subtitle: tabLabel(store.tab)),
+          Expanded(
+            child: IndexedStack(
+              index: _stackIndex(store.tab),
+              children: const [VandaagScreen(), TrainingScreen(), TechniekenScreen(), EtenScreen()],
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (store.isSparringActive) const _LiveSessionBar(),
-          const _KineticNavBar(),
+          const KineticNavBar(),
         ],
       ),
     );
   }
 }
 
-class _KineticNavBar extends StatelessWidget {
-  const _KineticNavBar();
+class KineticNavBar extends StatelessWidget {
+  const KineticNavBar({super.key});
 
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     Widget item(int index, IconData icon, IconData activeIcon, String label) {
       final active = store.tab == index;
-      final color = active ? KColor.teal : KColor.textMuted;
+      final color = active ? k.accent : k.textSecondary;
       return Expanded(
-        child: InkResponse(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            store.selectTab(index);
-          },
-          radius: 36,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(active ? activeIcon : icon, color: color, size: 24),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: KText.caption.copyWith(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        child: Semantics(
+          selected: active,
+          button: true,
+          label: label,
+          child: InkResponse(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              store.selectTab(index);
+            },
+            radius: 36,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(active ? activeIcon : icon, color: color, size: 24),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: context.t.labelSm.copyWith(
+                    color: color,
+                    letterSpacing: 0.2,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
     }
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: KColor.surface,
-        border: Border(top: BorderSide(color: KColor.border)),
+    return Container(
+      decoration: BoxDecoration(
+        color: k.surface,
+        border: Border(top: BorderSide(color: k.border)),
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 68,
-          child: Row(
-            children: [
-              item(KTab.vandaag, Icons.space_dashboard_outlined, Icons.space_dashboard, 'Vandaag'),
-              item(KTab.training, Icons.insights_outlined, Icons.insights, 'Training'),
-              Expanded(
-                child: Center(
-                  child: Transform.translate(
-                    offset: const Offset(0, -14),
-                    child: Semantics(
-                      button: true,
-                      label: 'Snelle actie',
-                      child: GestureDetector(
+      // Ruimte voor de Android-navigatieknoppen / gesturebalk.
+      padding: EdgeInsets.only(bottom: context.bottomInset),
+      child: SizedBox(
+        height: 68,
+        child: Row(
+          children: [
+            item(KTab.vandaag, Icons.calendar_today_outlined, Icons.calendar_today, 'Vandaag'),
+            item(KTab.training, Icons.sports_martial_arts_outlined, Icons.sports_martial_arts, 'Training'),
+            Expanded(
+              child: Center(
+                child: Transform.translate(
+                  offset: const Offset(0, -16),
+                  child: Semantics(
+                    button: true,
+                    label: 'Snelle actie',
+                    child: Material(
+                      color: k.primary,
+                      shape: CircleBorder(side: BorderSide(color: k.canvas, width: 4)),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
                         onTap: () {
                           HapticFeedback.mediumImpact();
                           showQuickActions(context);
                         },
-                        child: Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [KColor.tealLight, KColor.teal],
-                            ),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: KColor.bg, width: 4),
-                            boxShadow: const [BoxShadow(color: KColor.tealGlow, blurRadius: 18, spreadRadius: 2)],
-                          ),
-                          child: const Icon(Icons.add_rounded, color: KColor.bg, size: 32),
+                        child: SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: Icon(Icons.add_rounded, color: k.onPrimary, size: 34),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              item(KTab.technieken, Icons.sports_martial_arts_outlined, Icons.sports_martial_arts, 'Technieken'),
-              item(KTab.eten, Icons.restaurant_outlined, Icons.restaurant, 'Eten'),
-            ],
-          ),
+            ),
+            item(KTab.technieken, Icons.menu_book_outlined, Icons.menu_book, 'Technieken'),
+            item(KTab.eten, Icons.restaurant_outlined, Icons.restaurant, 'Eten'),
+          ],
         ),
       ),
     );
@@ -141,27 +158,32 @@ class _LiveSessionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
+    final k = context.k;
     final t = store.sparring!;
     final rest = t.phase == SparringPhase.rest;
+    final color = rest ? k.primary : k.danger;
     return Material(
-      color: rest ? KColor.teal.withValues(alpha: 0.18) : KColor.danger.withValues(alpha: 0.18),
+      color: color.withValues(alpha: k.isDark ? 0.16 : 0.10),
       child: InkWell(
         onTap: () => openLiveSession(context),
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: color.withValues(alpha: 0.5)))),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
-              LiveDot(color: rest ? KColor.teal : KColor.danger, active: !t.isPaused),
+              LiveDot(color: color, active: !t.isPaused),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${rest ? 'RUST' : 'SPARRING'} • Ronde ${t.round}/${t.config.rounds}${t.isPaused ? ' • gepauzeerd' : ''}',
-                  style: KText.caption.copyWith(color: KColor.text, fontWeight: FontWeight.w700),
+                  '${rest ? 'RUST' : store.sessionTitle.toUpperCase()} • Ronde ${t.round}/${t.config.rounds}${t.isPaused ? ' • gepauzeerd' : ''}',
+                  style: context.t.labelSm.copyWith(color: k.text),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(mmss(store.roundSecondsRemaining), style: KText.subtitle.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+              Text(mmss(store.roundSecondsRemaining), style: context.t.subtitle.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
               const SizedBox(width: 8),
-              const Icon(Icons.open_in_full, size: 18, color: KColor.textSecondary),
+              Icon(Icons.open_in_full, size: 18, color: k.textSecondary),
             ],
           ),
         ),
