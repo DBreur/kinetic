@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Tijdelijke sessiebestanden van de Kotlin-compiler
+.kotlin/
