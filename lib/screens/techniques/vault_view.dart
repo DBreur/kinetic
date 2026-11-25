@@ -289,14 +289,15 @@ class VaultCard extends StatelessWidget {
     final e = entry;
     final mastery = e.masteryPercent;
     final goal = e.own?.learningGoal.trim() ?? '';
-    final (footerIcon, footerText) = goal.isNotEmpty
-        ? (Icons.flag_outlined, 'Doel: $goal')
+    final footerText = goal.isNotEmpty
+        ? 'Doel: $goal'
         : e.difficulty != null
-        ? (Icons.signal_cellular_alt, difficultyLabel(e.difficulty!))
-        : (Icons.person_outline, 'Eigen techniek');
+        ? difficultyLabel(e.difficulty!)
+        : 'Eigen techniek';
+    final eyebrow = [e.group.label, if (e.subtitle.isNotEmpty) e.subtitle].join(' • ');
     return KCard(
-      borderColor: e.inFocus ? k.primary : null,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      borderColor: e.inFocus ? k.accent : null,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       onTap: () => showTechniqueSheet(context, e),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -308,34 +309,22 @@ class VaultCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        GroupTag(e.group),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.repeat, size: 14, color: k.accent),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                repsLabel(e.loggedReps),
-                                style: context.t.caption,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    Text(
+                      eyebrow.toUpperCase(),
+                      style: context.t.labelSm.copyWith(color: groupColor(context, e.group), letterSpacing: 0.6),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(e.name, style: context.t.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    if (e.subtitle.isNotEmpty) ...[
+                    if (e.description.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(e.subtitle, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(
+                        e.description,
+                        style: context.t.caption,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ],
                 ),
@@ -343,59 +332,117 @@ class VaultCard extends StatelessWidget {
               if (!e.isOwn) ...[
                 const SizedBox(width: 8),
                 const KPill('Bibliotheek', icon: Icons.local_library_outlined, dense: true),
-              ] else if (mastery != null) ...[
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('$mastery%', style: context.t.metricSm.copyWith(color: k.accent)),
-                    const SizedBox(height: 2),
-                    Text('MASTERY', style: context.t.labelSm),
-                  ],
-                ),
               ],
             ],
           ),
-          if (e.description.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            KWell(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Icon(Icons.insights, size: 18, color: k.accent),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      e.description,
-                      style: context.t.body.copyWith(color: k.textSecondary),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 12),
+          // Mastery + volume in een donker vlak, zoals in de mock.
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: k.isDark ? KineticColors.sunken : k.well,
+              borderRadius: BorderRadius.circular(KRadius.sm),
             ),
-          ],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mastery Index', style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            mastery == null ? '—' : '$mastery%',
+                            style: context.t.caption.copyWith(color: k.successInk, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: KProgressBar(value: (mastery ?? 0) / 100, color: k.successInk, height: 5),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Volume', style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(
+                      repsLabel(e.loggedReps).replaceAll(' gelogd', ''),
+                      style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(footerIcon, size: 16, color: k.textSecondary),
-              const SizedBox(width: 6),
               Expanded(
-                child: Text(footerText, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  footerText,
+                  style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _RepButton(onTap: () => addRep(context, e)),
+              const SizedBox(width: 6),
+              _FocusButton(entry: e),
             ],
           ),
-          const SizedBox(height: 6),
-          Divider(color: k.border, height: 1),
-          FocusToggleRow(entry: e),
         ],
+      ),
+    );
+  }
+}
+
+/// "Focus in Sessie" als knop: omlijnd met +, of teal "In Focus" met vinkje.
+class _FocusButton extends StatelessWidget {
+  const _FocusButton({required this.entry});
+  final VaultEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final on = entry.inFocus;
+    final fg = on ? k.onPrimary : k.text;
+    return Semantics(
+      toggled: on,
+      button: true,
+      label: 'Focus in Sessie',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Material(
+          color: on ? k.primary : k.well,
+          borderRadius: BorderRadius.circular(KRadius.sm),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => toggleFocus(context, entry),
+            child: SizedBox(
+              height: 40,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(on ? Icons.check : Icons.add_circle_outline, size: 16, color: fg),
+                    const SizedBox(width: 5),
+                    Text(on ? 'In Focus' : 'Focus', style: context.t.bodyStrong.copyWith(fontSize: 13, color: fg)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

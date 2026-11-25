@@ -1,7 +1,8 @@
-// vandaag_screen.dart: "Vandaag's protocol" (kinetic_today_1/2): fight-prep-
-// banner, Dexcom G7-kaart, glucosetrend met tijdvenster, de eerstvolgende
-// training met pre-training check, pre-sparring advies, snelle 1-tik-knoppen
-// en de dagelijkse output.
+// vandaag_screen.dart: Vandaag (kinetic_vandaag_interactief_dark_mode):
+// fight-prep-banner, continu telemetrie (glucose, IOB en trend in één
+// kaart), de mat-modus-kaart om een training te starten, snelle tegels
+// (eten, vocht), de geplande training met pre-training check, advies en de
+// dagelijkse output.
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -33,10 +34,8 @@ class VandaagScreen extends StatelessWidget {
       onRefresh: store.refreshAll,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: pagePadding(context, top: 16),
+        padding: pagePadding(context, top: 8),
         children: [
-          const _Header(),
-          const SizedBox(height: 16),
           if (store.hypoAlert && r != null)
             HypoBanner(
               reading: r,
@@ -45,16 +44,16 @@ class VandaagScreen extends StatelessWidget {
             ),
           const _FightPrepBanner(),
           const SizedBox(height: 16),
-          const _DexcomCard(),
+          const _TelemetryCard(),
           const SizedBox(height: 16),
-          const _TrendCard(),
+          const _MatModeCard(),
+          const SizedBox(height: 12),
+          const _QuickButtons(),
           const SizedBox(height: 16),
           const _TrainingCard(),
           const SizedBox(height: 16),
           const _AdviceCard(),
-          const SizedBox(height: 16),
-          const _QuickButtons(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           const _DailyOutput(),
         ],
       ),
@@ -74,48 +73,6 @@ class VandaagScreen extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------------ header
-
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) {
-    final store = KineticScope.of(context);
-    final h = store.now().hour;
-    final greeting = h < 6
-        ? 'Goedenacht'
-        : h < 12
-        ? 'Goedemorgen'
-        : h < 18
-        ? 'Goedemiddag'
-        : 'Goedenavond';
-    final name = store.displayName;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Eyebrow("Vandaag's protocol"),
-              const SizedBox(height: 4),
-              Text(
-                name.isEmpty ? greeting : '$greeting, $name',
-                style: context.t.headline,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        const KPill('T1D • Sambo', tone: KTone.primary, dot: true),
-      ],
-    );
-  }
-}
-
 // --------------------------------------------------------------- fight prep
 
 class _FightPrepBanner extends StatelessWidget {
@@ -129,56 +86,90 @@ class _FightPrepBanner extends StatelessWidget {
     final weight = store.currentWeightKg;
     final target = store.targetWeightKg;
     final days = comp == null ? null : daysUntil(comp.startsAt, now: store.now());
-    final title = comp == null
-        ? 'Geen wedstrijd gepland'
-        : '${comp.name} • ${days == 0 ? 'Vandaag!' : 'Nog $days ${days == 1 ? 'dag' : 'dagen'}'}';
     String? delta;
+    var deltaColor = k.successInk;
     if (weight != null && target != null) {
       // Minimumklasse: strikt boven de grens, dus dezelfde +0.1 als op Wedstrijden.
       final d = comp?.gainNeededKg(weight) ?? (target - weight);
-      delta = d.abs() < 0.05 ? ' (op gewicht)' : ' (${d > 0 ? '+' : ''}${dec1(d)} kg target)';
+      if (d.abs() < 0.05) {
+        delta = 'op gewicht';
+      } else {
+        delta = '${d > 0 ? '+' : ''}${dec1(d)} kg target';
+        if (d.abs() > 3) deltaColor = k.warningInk;
+      }
     }
     void open() => Navigator.of(context).pushNamed('/competitions');
     return KCard(
       onTap: open,
+      color: k.isDark ? k.well : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              IconTile(icon: Icons.emoji_events_outlined, color: k.purple, size: 44),
-              const SizedBox(width: 12),
+              Container(width: 9, height: 9, decoration: BoxDecoration(color: k.accent, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  (comp?.name ?? 'Fight prep').toUpperCase(),
+                  style: context.t.labelSm.copyWith(color: k.accent, letterSpacing: 0.8),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (days != null) ...[
+                const SizedBox(width: 8),
+                DarkPill(days == 0 ? 'Vandaag!' : 'Nog $days ${days == 1 ? 'dag' : 'dagen'}'),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Eyebrow(comp == null ? 'Fight prep' : '${comp.disciplineLabel} • fight prep'),
+                    Text(comp == null ? 'Geen wedstrijd gepland' : 'Huidig gewicht', style: context.t.caption),
                     const SizedBox(height: 2),
-                    Text(title, style: context.t.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: weight == null ? 'Nog geen weging' : '${dec1(weight)} kg',
-                            style: context.t.bodyStrong,
-                          ),
-                          if (delta != null) TextSpan(text: delta, style: context.t.caption),
-                        ],
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: weight == null ? '--' : dec1(weight),
+                              style: context.t.metricMd.copyWith(fontSize: 30),
+                            ),
+                            TextSpan(text: ' kg', style: context.t.unit),
+                            if (delta != null)
+                              TextSpan(
+                                text: '   $delta',
+                                style: context.t.caption.copyWith(color: deltaColor, fontWeight: FontWeight.w700),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: k.textMuted),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                onPressed: open,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: k.accent,
+                  backgroundColor: k.isDark ? k.surface : null,
+                  side: BorderSide(color: k.accent.withValues(alpha: 0.35)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  textStyle: context.t.bodyStrong,
+                ),
+                icon: const Icon(Icons.monitor_weight_outlined, size: 18),
+                label: Text(comp == null ? 'Plannen' : 'Inwegen & Prep'),
+              ),
             ],
-          ),
-          const SizedBox(height: 12),
-          BigButton(
-            label: 'Inwegen & Prep ⚖️',
-            style: KButtonStyle.secondary,
-            height: 48,
-            onPressed: open,
           ),
         ],
       ),
@@ -186,10 +177,19 @@ class _FightPrepBanner extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------------ dexcom
+// --------------------------------------------------------------- telemetrie
 
-class _DexcomCard extends StatelessWidget {
-  const _DexcomCard();
+/// "Continu Telemetrie": waarde + trend + IOB, de laatste meting en de
+/// glucosetrend (3/6/12/24 uur) in één kaart.
+class _TelemetryCard extends StatefulWidget {
+  const _TelemetryCard();
+
+  @override
+  State<_TelemetryCard> createState() => _TelemetryCardState();
+}
+
+class _TelemetryCardState extends State<_TelemetryCard> {
+  int _hours = 3;
 
   @override
   Widget build(BuildContext context) {
@@ -201,68 +201,110 @@ class _DexcomCard extends StatelessWidget {
     final age = r == null ? null : now.difference(r.at).inMinutes;
     // Bij vingerprik is een oude meting normaal (je meet niet elke 15 min).
     final stale = !finger && age != null && age >= 15;
-    final message = store.glucose?.message;
+    final from = now.subtract(Duration(hours: _hours));
+    final window = store.glucoseHistory.where((g) => g.at.isAfter(from)).map((g) => g.mmol).toList();
+    final tir = timeInRange(window);
+
+    final (String zoneLabel, KTone zoneTone) = r == null
+        ? ('Geen meting', KTone.neutral)
+        : stale
+        ? ('Meting is oud', KTone.warning)
+        : switch (zoneFor(r.mmol)) {
+            GlucoseZone.inTarget => ('Binnen range', KTone.success),
+            GlucoseZone.hypo => ('Hypo', KTone.danger),
+            GlucoseZone.low => ('Laag', KTone.warning),
+            GlucoseZone.high => ('Hoog', KTone.warning),
+          };
+    final trendColor = r == null ? k.textMuted : (isFalling(r.trend) ? k.warningInk : k.accent);
+
     return KCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              IconTile(icon: finger ? Icons.water_drop_outlined : Icons.sensors, size: 32, color: k.accent),
-              const SizedBox(width: 10),
+              Icon(finger ? Icons.water_drop_outlined : Icons.ssid_chart, color: k.accent, size: 22),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text(finger ? 'Vingerprik' : 'Dexcom G7 Actief', style: context.t.bodyStrong),
-              ),
-              if (age != null)
-                Text(
-                  age <= 0 ? 'Zojuist bijgewerkt' : '$age min geleden',
-                  style: context.t.caption.copyWith(color: stale ? k.warningInk : null),
+                child: Text(
+                  finger ? 'Glucose (vingerprik)' : 'Continu Telemetrie',
+                  style: context.t.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+              KPill(zoneLabel, tone: zoneTone, dot: true, dense: true),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: GlucoseReadout(reading: r, size: 48, showArrow: false),
-                    ),
-                    const SizedBox(height: 4),
-                    Text('IOB ${store.iob.toStringAsFixed(1)} E actief', style: context.t.caption),
-                  ],
-                ),
-              ),
-              if (r != null) ...[
-                const SizedBox(width: 12),
-                KWell(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
-                        trendArrow(r.trend),
-                        style: context.t.title.copyWith(color: isFalling(r.trend) ? k.warningInk : k.accent, height: 1),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(trendLabel(r.trend), style: context.t.bodyStrong),
+                      GlucoseReadout(reading: r, size: 52, showArrow: false),
+                      if (r != null) ...[
+                        const SizedBox(width: 12),
+                        Text(trendArrow(r.trend), style: context.t.metricMd.copyWith(color: trendColor)),
+                      ],
                     ],
                   ),
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('IOB (insuline actief)', style: context.t.caption),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${store.iob.toStringAsFixed(1)} E',
+                    style: context.t.subtitle.copyWith(color: k.accent, fontFeatures: const [FontFeature.tabularFigures()]),
+                  ),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           if (r != null)
-            _RangeWell(reading: r, stale: stale)
+            KWell(
+              color: k.isDark ? KineticColors.sunken : null,
+              borderColor: k.border,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.schedule, size: 16, color: stale ? k.warningInk : k.textSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    hhmm(r.at),
+                    style: context.t.caption.copyWith(color: stale ? k.warningInk : k.text, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      age == null || age <= 0 ? '• zojuist' : '• $age min',
+                      style: context.t.caption.copyWith(color: stale ? k.warningInk : null),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    trendLabel(r.trend),
+                    style: context.t.caption.copyWith(color: trendColor, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            )
           else ...[
             Text(
-              message ?? 'Nog geen glucosewaarde.',
+              store.glucose?.message ?? 'Nog geen glucosewaarde.',
               style: context.t.caption.copyWith(color: k.warningInk),
             ),
             const SizedBox(height: 10),
@@ -274,128 +316,162 @@ class _DexcomCard extends StatelessWidget {
               onPressed: () => showFingerstickSheet(context),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-/// "✓ In bereik  •  Doel: 4.2 – 9.0 mmol/L", per zone.
-class _RangeWell extends StatelessWidget {
-  const _RangeWell({required this.reading, required this.stale});
-  final GlucoseReading reading;
-  final bool stale;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    final range = '${dec1(targetLow)} – ${dec1(targetHigh)} mmol/L';
-    final (IconData icon, String label, KTone tone, String detail) = stale
-        ? (Icons.schedule, 'Meting is oud', KTone.warning, 'Controleer de sensor')
-        : switch (zoneFor(reading.mmol)) {
-            GlucoseZone.inTarget => (Icons.check, 'In bereik', KTone.success, 'Doel: $range'),
-            GlucoseZone.hypo => (Icons.priority_high, 'Hypo', KTone.danger, 'Onder ${dec1(hypoBelow)} mmol/L'),
-            GlucoseZone.low => (Icons.south, 'Laag', KTone.warning, 'Doel: $range'),
-            GlucoseZone.high => (Icons.north, 'Hoog', KTone.warning, 'Doel: $range'),
-          };
-    final (_, fg) = toneColors(k, tone);
-    final solid = switch (tone) {
-      KTone.success => k.success,
-      KTone.danger => k.danger,
-      _ => k.warning,
-    };
-    return KWell(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(color: solid, shape: BoxShape.circle),
-            child: Icon(icon, size: 16, color: k.surface),
-          ),
-          const SizedBox(width: 10),
-          Text(label, style: context.t.bodyStrong.copyWith(color: fg)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              detail,
-              textAlign: TextAlign.end,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.t.caption,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ------------------------------------------------------------------- trend
-
-class _TrendCard extends StatefulWidget {
-  const _TrendCard();
-
-  @override
-  State<_TrendCard> createState() => _TrendCardState();
-}
-
-class _TrendCardState extends State<_TrendCard> {
-  int _hours = 3;
-
-  @override
-  Widget build(BuildContext context) {
-    final store = KineticScope.of(context);
-    final k = context.k;
-    final now = store.now();
-    final from = now.subtract(Duration(hours: _hours));
-    final window = store.glucoseHistory.where((g) => g.at.isAfter(from)).map((g) => g.mmol).toList();
-    final avg = window.isEmpty ? null : window.reduce((a, b) => a + b) / window.length;
-    final tir = timeInRange(window);
-    return KCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.ssid_chart, color: k.accent, size: 22),
-              const SizedBox(width: 10),
-              Expanded(child: Text('Glucosetrend', style: context.t.title)),
-              if (avg != null) ...[
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: zoneInk(k, avg), shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 6),
-                Text('Gem. ${dec1(avg)} mmol/L', style: context.t.caption),
-              ],
-            ],
-          ),
           const SizedBox(height: 14),
-          KSegmented<int>(
-            options: const [(3, '3u'), (6, '6u'), (12, '12u'), (24, '24u')],
-            value: _hours,
-            onChanged: (h) => setState(() => _hours = h),
-          ),
-          const SizedBox(height: 12),
           GlucoseTimeline(
             points: store.glucoseHistory,
             meals: store.foodEntries,
             now: now,
             windowHours: _hours,
-            height: 190,
+            height: 180,
           ),
-          if (tir != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              '${(tir * 100).round()}% in doelbereik (laatste $_hours uur) • houd een punt ingedrukt voor details',
-              style: context.t.caption,
-            ),
-          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  tir == null ? 'Houd een punt ingedrukt voor details' : '${(tir * 100).round()}% in doelbereik',
+                  style: context.t.caption,
+                  maxLines: 2,
+                ),
+              ),
+              const SizedBox(width: 8),
+              for (final h in const [3, 6, 12, 24])
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: _HourChip(hours: h, selected: _hours == h, onTap: () => setState(() => _hours = h)),
+                ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _HourChip extends StatelessWidget {
+  const _HourChip({required this.hours, required this.selected, required this.onTap});
+  final int hours;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: 'Laatste $hours uur',
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? k.primaryTint : k.well,
+        borderRadius: BorderRadius.circular(KRadius.sm),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text('${hours}u', style: context.t.labelSm.copyWith(color: selected ? k.accent : k.textSecondary)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- mat-modus
+
+/// De grote teal kaart: training starten, of terug naar de lopende training.
+class _MatModeCard extends StatelessWidget {
+  const _MatModeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = KineticScope.of(context);
+    final k = context.k;
+    final tr = store.isTrainingActive ? store.training : null;
+    final t = store.sparring;
+    final String eyebrow;
+    final String title;
+    final String sub;
+    if (tr != null) {
+      eyebrow = t != null ? 'Mat-modus • sparren' : 'Mat-modus • live';
+      title = 'Terug naar de training';
+      sub = t != null
+          ? 'Ronde ${t.round}/${t.config.rounds} • ${t.phase == SparringPhase.rest ? 'rust' : 'nog'} ${mmss(store.roundSecondsRemaining)}'
+          : '${tr.displayTitle} • tot ${hhmm(tr.endsAt)}';
+    } else {
+      eyebrow = 'Mat-modus • stand-by';
+      title = 'Training starten';
+      sub = 'Discipline, tijden en sensor-check';
+    }
+    final fg = k.isDark ? k.onPrimary : Colors.white;
+    return Semantics(
+      button: true,
+      label: title,
+      excludeSemantics: true,
+      child: Material(
+        color: k.primary,
+        borderRadius: BorderRadius.circular(KRadius.lg),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.heavyImpact();
+            if (tr != null) {
+              openLiveSession(context);
+            } else {
+              showStartTrainingSheet(context, planned: store.nextPlannedTraining);
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(tr != null ? Icons.sensors : Icons.sports_mma, size: 16, color: fg.withValues(alpha: 0.8)),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              eyebrow.toUpperCase(),
+                              style: context.t.labelSm.copyWith(color: fg.withValues(alpha: 0.8)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(title, style: context.t.headline.copyWith(color: fg)),
+                      const SizedBox(height: 2),
+                      Text(
+                        sub,
+                        style: context.t.caption.copyWith(color: fg.withValues(alpha: 0.85)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(color: fg.withValues(alpha: 0.12), shape: BoxShape.circle),
+                  child: Icon(tr != null ? Icons.open_in_full : Icons.play_arrow_rounded, color: fg, size: 30),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -403,6 +479,7 @@ class _TrendCardState extends State<_TrendCard> {
 
 // ---------------------------------------------------------------- training
 
+/// "Geplande Mat-Tijd": de eerstvolgende training met de pre-training check.
 class _TrainingCard extends StatefulWidget {
   const _TrainingCard();
 
@@ -418,98 +495,63 @@ class _TrainingCardState extends State<_TrainingCard> {
     final store = KineticScope.of(context);
     final k = context.k;
     final p = store.nextPlannedTraining;
-    final active = store.isTrainingActive;
     final clearance = store.clearanceForNextRound();
     final expanded = _expanded ?? clearance.level != ClearanceLevel.safe;
     final (_, toneFg) = toneColors(k, clearanceTone(clearance.level));
-    final t = store.sparring;
-
-    final header = p == null
-        ? Row(
-            children: [
-              IconTile(icon: Icons.sports_kabaddi, size: 56, color: k.primary),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Geen training gepland', style: context.t.title),
-                    const SizedBox(height: 2),
-                    Text('Start een vrije training of plan er een in je agenda.', style: context.t.caption),
-                  ],
-                ),
-              ),
-            ],
-          )
-        : Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              IconTile(icon: _kindIcon(p.kind), size: 56, color: k.primary, filled: true),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        KPill(p.kind.label, tone: KTone.neutral, dense: true, uppercase: true),
-                        if (p.durationMinutes != null) Text('${p.durationMinutes} min', style: context.t.caption),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(p.displayTitle, style: context.t.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    if (p.location.trim().isNotEmpty)
-                      Text(p.location.trim(), style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              KPill(_timeLabel(p.startsAt, store.now()), tone: KTone.primary),
-            ],
-          );
 
     return KCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          header,
-          const SizedBox(height: 16),
-          // Alleen als er een training loopt: status (geen spar-format meer;
-          // sparren voeg je tijdens de training toe).
-          if (active && store.training != null) ...[
-            KWell(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              child: Row(
-                children: [
-                  Icon(t != null ? Icons.sports_mma : Icons.timer_outlined, color: k.accent, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      t != null
-                          ? '${store.sessionTitle} • sparren ${t.phase == SparringPhase.rest ? 'rust' : 'ronde'} ${t.round}/${t.config.rounds}'
-                          : '${store.sessionTitle} • tot ${hhmm(store.training!.endsAt)}',
-                      style: context.t.body.copyWith(color: k.text),
-                      maxLines: 1,
+          Row(
+            children: [
+              Expanded(child: Text('Geplande Mat-Tijd', style: context.t.title)),
+              if (p != null) KPill(_timeLabel(p.startsAt, store.now(), p.durationMinutes), tone: KTone.primary, dense: true),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(color: k.well, borderRadius: BorderRadius.circular(KRadius.md)),
+                child: Icon(p == null ? Icons.event_available_outlined : _kindIcon(p.kind), color: k.accent, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      p?.displayTitle ?? 'Geen training gepland',
+                      style: context.t.subtitle.copyWith(fontSize: 17),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    t != null ? mmss(store.roundSecondsRemaining) : durationLabel(store.training!.elapsedSeconds(store.now()) ~/ 60),
-                    style: context.t.caption.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      p == null
+                          ? 'Start een vrije training met de mat-modus-kaart.'
+                          : [
+                              p.kind.label,
+                              if (p.durationMinutes != null) '${p.durationMinutes} min',
+                              if (p.location.trim().isNotEmpty) p.location.trim(),
+                            ].join(' • '),
+                      style: context.t.caption,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-          ],
+            ],
+          ),
+          const SizedBox(height: 14),
           // Pre-Training Check: status meteen zichtbaar, uitleg uitklapbaar.
           Material(
-            color: k.primaryTint,
+            color: k.isDark ? KineticColors.sunken : k.well,
             borderRadius: BorderRadius.circular(KRadius.md),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -518,7 +560,7 @@ class _TrainingCardState extends State<_TrainingCard> {
                 setState(() => _expanded = !expanded);
               },
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -526,17 +568,12 @@ class _TrainingCardState extends State<_TrainingCard> {
                       constraints: const BoxConstraints(minHeight: 32),
                       child: Row(
                         children: [
-                          Expanded(
-                            child: Text('Pre-Training Check', style: context.t.bodyStrong.copyWith(color: k.accent)),
-                          ),
-                          KPill(
-                            clearanceShort(clearance.level),
-                            tone: clearanceTone(clearance.level),
-                            icon: clearanceIcon(clearance.level),
-                            dense: true,
-                          ),
-                          const SizedBox(width: 6),
-                          Icon(expanded ? Icons.expand_less : Icons.expand_more, color: k.accent),
+                          Icon(clearanceIcon(clearance.level), size: 20, color: toneFg),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Pre-Training Check', style: context.t.bodyStrong)),
+                          KPill(clearanceShort(clearance.level), tone: clearanceTone(clearance.level), dense: true),
+                          const SizedBox(width: 4),
+                          Icon(expanded ? Icons.expand_less : Icons.expand_more, color: k.textSecondary),
                         ],
                       ),
                     ),
@@ -545,7 +582,7 @@ class _TrainingCardState extends State<_TrainingCard> {
                       alignment: Alignment.topCenter,
                       child: expanded
                           ? Padding(
-                              padding: const EdgeInsets.only(top: 8, right: 4),
+                              padding: const EdgeInsets.only(top: 8, right: 4, left: 28),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -562,24 +599,6 @@ class _TrainingCardState extends State<_TrainingCard> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          if (active)
-            BigButton(
-              label: 'Terug naar de training',
-              icon: Icons.sports_mma,
-              height: 56,
-              onPressed: () {
-                HapticFeedback.heavyImpact();
-                openLiveSession(context);
-              },
-            )
-          else
-            BigButton(
-              label: 'Training starten',
-              icon: Icons.play_arrow_rounded,
-              height: 56,
-              onPressed: () => showStartTrainingSheet(context, planned: p),
-            ),
         ],
       ),
     );
@@ -591,12 +610,13 @@ class _TrainingCardState extends State<_TrainingCard> {
     _ => Icons.sports_kabaddi,
   };
 
-  /// "18:30", of "morgen 18:30" / "do 18:30" als het niet vandaag is.
-  static String _timeLabel(DateTime at, DateTime now) {
+  /// "18:30 - 20:00", met "morgen" / "do" ervoor als het niet vandaag is.
+  static String _timeLabel(DateTime at, DateTime now, int? minutes) {
     final days = daysUntil(at, now: now);
-    if (days == 0) return hhmm(at);
-    if (days == 1) return 'morgen ${hhmm(at)}';
-    return '${shortDate(at).split(' ').first} ${hhmm(at)}';
+    final range = minutes == null ? hhmm(at) : '${hhmm(at)} - ${hhmm(at.add(Duration(minutes: minutes)))}';
+    if (days == 0) return range;
+    if (days == 1) return 'morgen $range';
+    return '${shortDate(at).split(' ').first} $range';
   }
 }
 
@@ -611,23 +631,29 @@ class _AdviceCard extends StatelessWidget {
     final k = context.k;
     final (title, text, tone) = _advice(store.clearanceForNextRound(), store.reading, store.iob, store.fastCarbGrams);
     final (_, fg) = toneColors(k, tone);
-    return KCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IconTile(icon: tone == KTone.primary ? Icons.bolt : Icons.warning_amber_rounded, size: 44, color: fg),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    // Inzicht-kaart uit de mocks: accentstreep links.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(KRadius.lg),
+      child: Container(
+        decoration: BoxDecoration(
+          color: k.surface,
+          border: Border(left: BorderSide(color: fg, width: 4)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(title, style: context.t.bodyStrong),
-                const SizedBox(height: 4),
-                Text(text, style: context.t.body.copyWith(color: k.textSecondary)),
+                Icon(tone == KTone.primary ? Icons.lightbulb_outline : Icons.warning_amber_rounded, color: fg, size: 22),
+                const SizedBox(width: 8),
+                Expanded(child: Text(title, style: context.t.subtitle)),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(text, style: context.t.body.copyWith(color: k.textSecondary)),
+          ],
+        ),
       ),
     );
   }
@@ -681,84 +707,97 @@ class _QuickButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
-    final k = context.k;
     final liters = store.waterMlToday / 1000;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (store.waterEnabled) ...[
           Expanded(
-            child: KCard(
-              onTap: () async {
-                HapticFeedback.mediumImpact();
-                final before = store.waterMlToday;
-                await store.addWater(250);
-                if (!context.mounted) return;
-                showToast(
-                  context,
-                  'Vocht ${(before / 1000).toStringAsFixed(2)}L → ${(store.waterMlToday / 1000).toStringAsFixed(2)}L',
-                  actionLabel: 'Ongedaan',
-                  onAction: () => store.addWater(-250),
-                );
-              },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      IconTile(icon: Icons.water_drop_outlined, size: 32, color: k.blue),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text('Vocht', style: context.t.bodyStrong)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${liters.toStringAsFixed(store.waterMlToday % 100 == 0 ? 1 : 2)}L',
-                    style: context.t.metricMd,
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Tik voor +250ml', style: context.t.caption.copyWith(color: k.blue, fontWeight: FontWeight.w600)),
-                ],
-              ),
+            child: _QuickTile(
+              icon: Icons.restaurant,
+              title: 'Eten & Carbs',
+              value: store.nutritionGoalsEnabled
+                  ? '${grams(store.carbsToday)}/${grams(store.carbsTarget)}g'
+                  : '${grams(store.carbsToday)}g',
+              sub: 'Maaltijd toevoegen',
+              onTap: store.requestMealSheet,
             ),
           ),
-          const SizedBox(width: 12),
+          if (store.waterEnabled) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickTile(
+                icon: Icons.water_drop_outlined,
+                title: 'Vocht',
+                value: '${liters.toStringAsFixed(store.waterMlToday % 100 == 0 ? 1 : 2)} L',
+                sub: 'Tik voor +250ml',
+                onTap: () async {
+                  HapticFeedback.mediumImpact();
+                  final before = store.waterMlToday;
+                  await store.addWater(250);
+                  if (!context.mounted) return;
+                  showToast(
+                    context,
+                    'Vocht ${(before / 1000).toStringAsFixed(2)}L → ${(store.waterMlToday / 1000).toStringAsFixed(2)}L',
+                    actionLabel: 'Ongedaan',
+                    onAction: () => store.addWater(-250),
+                  );
+                },
+              ),
+            ),
           ],
-          Expanded(
-            child: KCard(
-              onTap: store.requestMealSheet,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      IconTile(icon: Icons.restaurant_outlined, size: 32, color: k.warningInk),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text('Eten & carbs', style: context.t.bodyStrong)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(text: grams(store.carbsToday), style: context.t.metricMd),
-                        TextSpan(
-                          text: store.nutritionGoalsEnabled ? ' / ${grams(store.carbsTarget)}g' : ' g vandaag',
-                          style: context.t.unit,
-                        ),
-                      ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Tegel met icoonvlak linksboven, waarde rechtsboven, titel en subregel.
+class _QuickTile extends StatelessWidget {
+  const _QuickTile({required this.icon, required this.title, required this.value, required this.sub, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String value;
+  final String sub;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return KCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: k.well, borderRadius: BorderRadius.circular(KRadius.sm)),
+                child: Icon(icon, color: k.accent, size: 22),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      value,
+                      style: context.t.bodyStrong.copyWith(color: k.accent, fontFeatures: const [FontFeature.tabularFigures()]),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Maaltijd toevoegen',
-                    style: context.t.caption.copyWith(color: k.warningInk, fontWeight: FontWeight.w600),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
+          const SizedBox(height: 14),
+          Text(title, style: context.t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(sub, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -773,65 +812,59 @@ class _DailyOutput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
-    final k = context.k;
     final mat = store.matMinutesToday;
     Widget pair(Widget a, Widget b) => IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [Expanded(child: a), const SizedBox(width: 8), Expanded(child: b)],
+        children: [Expanded(child: a), const SizedBox(width: 12), Expanded(child: b)],
       ),
     );
-    return KCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
+          child: Row(
             children: [
-              Expanded(child: Text('Dagelijkse output', style: context.t.title)),
+              const Expanded(child: Eyebrow('Dagelijkse output')),
               Text(shortDate(store.now()), style: context.t.caption),
             ],
           ),
-          const SizedBox(height: 12),
-          pair(
-            MetricTile(
-              inWell: true,
-              label: 'Verbranding',
-              value: '${store.kcalToday} kcal',
-              sub: 'Schatting uit mat-tijd',
-              icon: Icons.local_fire_department_outlined,
-              accent: k.warningInk,
-            ),
-            MetricTile(
-              inWell: true,
-              label: 'Tijd op mat',
-              value: '$mat min',
-              sub: store.isTrainingActive ? 'Sessie loopt' : 'Vandaag',
-              icon: Icons.timer_outlined,
-            ),
+        ),
+        pair(
+          OutputTile(
+            label: 'Verbranding',
+            value: '${store.kcalToday}',
+            unit: 'kcal',
+            sub: 'Schatting uit mat-tijd',
+            icon: Icons.local_fire_department_outlined,
           ),
-          const SizedBox(height: 8),
-          pair(
-            MetricTile(
-              inWell: true,
-              label: 'HRV herstel',
-              value: '—',
-              sub: 'Koppel Polar H10',
-              icon: Icons.monitor_heart_outlined,
-              accent: k.blue,
-              subColor: k.textMuted,
-            ),
-            MetricTile(
-              inWell: true,
-              label: 'Slaap',
-              value: '—',
-              sub: 'Geen slaapbron',
-              icon: Icons.bedtime_outlined,
-              accent: k.purple,
-              subColor: k.textMuted,
-            ),
+          OutputTile(
+            label: 'Tijd op Mat',
+            value: '$mat',
+            unit: 'min',
+            sub: store.isTrainingActive ? 'Sessie loopt' : 'Vandaag',
+            icon: Icons.timer_outlined,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 12),
+        pair(
+          const OutputTile(
+            label: 'HRV Herstel',
+            value: '—',
+            sub: 'Koppel Polar H10',
+            icon: Icons.favorite_border,
+            muted: true,
+          ),
+          const OutputTile(
+            label: 'Slaap Herstel',
+            value: '—',
+            sub: 'Geen slaapbron',
+            icon: Icons.bedtime_outlined,
+            muted: true,
+          ),
+        ),
+      ],
     );
   }
 }

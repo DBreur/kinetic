@@ -45,19 +45,21 @@ void main() {
 
   testWidgets('Vandaag toont fight prep, Dexcom en de sparring-CTA', (tester) async {
     await pumpApp(tester);
-    expect(find.textContaining('Combat Sambo Open • Nog 18 dagen'), findsOneWidget);
-    expect(find.textContaining('78.4 kg (-1.4 kg target)'), findsOneWidget);
+    expect(find.text('COMBAT SAMBO OPEN'), findsOneWidget);
+    expect(find.text('Nog 18 dagen'), findsOneWidget);
+    expect(find.textContaining('78.4 kg'), findsOneWidget);
+    expect(find.textContaining('-1.4 kg target'), findsOneWidget);
     expect(find.text('6.5'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Training starten'), 200, scrollable: vertical);
     await tester.scrollUntilVisible(find.text('Tik voor +250ml'), 200, scrollable: vertical);
-    expect(find.text('3.2L'), findsOneWidget);
+    expect(find.text('3.2 L'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Tik voor +250ml'));
     await settle(tester);
     await tester.tap(find.text('Tik voor +250ml'));
     await settle(tester);
     expect(store.waterMlToday, 3450);
-    expect(find.text('3.45L'), findsOneWidget);
+    expect(find.text('3.45 L'), findsOneWidget);
   });
 
   testWidgets('5-tabs navigatie en de barometer', (tester) async {
@@ -66,7 +68,8 @@ void main() {
     await settle(tester);
     expect(find.text('Eet Logboek'), findsOneWidget);
     expect(store.carbsToday, 165);
-    expect(find.text('45g resterend'), findsOneWidget);
+    expect(find.text('Resterend'), findsOneWidget);
+    expect(find.text('45g'), findsOneWidget);
 
     // Snelle-carbs-knoppen zijn weg; loggen gaat via de maaltijd-sheet.
     expect(find.text('+15g Dextrose'), findsNothing);
@@ -80,6 +83,9 @@ void main() {
     expect(find.text('Liver Punch Setup'), findsNothing);
     final strikingHeader = find.descendant(of: find.byType(GroupHeader), matching: find.text('Striking'));
     await tester.scrollUntilVisible(strikingHeader, 300, scrollable: vertical);
+    // Bovenaan in beeld zetten, zodat de tik niet op de navigatiebalk valt.
+    await tester.ensureVisible(strikingHeader);
+    await settle(tester);
     await tester.tap(strikingHeader);
     await settle(tester);
     expect(find.text('Liver hook'), findsOneWidget);
@@ -87,7 +93,7 @@ void main() {
 
     await tester.tap(find.text('Training'));
     await settle(tester);
-    expect(find.text('Training Historie'), findsOneWidget);
+    expect(find.text('Sessie Historie'), findsOneWidget);
   });
 
   testWidgets('centrale + opent het actiemenu', (tester) async {
@@ -527,7 +533,7 @@ void main() {
 
   testWidgets('wedstrijd plannen, aanpassen en verwijderen', (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Inwegen & Prep ⚖️'));
+    await tester.tap(find.text('Inwegen & Prep'));
     await settle(tester);
     final add = find.widgetWithText(TextButton, 'Wedstrijd');
     await tester.scrollUntilVisible(add, 300, scrollable: vertical);
@@ -597,28 +603,26 @@ void main() {
   testWidgets('dagdoel voeding en vocht aan/uit', (tester) async {
     await pumpApp(tester);
     await tester.scrollUntilVisible(find.text('Tik voor +250ml'), 200, scrollable: vertical);
-    expect(find.text(' / 210g', findRichText: true), findsNothing);
-    expect(find.textContaining('/ 210g', findRichText: true), findsOneWidget);
+    expect(find.text('165/210g'), findsOneWidget);
 
     await store.setWaterEnabled(false);
     await store.setNutritionGoalsEnabled(false);
     await settle(tester);
     expect(find.text('Tik voor +250ml'), findsNothing);
-    expect(find.textContaining('g vandaag', findRichText: true), findsOneWidget);
+    expect(find.text('165g'), findsOneWidget);
 
     await tester.tap(find.text('Eten'));
     await settle(tester);
-    expect(find.text('Dagdoel voeding staat uit'), findsOneWidget);
-    expect(find.textContaining('resterend'), findsNothing);
-    await tester.tap(find.text('Aanzetten'));
+    expect(find.text('Resterend'), findsNothing);
+    await tester.tap(find.text('Dagdoel aanzetten'));
     await settle(tester);
     expect(store.nutritionGoalsEnabled, isTrue);
-    expect(find.text('45g resterend'), findsOneWidget);
+    expect(find.text('Resterend'), findsOneWidget);
   });
 
   testWidgets('inwegen met ±0.1 kg en registreren', (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Inwegen & Prep ⚖️'));
+    await tester.tap(find.text('Inwegen & Prep'));
     await settle(tester);
     expect(find.text('Wedstrijden & Gewicht'), findsOneWidget);
     expect(find.text('Nog af te vallen: -1.4 kg naar doel'), findsOneWidget);

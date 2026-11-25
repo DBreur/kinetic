@@ -1,5 +1,5 @@
 // shell_screen.dart: de app-shell uit kinetic-design: top app bar (logo,
-// "Kinetic" + schermnaam, thema-schakelaar, avatar) en de 5-tabs navigatie
+// schermnaam met teal stip, live-telemetrieknop, avatar) en de 5-tabs navigatie
 // (Vandaag, Training, '+', Technieken, Eten) met de centrale quick action.
 // Loopt er een sessie, dan staat er een "terug naar de mat"-balk boven.
 
@@ -105,8 +105,8 @@ class KineticNavBar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: k.surface,
-        border: Border(top: BorderSide(color: k.border)),
+        color: k.isDark ? const Color(0xFF181C21) : k.surface,
+        border: k.isDark ? null : Border(top: BorderSide(color: k.border)),
       ),
       // Ruimte voor de Android-navigatieknoppen / gesturebalk.
       padding: EdgeInsets.only(bottom: context.bottomInset),
@@ -114,8 +114,8 @@ class KineticNavBar extends StatelessWidget {
         height: 68,
         child: Row(
           children: [
-            item(KTab.vandaag, Icons.calendar_today_outlined, Icons.calendar_today, 'Vandaag'),
-            item(KTab.training, Icons.sports_martial_arts_outlined, Icons.sports_martial_arts, 'Training'),
+            item(KTab.vandaag, Icons.local_fire_department_outlined, Icons.local_fire_department, 'Vandaag'),
+            item(KTab.training, Icons.fitness_center_outlined, Icons.fitness_center, 'Training'),
             Expanded(
               child: Center(
                 child: Transform.translate(
@@ -125,7 +125,9 @@ class KineticNavBar extends StatelessWidget {
                     label: 'Snelle actie',
                     child: Material(
                       color: k.primary,
-                      shape: CircleBorder(side: BorderSide(color: k.canvas, width: 4)),
+                      shape: const CircleBorder(),
+                      elevation: 6,
+                      shadowColor: k.primary.withValues(alpha: 0.5),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: () {
@@ -143,7 +145,7 @@ class KineticNavBar extends StatelessWidget {
                 ),
               ),
             ),
-            item(KTab.technieken, Icons.menu_book_outlined, Icons.menu_book, 'Technieken'),
+            item(KTab.technieken, Icons.shield_outlined, Icons.shield, 'Technieken'),
             item(KTab.eten, Icons.restaurant_outlined, Icons.restaurant, 'Eten'),
           ],
         ),

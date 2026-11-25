@@ -1,6 +1,6 @@
 // kinetic_theme.dart: het Kinetic design system (kinetic-design/) in twee
 // varianten met live wisselen:
-//  - Dark  = "Kinetic Metabolic Combat" (canvas #0b0f14, kaarten #121820)
+//  - Dark  = de "interactief dark mode"-mocks (canvas #101419, kaarten #1c2025)
 //  - Light = "Kinetic" (canvas #f8fafc, witte kaarten, teal #0d9488)
 // Geen gradients, glows of decoratieve schaduwen: diepte komt alleen uit
 // tonale lagen en 1px haarlijnen.
@@ -87,33 +87,38 @@ class KineticColors extends ThemeExtension<KineticColors> {
 
   bool get isDark => brightness == Brightness.dark;
 
+  /// Diepste vlak in dark mode (tooltipstrook, check-regel in een kaart).
+  static const sunken = Color(0xFF0A0E13);
+
+  // Donker = de "interactief dark mode"-mocks: tonale vlakken zonder randen
+  // (#101419 canvas, #1c2025 kaarten, #262a30 wells), teal #4fdbc8 als accent.
   static const dark = KineticColors(
     brightness: Brightness.dark,
-    canvas: Color(0xFF0B0F14),
-    surface: Color(0xFF121820),
-    well: Color(0xFF1C2430),
-    border: Color(0xFF1C2430),
-    borderStrong: Color(0xFF283546),
-    text: Color(0xFFF8FAFC),
-    textSecondary: Color(0xFF94A3B8),
-    textMuted: Color(0xFF64748B),
+    canvas: Color(0xFF101419),
+    surface: Color(0xFF1C2025),
+    well: Color(0xFF262A30),
+    border: Color(0xFF262A30),
+    borderStrong: Color(0xFF3C4947),
+    text: Color(0xFFE0E2EA),
+    textSecondary: Color(0xFFBBCAC6),
+    textMuted: Color(0xFF859490),
     primary: Color(0xFF14B8A6),
-    onPrimary: Color(0xFF042F2E),
+    onPrimary: Color(0xFF003731),
     primaryPressed: Color(0xFF0F766E),
-    accent: Color(0xFF2DD4BF),
-    primaryTint: Color(0x2614B8A6),
-    success: Color(0xFF10B981),
-    successInk: Color(0xFF34D399),
-    successTint: Color(0x2610B981),
+    accent: Color(0xFF4FDBC8),
+    primaryTint: Color(0x264FDBC8),
+    success: Color(0xFF16BB83),
+    successInk: Color(0xFF4EDEA3),
+    successTint: Color(0x264EDEA3),
     warning: Color(0xFFF59E0B),
     warningInk: Color(0xFFFBBF24),
     warningTint: Color(0x26F59E0B),
     danger: Color(0xFFEF4444),
-    dangerInk: Color(0xFFF87171),
-    dangerTint: Color(0x26EF4444),
+    dangerInk: Color(0xFFFFB4AB),
+    dangerTint: Color(0x33EF4444),
     purple: Color(0xFFA855F7),
     blue: Color(0xFF3B82F6),
-    scrim: Color(0xE60B0F14),
+    scrim: Color(0xE6101419),
   );
 
   static const light = KineticColors(
@@ -361,22 +366,22 @@ ThemeData kineticTheme(KineticColors k) {
 // context.k / context.t zijn omgezet; wordt verwijderd zodra alles om is.
 
 abstract final class KColor {
-  static const bg = Color(0xFF0B0F14);
+  static const bg = Color(0xFF101419);
   static const surface = Color(0xFF121820);
   static const surfaceContainer = Color(0xFF121820);
   static const surfaceHigh = Color(0xFF1C2430);
   static const surfaceElevated = Color(0xFF283546);
   static const teal = Color(0xFF14B8A6);
-  static const tealLight = Color(0xFF2DD4BF);
+  static const tealLight = Color(0xFF4FDBC8);
   static const tealGlow = Color(0x4014B8A6);
   static const warning = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
-  static const success = Color(0xFF10B981);
+  static const success = Color(0xFF4EDEA3);
   static const purple = Color(0xFFA855F7);
   static const blue = Color(0xFF3B82F6);
-  static const text = Color(0xFFF8FAFC);
-  static const textSecondary = Color(0xFF94A3B8);
-  static const textMuted = Color(0xFF64748B);
+  static const text = Color(0xFFE0E2EA);
+  static const textSecondary = Color(0xFFBBCAC6);
+  static const textMuted = Color(0xFF859490);
   static const border = Color(0xFF1C2430);
 }
 

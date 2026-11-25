@@ -708,32 +708,50 @@ class _SparringPanel extends StatelessWidget {
     final total = timer.config.rounds;
     final roundIndex = timer.round - 1;
     final round = block != null && roundIndex < block.rounds.length ? block.rounds[roundIndex] : null;
-    final timeColor = paused ? k.textMuted : (remaining <= 10 ? k.warningInk : k.text);
+    final timeColor = paused ? k.textMuted : (remaining <= 10 ? k.warningInk : k.accent);
     return KCard(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Ronde ',
-                  style: t.title.copyWith(color: k.textSecondary),
+          Row(
+            children: [
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Ronde ',
+                        style: t.headline.copyWith(fontSize: 26, color: k.accent),
+                      ),
+                      TextSpan(
+                        text: '${timer.round}',
+                        style: t.headline.copyWith(fontSize: 26, fontWeight: FontWeight.w800, color: k.accent),
+                      ),
+                      TextSpan(
+                        text: ' / $total',
+                        style: t.title.copyWith(color: k.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
-                TextSpan(
-                  text: '${timer.round}',
-                  style: t.headline.copyWith(fontSize: 26, fontWeight: FontWeight.w800, color: k.accent),
-                ),
-                TextSpan(
-                  text: ' / $total',
-                  style: t.title.copyWith(color: k.textSecondary),
-                ),
-              ],
-            ),
+              ),
+              Icon(Icons.sports_kabaddi, size: 18, color: k.accent),
+              const SizedBox(width: 6),
+              Text('SPARRING', style: t.labelSm.copyWith(color: k.accent, letterSpacing: 0.8)),
+            ],
           ),
           const SizedBox(height: 10),
           RoundSegments(total: total, done: timer.round - 1, currentProgress: timer.phaseProgress(store.now())),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.hourglass_bottom, size: 16, color: k.textSecondary),
+              const SizedBox(width: 6),
+              Text('RESTEREND IN RONDE', style: t.labelSm.copyWith(letterSpacing: 0.8)),
+            ],
+          ),
           Semantics(
             button: true,
             label: 'Resterende tijd ${mmss(remaining)}, tik om te ${paused ? 'hervatten' : 'pauzeren'}',
