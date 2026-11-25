@@ -63,6 +63,12 @@ De iconen in `android/app/src/main/res/` (`mipmap-*/ic_launcher.png` en
 `values/colors.xml`. Na een nieuw logo die bestanden opnieuw genereren
 (legacy 48 dp, adaptive voorgrond 108 dp per dichtheid).
 
+Hetzelfde logo staat ook in de andere platforms: iOS
+(`ios/Runner/Assets.xcassets/AppIcon.appiconset`, vierkant zonder
+transparantie), macOS (`macos/Runner/Assets.xcassets/AppIcon.appiconset`,
+afgeronde tegel), web (`web/favicon.png`, `web/icons/`, kleuren in
+`web/manifest.json`) en Windows (`windows/runner/resources/app_icon.ico`).
+
 ## Tests
 
 ```powershell

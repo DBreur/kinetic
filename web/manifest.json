@@ -1,11 +1,11 @@
 {
-    "name": "kinetic",
-    "short_name": "kinetic",
+    "name": "Kinetic",
+    "short_name": "Kinetic",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#101419",
+    "theme_color": "#101419",
+    "description": "Kinetic: combat sports, training en T1D-telemetrie.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
