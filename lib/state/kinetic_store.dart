@@ -19,6 +19,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../core/app_config.dart';
+import '../core/bolus_calculator.dart';
 import '../core/formatters.dart';
 import '../core/glucose_rules.dart';
 import '../core/iob.dart';
@@ -26,6 +27,7 @@ import '../core/meal_impact.dart';
 import '../core/preset_text.dart';
 import '../core/sparring_timer.dart';
 import '../core/training_blocks.dart';
+import '../models/bolus_period.dart';
 import '../models/combination.dart';
 import '../models/competition.dart';
 import '../models/food_log_entry.dart';
@@ -435,12 +437,15 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     double? fat,
     MealContext? context,
     double? insulinUnits,
+    double? insulinFoodUnits,
+    double? insulinCorrectionUnits,
+    double? mmolOverride,
     Map<String, int> presetCounts = const {},
   }) async {
     final uid = _uid;
     final c = _client;
     final r = reading;
-    final mmol = (r != null && !r.isStaleAt(now())) ? double.parse(r.mmol.toStringAsFixed(1)) : null;
+    final mmol = mmolOverride ?? ((r != null && !r.isStaleAt(now())) ? double.parse(r.mmol.toStringAsFixed(1)) : null);
     FoodLogEntry entry;
     if (uid == null || c == null) {
       entry = FoodLogEntry(
@@ -453,6 +458,8 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
         context: context,
         mmol: mmol,
         insulinUnits: insulinUnits,
+        insulinFoodUnits: insulinFoodUnits,
+        insulinCorrectionUnits: insulinCorrectionUnits,
         presetCounts: presetCounts,
       );
     } else {
@@ -467,6 +474,8 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
           context: context,
           mmol: mmol,
           insulinUnits: insulinUnits,
+          insulinFoodUnits: insulinFoodUnits,
+          insulinCorrectionUnits: insulinCorrectionUnits,
           presetCounts: presetCounts,
         );
         lastSyncAt = now();
@@ -479,6 +488,23 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     foodEntries = [entry, ...foodEntries];
     notifyListeners();
     return entry;
+  }
+
+  /// Een gelogde maaltijd aanpassen (Eten → kaart aantikken).
+  Future<bool> updateFood(FoodLogEntry entry) async {
+    final c = _client;
+    try {
+      var saved = entry;
+      if (c != null && !entry.id.startsWith('local-')) {
+        saved = await FoodLogRepository(c).update(entry);
+        lastSyncAt = now();
+      }
+      foodEntries = [for (final e in foodEntries) e.id == entry.id ? saved : e];
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> deleteFood(FoodLogEntry entry) async {
@@ -1640,6 +1666,72 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
         });
       }
       profile = p.copyWith(dailyLowBelow: low, hyperLimit: hyper);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ------------------------------------------------------- bolus-calculator
+
+  /// Staat de calculator aan en is er minstens één tijdvak?
+  bool get bolusCalculatorActive {
+    final p = profile;
+    return p != null && p.bolusCalculatorEnabled && p.bolusPeriods.isNotEmpty;
+  }
+
+  /// Voorstel voor voedings- en correctie-insuline op dit moment.
+  BolusSuggestion bolusSuggestion({double? carbs, double? mmol, DateTime? at}) {
+    final p = profile ?? const KineticProfile(id: '');
+    return calculateBolus(
+      periods: p.bolusPeriods,
+      carbs: carbs,
+      currentMmol: mmol,
+      correctionFactor: p.correctionFactor,
+      correctionTargetDay: p.correctionTargetDay,
+      correctionTargetNight: p.correctionTargetNight,
+      nightStart: p.correctionNightStart,
+      nightEnd: p.correctionNightEnd,
+      at: at ?? now(),
+    );
+  }
+
+  /// Instellingen van de bolus-calculator (kolommen in `profiles`).
+  Future<bool> updateBolusSettings({
+    bool? enabled,
+    List<BolusPeriod>? periods,
+    double? correctionFactor,
+    double? targetDay,
+    double? targetNight,
+    String? nightStart,
+    String? nightEnd,
+  }) async {
+    final p = profile;
+    if (p == null) return false;
+    final sorted = periods == null ? null : ([...periods]..sort((a, b) => a.startMinutes.compareTo(b.startMinutes)));
+    try {
+      final c = _client;
+      if (c != null) {
+        await ProfileRepository(c).updateFields(p.id, {
+          'bolus_calculator_enabled': ?enabled,
+          if (sorted != null) 'bolus_periods': [for (final x in sorted) x.toJson()],
+          'correction_factor': ?correctionFactor,
+          'correction_target_day': ?targetDay,
+          'correction_target_night': ?targetNight,
+          'correction_night_start': ?nightStart,
+          'correction_night_end': ?nightEnd,
+        });
+      }
+      profile = p.copyWith(
+        bolusCalculatorEnabled: enabled,
+        bolusPeriods: sorted,
+        correctionFactor: correctionFactor,
+        correctionTargetDay: targetDay,
+        correctionTargetNight: targetNight,
+        correctionNightStart: nightStart,
+        correctionNightEnd: nightEnd,
+      );
       notifyListeners();
       return true;
     } catch (_) {

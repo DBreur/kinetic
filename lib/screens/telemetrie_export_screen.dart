@@ -16,6 +16,7 @@ import '../models/kinetic_profile.dart';
 import '../services/telemetry_export.dart';
 import '../state/kinetic_store.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/bolus_settings.dart';
 import '../widgets/kinetic_widgets.dart';
 import '../widgets/sheets.dart';
 
@@ -49,6 +50,9 @@ class TelemetrieExportScreen extends StatelessWidget {
           const SizedBox(height: 24),
           const _SectionHeader(icon: Icons.tune, title: 'Metabole drempels & protocol'),
           const _ThresholdsCard(),
+          const SizedBox(height: 24),
+          const _SectionHeader(icon: Icons.calculate_outlined, title: 'Insuline & bolus-calculator'),
+          const BolusSettingsCard(),
           const SizedBox(height: 24),
           const _SectionHeader(icon: Icons.contrast, title: 'Weergave'),
           KCard(

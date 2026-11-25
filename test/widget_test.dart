@@ -3,6 +3,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinetic/core/sparring_timer.dart';
 import 'package:kinetic/main.dart';
+import 'package:kinetic/models/bolus_period.dart';
 import 'package:kinetic/models/combination.dart';
 import 'package:kinetic/models/competition.dart';
 import 'package:kinetic/models/glucose.dart';
@@ -120,6 +121,72 @@ void main() {
     await settle(tester);
     expect(store.carbsToday, 195);
     expect(store.todayEntries.first.description, 'Banaan + Dextrose Gel');
+  });
+
+  testWidgets('bolus-calculator: voeding, correctie en totaal', (tester) async {
+    await pumpApp(tester, mmol: 12.0);
+    await store.updateBolusSettings(
+      enabled: true,
+      periods: const [BolusPeriod(label: 'Dag', startTime: '00:00', carbRatio: 10)],
+      correctionFactor: 2.0,
+      targetDay: 8.0,
+      targetNight: 8.0,
+    );
+    store.requestMealSheet();
+    await settle(tester);
+    expect(find.text('Bolus-calculator'), findsOneWidget);
+    expect(find.text('Insuline (E, optioneel)'), findsNothing);
+    await tester.enterText(find.widgetWithText(TextField, 'Koolh. (g)'), '30');
+    await settle(tester);
+    // 30 g / 10 = 3 E voeding, (12 - 8) / 2 = 2 E correctie.
+    expect(tester.widget<Text>(find.byKey(const ValueKey('bolus-total'))).data, '5');
+
+    // Eigen correctie overschrijft het voorstel.
+    await tester.enterText(find.widgetWithText(TextField, 'Correctie (E)'), '1');
+    await settle(tester);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('bolus-total'))).data, '4');
+
+    await tester.ensureVisible(find.text('Opslaan in Dagoverzicht'));
+    await tester.tap(find.text('Opslaan in Dagoverzicht'));
+    await settle(tester);
+    final e = store.todayEntries.firstWhere((x) => x.insulinFoodUnits != null);
+    expect(e.insulinFoodUnits, 3.0);
+    expect(e.insulinCorrectionUnits, 1.0);
+    expect(e.insulinUnits, 4.0);
+    expect(e.mmol, 12.0);
+  });
+
+  testWidgets('alleen insuline heet Correctie, met een duidelijk totaal', (tester) async {
+    await pumpApp(tester);
+    await store.logFood(description: 'Correctie', insulinUnits: 2, insulinFoodUnits: 0, insulinCorrectionUnits: 2);
+    await tester.tap(find.text('Eten'));
+    await settle(tester);
+    expect(find.text('Correctie'), findsWidgets);
+    expect(find.text('Correctie totaal'), findsOneWidget);
+    expect(find.text('2 E'), findsOneWidget);
+  });
+
+  testWidgets('gelogde maaltijd aanpassen via de kaart', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Eten'));
+    await settle(tester);
+    final card = find.text('Rijst met kip');
+    await tester.scrollUntilVisible(card, 300, scrollable: vertical);
+    await tester.ensureVisible(card);
+    await settle(tester);
+    await tester.tap(card);
+    await settle(tester);
+    expect(find.text('Maaltijd aanpassen'), findsOneWidget);
+    expect(find.text('Insuline (E, optioneel)'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Koolh. (g)'), '80');
+    await tester.enterText(find.widgetWithText(TextField, 'Insuline (E, optioneel)'), '6');
+    await tester.ensureVisible(find.text('Wijzigingen opslaan'));
+    await tester.tap(find.text('Wijzigingen opslaan'));
+    await settle(tester);
+    final e = store.todayEntries.firstWhere((x) => x.description == 'Rijst met kip');
+    expect(e.carbs, 80);
+    expect(e.insulinUnits, 6);
+    expect(store.carbsToday, 175);
   });
 
   testWidgets('maaltijd met presets: −/+ werkt omschrijving en koolhydraten bij', (tester) async {
