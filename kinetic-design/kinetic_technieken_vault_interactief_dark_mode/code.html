@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-tint": "#4fdbc8", "on-tertiary-fixed-variant": "#005236", "tertiary": "#4edea3", "on-background": "#e0e2ea", "on-surface-variant": "#bbcac6", "on-tertiary": "#003824", "surface-container-lowest": "#0a0e13", "on-primary-fixed-variant": "#005048", "on-secondary": "#003731", "on-tertiary-container": "#00442c", "primary": "#4fdbc8", "surface": "#101419", "surface-dim": "#101419", "primary-container": "#14b8a6", "on-primary-fixed": "#00201c", "on-error-container": "#ffdad6", "inverse-primary": "#006b5f", "secondary-container": "#03c6b2", "surface-bright": "#36393f", "tertiary-fixed": "#6ffbbe", "on-surface": "#e0e2ea", "secondary": "#44e2cd", "background": "#101419", "outline": "#859490", "primary-fixed": "#71f8e4", "tertiary-fixed-dim": "#4edea3", "secondary-fixed-dim": "#3cddc7", "on-primary": "#003731", "outline-variant": "#3c4947", "inverse-on-surface": "#2d3136", "on-secondary-fixed": "#00201c", "tertiary-container": "#16bb83", "on-secondary-fixed-variant": "#005047", "on-secondary-container": "#004d44", "surface-container": "#1c2025", "surface-container-highest": "#31353b", "inverse-surface": "#e0e2ea", "surface-container-high": "#262a30", "error": "#ffb4ab", "on-error": "#690005", "error-container": "#93000a", "surface-variant": "#31353b", "on-tertiary-fixed": "#002113", "on-primary-container": "#00423b", "secondary-fixed": "#62fae3", "primary-fixed-dim": "#4fdbc8", "surface-container-low": "#181c21" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin-tablet": "1.5rem", "space-lg": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-md": "1rem", "margin": "1rem", "gutter-desktop": "1.5rem", "margin-desktop": "2rem", "space-xs": "0.25rem", "space-xl": "2rem" }, "fontFamily": { "metric-numeral": ["Inter"], "body-sm": ["Inter"], "label-lg": ["Inter"], "display-lg": ["Inter"], "body-lg": ["Inter"], "display-lg-mobile": ["Inter"], "headline-lg": ["Inter"], "label-md": ["Inter"], "label-sm": ["Inter"], "headline-md": ["Inter"], "body-md": ["Inter"], "headline-sm": ["Inter"] }, "fontSize": { "metric-numeral": ["44px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "700" }], "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }], "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400" }], "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }], "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "600" }] } } } }</script><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#101419;color:#e0e2ea;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen flex flex-col selection:bg-primary selection:text-on-primary"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.35)] pt-safe"><div class="h-16 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0 flex-1"><img alt="Kinetic Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/ALJJyrDi8n02xiUJEQ4gVhnnjindIyBda-I_cL9I-wwQCI7sjGXjArFrfJw9poszZTgFYluCVzorSP-tJ5Ss_mjvnyJi2PRDKdXuSD5ssTT8mNfJuozHM54R9hlx3rMdh5f652xtla_3lHFYN8CSyvAD8wbDbNnQGNuJ8cS3bKQnsRMzmoXLFf0KHo0aTTnjBJP9DJHLwo28sX6PLoas3qSozVKdxGzFGvfu7w46CCFy1-9x"/><div class="flex items-center gap-space-xs min-w-0"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight truncate">Technieken</span><span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span></div></div><div class="flex items-center gap-space-sm flex-shrink-0"><a class="w-11 h-11 flex items-center justify-center rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors active:scale-95" data-path="quick-telemetry" href="#"><span class="material-symbols-outlined text-[20px]">vital_signs</span></a><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(79,219,200,0.35)]"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full px-margin pb-space-xl">
+<!-- Toast Notification System -->
+<div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 opacity-0 pointer-events-none translate-y-[-8px] flex items-center gap-space-sm bg-surface-container-highest shadow-xl px-space-md py-space-sm rounded-lg border-0" id="technique-toast">
+<span class="material-symbols-outlined text-primary text-[20px]" id="toast-icon">check_circle</span>
+<span class="font-label-md text-label-md text-on-surface" id="toast-msg">Techniek bijgewerkt</span>
+</div>
+<!-- Header Action & Quick Metrics -->
+<div class="flex items-center justify-between gap-space-md mt-space-sm mb-space-md">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary">Biometric Combat Protocol</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">42 gedocumenteerde gevechtsdrills</p>
+</div>
+<button class="h-11 px-space-md bg-primary-container text-on-primary-container rounded-lg font-label-md text-label-md flex items-center gap-space-xs shadow-md active:scale-95 transition-transform" id="open-add-modal">
+<span class="material-symbols-outlined text-[18px]">add_box</span>
+<span>Nieuwe Drill</span>
+</button>
+</div>
+<!-- Search & Fast Filters -->
+<div class="flex flex-col gap-space-sm mb-space-lg">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-space-md top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="w-full h-12 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg pl-11 pr-space-md outline-none focus:bg-surface-container-low transition-colors" id="technique-search" placeholder="Zoek op techniek, cue of biomechanica..." type="text"/>
+<button class="hidden absolute right-space-sm top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-outline hover:text-on-surface" id="clear-search">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Filter Chips Horizontal Scroll -->
+<div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar py-1">
+<button class="filter-chip active-filter px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md whitespace-nowrap transition-all shadow-sm" data-filter="all">
+        Alle (16)
+      </button>
+<button class="filter-chip px-space-md py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md whitespace-nowrap hover:bg-surface-container-high transition-all" data-filter="strikes">
+        Strikes (5)
+      </button>
+<button class="filter-chip px-space-md py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md whitespace-nowrap hover:bg-surface-container-high transition-all" data-filter="throws">
+        Throws / Worpen (4)
+      </button>
+<button class="filter-chip px-space-md py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md whitespace-nowrap hover:bg-surface-container-high transition-all" data-filter="submissions">
+        Submissions (4)
+      </button>
+<button class="filter-chip px-space-md py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md whitespace-nowrap hover:bg-surface-container-high transition-all" data-filter="defense">
+        Defense (3)
+      </button>
+</div>
+</div>
+<!-- Telemetry Focus Readiness Pill -->
+<div class="bg-surface-container-low rounded-xl p-space-md mb-space-lg flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[24px]">target</span>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="inline-block w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="font-label-md text-label-md text-on-surface">Actieve Focus Queue</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant"><span id="focus-count">2</span> technieken gepland voor volgende sparring</p>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-primary px-space-sm py-1 bg-surface-container-highest rounded">Auto-sync CGM</span>
+</div>
+<!-- ACCORDION CONTAINER -->
+<div class="flex flex-col gap-space-md" id="accordion-root">
+<!-- CATEGORIE 1: STRIKES -->
+<section class="category-block bg-surface-container rounded-xl overflow-hidden shadow-sm" data-category="strikes">
+<button aria-expanded="true" class="accordion-trigger w-full p-space-md flex items-center justify-between bg-surface-container hover:bg-surface-container-high transition-colors text-left">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">sports_mma</span>
+</div>
+<div>
+<div class="flex items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Strikes &amp; Combinaties</h2>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-surface-container-lowest text-on-surface-variant">5</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Slagkracht, heuprotatie en low-glucose spikes</p>
+</div>
+</div>
+<span class="material-symbols-outlined accordion-icon text-on-surface-variant transition-transform duration-300">expand_more</span>
+</button>
+<div class="accordion-content flex flex-col gap-space-sm p-space-md pt-0 bg-surface-container">
+<!-- Drill Item: Jab & Cross -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="jab cross combinatie stoten strike boksen">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Boxing Core</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Jab &amp; Cross Combinatie</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Focus op terugtrek-snelheid en kinbescherming tijdens extensie.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-space-xs mt-1 bg-surface-container-lowest p-space-sm rounded">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Mastery Index</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="font-label-md text-label-md text-tertiary">92%</span>
+<div class="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 92%"></div>
+</div>
+</div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Bag Volume</span>
+<span class="font-label-md text-label-md text-on-surface">2.450 reps</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Doel: Kin dekking</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Drill Item: Lever Hook -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="lever hook leverstoot bodyshot strike kickboksen">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Body Conditioning</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Lever Hook (Leverstoot)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">45° instaphoek onder de elleboog na fake cross.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-space-xs mt-1 bg-surface-container-lowest p-space-sm rounded">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Mastery Index</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="font-label-md text-label-md text-primary">85%</span>
+<div class="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 85%"></div>
+</div>
+</div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Bag Volume</span>
+<span class="font-label-md text-label-md text-on-surface">1.240 reps</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Doel: Slip-in explosiviteit</span>
+<button class="focus-toggle-btn is-focused h-9 px-space-md rounded bg-primary-container text-on-primary-container font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span class="btn-text">In Focus</span>
+</button>
+</div>
+</article>
+<!-- Drill Item: Low Calf Kick -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="low calf kick beentrap strike kickboksen muay thai">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Muay Thai / MMA</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Low Calf Kick</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Doel op nervus peroneus; snel wegstappen om counterpunch te vermijden.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-space-xs mt-1 bg-surface-container-lowest p-space-sm rounded">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Mastery Index</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="font-label-md text-label-md text-tertiary">78%</span>
+<div class="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 78%"></div>
+</div>
+</div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Bag Volume</span>
+<span class="font-label-md text-label-md text-on-surface">980 reps</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Impact: Scheenbeentip</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Drill Item: Spinning Back Fist -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="spinning back fist draaistoot strike mma">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Dynamic Rotational</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Spinning Back Fist</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Snelle draai over achterste schouder met directe visuele target recovery.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-space-xs mt-1 bg-surface-container-lowest p-space-sm rounded">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Mastery Index</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="font-label-md text-label-md text-primary">64%</span>
+<div class="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 64%"></div>
+</div>
+</div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Bag Volume</span>
+<span class="font-label-md text-label-md text-on-surface">430 reps</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Timing: Counter-setup</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Drill Item: Muay Thai Switch Kick -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="muay thai switch kick trap strike kickboksen">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Tempo Manipulation</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Muay Thai Switch Kick</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Schijnbeweging in de voetenstand direct gevolgd door explosieve linkertrap.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-space-xs mt-1 bg-surface-container-lowest p-space-sm rounded">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Mastery Index</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="font-label-md text-label-md text-tertiary">89%</span>
+<div class="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 89%"></div>
+</div>
+</div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Bag Volume</span>
+<span class="font-label-md text-label-md text-on-surface">1.820 reps</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Focus: Balansbehoud</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+</div>
+</section>
+<!-- CATEGORIE 2: THROWS & TAKEDOWNS -->
+<section class="category-block bg-surface-container rounded-xl overflow-hidden shadow-sm" data-category="throws">
+<button aria-expanded="false" class="accordion-trigger w-full p-space-md flex items-center justify-between bg-surface-container hover:bg-surface-container-high transition-colors text-left">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">sports_kabaddi</span>
+</div>
+<div>
+<div class="flex items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Throws &amp; Takedowns</h2>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-surface-container-lowest text-on-surface-variant">4</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Judoworpen &amp; worstelentries met biomechanisch hefboomeffect</p>
+</div>
+</div>
+<span class="material-symbols-outlined accordion-icon text-on-surface-variant transition-transform duration-300 -rotate-90">expand_more</span>
+</button>
+<div class="accordion-content hidden flex-col gap-space-sm p-space-md pt-0 bg-surface-container">
+<!-- Drill: Uchi Mata -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="uchi mata harai judo worp throw no-gi">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-secondary-fixed">Gi &amp; No-Gi</span>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-tertiary">Succesratio: 74%</span>
+</div>
+<h3 class="font-label-lg text-label-lg text-on-surface">Uchi Mata (Harai Variant)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Binnendijworp met diepe nekcontrole en krachtige heuplift.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Drill: Partner off-balancing (Kuzushi)</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Drill: Double Leg Blast -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="double leg blast worstelen takedown mma throw">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-primary">No-Gi / MMA</span>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-tertiary">Succesratio: 68%</span>
+</div>
+<h3 class="font-label-lg text-label-lg text-on-surface">Double Leg Blast</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Penetratie-stap direct door het centrum met hoofd op de flank.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Energie: Hoge anaerobe belasting</span>
+<button class="focus-toggle-btn is-focused h-9 px-space-md rounded bg-primary-container text-on-primary-container font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span class="btn-text">In Focus</span>
+</button>
+</div>
+</article>
+<!-- Drill: O-Goshi -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="o-goshi heupworp judo throw bjj">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-secondary-fixed">Gi Primary</span>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-tertiary">Succesratio: 81%</span>
+</div>
+<h3 class="font-label-lg text-label-lg text-on-surface">O-Goshi Heupworp</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Diepe underhook rond de rug met zwaartepunt onder tegenstander's heup.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Focus: Heupplaatsing en balans</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Drill: Fireman's Carry -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="firemans carry kata guruma throw worstelen judo">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-primary">No-Gi / Kata Guruma</span>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-highest text-tertiary">Succesratio: 62%</span>
+</div>
+<h3 class="font-label-lg text-label-lg text-on-surface">Fireman's Carry (Kata Guruma)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Overhoek-dump waarbij men onder de arm door duikt en over de schouders rolt.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Doel: Explosieve knie-drop</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+</div>
+</section>
+<!-- CATEGORIE 3: SUBMISSIONS & GRONDWERK -->
+<section class="category-block bg-surface-container rounded-xl overflow-hidden shadow-sm" data-category="submissions">
+<button aria-expanded="false" class="accordion-trigger w-full p-space-md flex items-center justify-between bg-surface-container hover:bg-surface-container-high transition-colors text-left">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">lock_reset</span>
+</div>
+<div>
+<div class="flex items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Submissions &amp; Grondwerk</h2>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-surface-container-lowest text-on-surface-variant">4</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Klemmen, wurgtechnieken en positional dominance</p>
+</div>
+</div>
+<span class="material-symbols-outlined accordion-icon text-on-surface-variant transition-transform duration-300 -rotate-90">expand_more</span>
+</button>
+<div class="accordion-content hidden flex-col gap-space-sm p-space-md pt-0 bg-surface-container">
+<!-- Sub 1: Rear Naked Choke -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="rear naked choke rnc submission wurg bjj">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Back Mount</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Rear Naked Choke (RNC)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Biceps-achter-het-hoofd grip, eliminatie van schouderruimte.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-tertiary">Mechanica: Halsslagader compressie</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Sub 2: Triangle Choke -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="triangle choke guard submission bjj driehoek">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Closed Guard</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Triangle Choke van Guard</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Arm-in controle met haakse heuphoek en sluiten over de kuit.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-tertiary">Mechanica: Nek &amp; schouder klem</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Sub 3: Heel Hook Setup -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="heel hook leg lock submission no-gi ashi garami">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Ashi Garami</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Heel Hook Setup (Inside)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Gecontroleerde hielrotatie vanuit single leg X of saddle positie.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-error">Risico: Hoge torsie op meniscus</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Sub 4: Kimura -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="kimura side control schouderklem submission bjj">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Side Control</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Kimura van Side Control</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Dubbele polsvergrendeling (figure-four) met rotatie achter de rug.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-tertiary">Mechanica: Schouderrotatie</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+</div>
+</section>
+<!-- CATEGORIE 4: VERDEDIGING & COUNTERS -->
+<section class="category-block bg-surface-container rounded-xl overflow-hidden shadow-sm" data-category="defense">
+<button aria-expanded="false" class="accordion-trigger w-full p-space-md flex items-center justify-between bg-surface-container hover:bg-surface-container-high transition-colors text-left">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">shield</span>
+</div>
+<div>
+<div class="flex items-center gap-space-xs">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Verdediging &amp; Counters</h2>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-surface-container-lowest text-on-surface-variant">3</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Takedown defense, escapes en reactieve intercepties</p>
+</div>
+</div>
+<span class="material-symbols-outlined accordion-icon text-on-surface-variant transition-transform duration-300 -rotate-90">expand_more</span>
+</button>
+<div class="accordion-content hidden flex-col gap-space-sm p-space-md pt-0 bg-surface-container">
+<!-- Def 1: Sprawl & Head Snap -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="sprawl head snap takedown defense verdediging worstelen">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Anticipatie</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Sprawl &amp; Head Snap</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Heupen direct achterwaarts werpen met zwaar borstgewicht op de nek.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Biometrie: Snelle hartslag-piek</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Def 2: Whizzer Defense -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="whizzer defense overhook takedown defense bjj">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Clinch Breaker</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Whizzer Defense (Overhook Torque)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Zware neerwaartse druk op de schouder van de tegenstander bij een underhook.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Focus: Schouderdruk behouden</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+<!-- Def 3: Overhook Counter -->
+<article class="technique-card bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-sm" data-name="overhook counter worp heupworp defense mma">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="min-w-0">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Reversal</span>
+<h3 class="font-label-lg text-label-lg text-on-surface">Overhook Counter Throw</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Gebruik de opwaartse druk van de opponent om een directe heupworp in te zetten.</p>
+</div>
+<button aria-label="Favoriet" class="favorite-btn w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline hover:text-primary active:scale-90 transition-all flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Timing: Reactief op level-change</span>
+<button class="focus-toggle-btn h-9 px-space-md rounded bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-space-xs active:scale-95 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="btn-text">Focus in Sessie</span>
+</button>
+</div>
+</article>
+</div>
+</section>
+</div>
+<!-- Empty Search Result State -->
+<div class="hidden flex-col items-center justify-center text-center py-space-xl px-space-md bg-surface-container rounded-xl mt-space-md" id="empty-state">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center text-outline mb-space-sm">
+<span class="material-symbols-outlined text-[28px]">search_off</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Geen technieken gevonden</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-xs mt-1">Geen resultaten voor deze zoekterm. Pas je filters aan of voeg een nieuwe drill toe.</p>
+</div>
+<!-- Modal: Nieuwe Techniek Toevoegen -->
+<div class="fixed inset-0 z-50 bg-surface-container-lowest/80 backdrop-blur-sm hidden items-center justify-center p-space-md" id="add-modal">
+<div class="w-full max-w-md bg-surface-container rounded-xl p-space-lg flex flex-col gap-space-md shadow-2xl">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[22px]">add_circle</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Techniek Vastleggen</h2>
+</div>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-on-surface" id="close-add-modal">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div>
+<label class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Naam van de drill</label>
+<input class="w-full h-11 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg px-space-sm outline-none focus:bg-surface-container-low transition-colors" id="modal-technique-name" placeholder="bv. Check Hook, Guillotine Choke" type="text"/>
+</div>
+<div>
+<label class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Categorie</label>
+<div class="grid grid-cols-2 gap-space-xs">
+<button class="category-select-pill active h-10 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md active:bg-primary active:text-on-primary" type="button">Strikes</button>
+<button class="category-select-pill h-10 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md" type="button">Throws</button>
+<button class="category-select-pill h-10 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md" type="button">Submissions</button>
+<button class="category-select-pill h-10 rounded-lg bg-surface-container-lowest text-on-surface-variant font-label-md text-label-md" type="button">Defense</button>
+</div>
+</div>
+<div>
+<label class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Biometrische / Glucose Aantekening</label>
+<input class="w-full h-11 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg px-space-sm outline-none" id="modal-technique-notes" placeholder="bv. Piekt hartslag snel, verbruikt 1.2 HE" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-space-sm mt-space-xs">
+<button class="flex-1 h-11 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-container-highest" id="cancel-add-modal">
+          Annuleren
+        </button>
+<button class="flex-1 h-11 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center justify-center gap-1 shadow-md" id="save-technique-btn">
+<span class="material-symbols-outlined text-[18px]">save</span>
+<span>Opslaan</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    // Toast Helper
+    const toast = document.getElementById('technique-toast');
+    const toastMsg = document.getElementById('toast-msg');
+    const toastIcon = document.getElementById('toast-icon');
+    let toastTimeout = null;
+
+    function showToast(message, iconName = 'check_circle', isHighlight = true) {
+      if (!toast) return;
+      clearTimeout(toastTimeout);
+      toastMsg.textContent = message;
+      toastIcon.textContent = iconName;
+      toastIcon.className = isHighlight 
+        ? 'material-symbols-outlined text-primary text-[20px]' 
+        : 'material-symbols-outlined text-tertiary text-[20px]';
+      
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-8px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-8px]');
+      }, 2300);
+    }
+
+    // Accordions Logic
+    const accordionTriggers = document.querySelectorAll('.accordion-trigger');
+    accordionTriggers.forEach(trigger => {
+      trigger.addEventListener('click', () => {
+        const content = trigger.nextElementSibling;
+        const icon = trigger.querySelector('.accordion-icon');
+        const isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+
+        if (isExpanded) {
+          content.classList.add('hidden');
+          trigger.setAttribute('aria-expanded', 'false');
+          if (icon) icon.classList.add('-rotate-90');
+        } else {
+          content.classList.remove('hidden');
+          trigger.setAttribute('aria-expanded', 'true');
+          if (icon) icon.classList.remove('-rotate-90');
+        }
+      });
+    });
+
+    // Favorite Button Click
+    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+    favoriteButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const isFav = btn.getAttribute('data-favorited') === 'true';
+
+        if (isFav) {
+          btn.setAttribute('data-favorited', 'false');
+          btn.classList.remove('bg-surface-tint/20', 'text-primary');
+          btn.classList.add('text-outline', 'bg-surface-container-high');
+          icon.style.fontVariationSettings = "'FILL' 0";
+          showToast('Verwijderd uit favorieten', 'star_border', false);
+        } else {
+          btn.setAttribute('data-favorited', 'true');
+          btn.classList.remove('text-outline', 'bg-surface-container-high');
+          btn.classList.add('bg-surface-tint/20', 'text-primary');
+          icon.style.fontVariationSettings = "'FILL' 1";
+          showToast('Toegevoegd aan ⭐ favoriete technieken', 'star', true);
+        }
+      });
+    });
+
+    // Focus Toggle Buttons & Queue Counter
+    const focusButtons = document.querySelectorAll('.focus-toggle-btn');
+    const focusCountEl = document.getElementById('focus-count');
+
+    function updateFocusCount() {
+      const activeCount = document.querySelectorAll('.focus-toggle-btn.is-focused').length;
+      if (focusCountEl) focusCountEl.textContent = activeCount;
+    }
+
+    focusButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const card = btn.closest('.technique-card');
+        const name = card ? card.querySelector('h3').textContent : 'Techniek';
+        const isFocused = btn.classList.contains('is-focused');
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const textSpan = btn.querySelector('.btn-text');
+
+        if (isFocused) {
+          btn.classList.remove('is-focused', 'bg-primary-container', 'text-on-primary-container');
+          btn.classList.add('bg-surface-container-high', 'text-on-surface');
+          if (icon) icon.textContent = 'add_circle';
+          if (textSpan) textSpan.textContent = 'Focus in Sessie';
+          showToast(`${name} verwijderd uit focus-queue`, 'remove_circle', false);
+        } else {
+          btn.classList.add('is-focused', 'bg-primary-container', 'text-on-primary-container');
+          btn.classList.remove('bg-surface-container-high', 'text-on-surface');
+          if (icon) icon.textContent = 'check';
+          if (textSpan) textSpan.textContent = 'In Focus';
+          showToast(`${name} geactiveerd voor komende sessie!`, 'target', true);
+        }
+        updateFocusCount();
+      });
+    });
+
+    // Filter Chips
+    const filterChips = document.querySelectorAll('.filter-chip');
+    const categoryBlocks = document.querySelectorAll('.category-block');
+    let currentFilter = 'all';
+
+    filterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        filterChips.forEach(c => {
+          c.classList.remove('bg-primary', 'text-on-primary', 'active-filter');
+          c.classList.add('bg-surface-container', 'text-on-surface-variant');
+        });
+        chip.classList.add('bg-primary', 'text-on-primary', 'active-filter');
+        chip.classList.remove('bg-surface-container', 'text-on-surface-variant');
+
+        currentFilter = chip.getAttribute('data-filter');
+        applyFilterAndSearch();
+      });
+    });
+
+    // Search Filtering
+    const searchInput = document.getElementById('technique-search');
+    const clearSearchBtn = document.getElementById('clear-search');
+    const emptyState = document.getElementById('empty-state');
+    const techniqueCards = document.querySelectorAll('.technique-card');
+
+    function applyFilterAndSearch() {
+      const query = (searchInput?.value || '').toLowerCase().trim();
+      let visibleCardsTotal = 0;
+
+      if (clearSearchBtn) {
+        clearSearchBtn.classList.toggle('hidden', query.length === 0);
+      }
+
+      categoryBlocks.forEach(block => {
+        const cat = block.getAttribute('data-category');
+        const matchesCategory = (currentFilter === 'all' || currentFilter === cat);
+        let visibleInThisCat = 0;
+
+        const cards = block.querySelectorAll('.technique-card');
+        cards.forEach(card => {
+          const searchable = (card.getAttribute('data-name') || '').toLowerCase();
+          const cardText = card.innerText.toLowerCase();
+          const matchesQuery = query === '' || searchable.includes(query) || cardText.includes(query);
+
+          if (matchesCategory && matchesQuery) {
+            card.classList.remove('hidden');
+            visibleInThisCat++;
+            visibleCardsTotal++;
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+
+        if (matchesCategory && (visibleInThisCat > 0 || query === '')) {
+          block.classList.remove('hidden');
+          // If searching, ensure matching category is opened
+          if (query.length > 0 && visibleInThisCat > 0) {
+            const content = block.querySelector('.accordion-content');
+            const trigger = block.querySelector('.accordion-trigger');
+            const icon = trigger.querySelector('.accordion-icon');
+            content.classList.remove('hidden');
+            trigger.setAttribute('aria-expanded', 'true');
+            if (icon) icon.classList.remove('-rotate-90');
+          }
+        } else {
+          block.classList.add('hidden');
+        }
+      });
+
+      if (emptyState) {
+        emptyState.classList.toggle('hidden', visibleCardsTotal > 0);
+      }
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', applyFilterAndSearch);
+    }
+
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        applyFilterAndSearch();
+        searchInput.focus();
+      });
+    }
+
+    // Modal Interaction
+    const addModal = document.getElementById('add-modal');
+    const openAddModalBtn = document.getElementById('open-add-modal');
+    const closeAddModalBtn = document.getElementById('close-add-modal');
+    const cancelAddModalBtn = document.getElementById('cancel-add-modal');
+    const saveTechniqueBtn = document.getElementById('save-technique-btn');
+    const modalInput = document.getElementById('modal-technique-name');
+
+    function openModal() {
+      if (addModal) {
+        addModal.classList.remove('hidden');
+        addModal.classList.add('flex');
+        setTimeout(() => modalInput?.focus(), 50);
+      }
+    }
+
+    function closeModal() {
+      if (addModal) {
+        addModal.classList.add('hidden');
+        addModal.classList.remove('flex');
+        if (modalInput) modalInput.value = '';
+      }
+    }
+
+    if (openAddModalBtn) openAddModalBtn.addEventListener('click', openModal);
+    if (closeAddModalBtn) closeAddModalBtn.addEventListener('click', closeModal);
+    if (cancelAddModalBtn) cancelAddModalBtn.addEventListener('click', closeModal);
+
+    // Modal category pills
+    const catPills = document.querySelectorAll('.category-select-pill');
+    catPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        catPills.forEach(p => {
+          p.classList.remove('bg-surface-container-high', 'text-on-surface');
+          p.classList.add('bg-surface-container-lowest', 'text-on-surface-variant');
+        });
+        pill.classList.remove('bg-surface-container-lowest', 'text-on-surface-variant');
+        pill.classList.add('bg-surface-container-high', 'text-on-surface');
+      });
+    });
+
+    if (saveTechniqueBtn) {
+      saveTechniqueBtn.addEventListener('click', () => {
+        const val = modalInput?.value.trim();
+        if (val) {
+          showToast(`"${val}" opgeslagen in de vault!`, 'verified', true);
+          closeModal();
+        } else {
+          showToast('Voer eerst een drill-naam in', 'warning', false);
+        }
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.45)]" data-active-classes="text-primary font-label-md"><div class="flex items-center justify-around h-16 px-space-xs max-w-lg mx-auto relative"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="vandaag" href="#"><span class="material-symbols-outlined text-[22px]">local_fire_department</span><span class="font-label-sm text-label-sm mt-0.5">Vandaag</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="training" href="#"><span class="material-symbols-outlined text-[22px]">fitness_center</span><span class="font-label-sm text-label-sm mt-0.5">Training</span></a><div class="flex items-center justify-center -mt-5"><a class="w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_16px_rgba(20,184,166,0.45)] hover:bg-primary transition-all active:scale-90" data-path="sessie-starten" href="#"><span class="material-symbols-outlined text-[28px]">add</span></a></div><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 transition-colors active:scale-95 text-primary font-label-md" data-path="technieken" href="#"><span class="material-symbols-outlined text-[22px]">shield</span><span class="font-label-sm text-label-sm mt-0.5">Technieken</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="eten" href="#"><span class="material-symbols-outlined text-[22px]">nutrition</span><span class="font-label-sm text-label-sm mt-0.5">Eten</span></a></div></nav></body></html>

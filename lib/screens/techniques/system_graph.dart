@@ -107,6 +107,40 @@ Size _canvasSize(Map<String, Rect> rects, double pad) {
   return Size(w + pad, h + pad);
 }
 
+/// Bocht van een pijl tussen twee rechthoeken: (start, c1, c2, eind).
+(Offset, Offset, Offset, Offset) edgeCurve(Rect a, Rect b) {
+  if (b.top >= a.bottom - 0.5) {
+    final start = a.bottomCenter;
+    final end = b.topCenter;
+    final midY = (start.dy + end.dy) / 2;
+    return (start, Offset(start.dx, midY), Offset(end.dx, midY), end);
+  }
+  if (b.bottom <= a.top + 0.5) {
+    // Terug naar een hogere laag (cyclus): langs de zijkant omhoog.
+    final start = a.centerRight;
+    final end = b.centerRight;
+    final bulge = math.max(a.right, b.right) + 36;
+    return (start, Offset(bulge, start.dy), Offset(bulge, end.dy), end);
+  }
+  // Zelfde laag: zijkant naar zijkant met een boog.
+  final leftToRight = a.center.dx < b.center.dx;
+  final start = leftToRight ? a.centerRight : a.centerLeft;
+  final end = leftToRight ? b.centerLeft : b.centerRight;
+  final lift = a.height * 0.9;
+  return (
+    start,
+    Offset(start.dx + (end.dx - start.dx) / 3, start.dy - lift),
+    Offset(end.dx - (end.dx - start.dx) / 3, end.dy - lift),
+    end,
+  );
+}
+
+/// Punt halverwege de bocht (voor het transitielabel).
+Offset edgeMidpoint(Rect a, Rect b) {
+  final (p0, p1, p2, p3) = edgeCurve(a, b);
+  return (p0 + p1 * 3 + p2 * 3 + p3) / 8;
+}
+
 /// Tekent de pijlen tussen de rechthoeken.
 void paintEdges(Canvas canvas, List<SystemEdge> edges, Map<String, Rect> rects, Color color, {double width = 1.6, double head = 7}) {
   final line = Paint()
@@ -119,29 +153,7 @@ void paintEdges(Canvas canvas, List<SystemEdge> edges, Map<String, Rect> rects, 
     final a = rects[e.from];
     final b = rects[e.to];
     if (a == null || b == null) continue;
-    final Offset start, end, c1, c2;
-    if (b.top >= a.bottom - 0.5) {
-      start = a.bottomCenter;
-      end = b.topCenter;
-      final midY = (start.dy + end.dy) / 2;
-      c1 = Offset(start.dx, midY);
-      c2 = Offset(end.dx, midY);
-    } else if (b.bottom <= a.top + 0.5) {
-      // Terug naar een hogere laag (cyclus): langs de zijkant omhoog.
-      start = a.centerRight;
-      end = b.centerRight;
-      final bulge = math.max(a.right, b.right) + 36;
-      c1 = Offset(bulge, start.dy);
-      c2 = Offset(bulge, end.dy);
-    } else {
-      // Zelfde laag: zijkant naar zijkant met een boog.
-      final leftToRight = a.center.dx < b.center.dx;
-      start = leftToRight ? a.centerRight : a.centerLeft;
-      end = leftToRight ? b.centerLeft : b.centerRight;
-      final lift = a.height * 0.9;
-      c1 = Offset(start.dx + (end.dx - start.dx) / 3, start.dy - lift);
-      c2 = Offset(end.dx - (end.dx - start.dx) / 3, end.dy - lift);
-    }
+    final (start, c1, c2, end) = edgeCurve(a, b);
     final path = Path()
       ..moveTo(start.dx, start.dy)
       ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, end.dx, end.dy);
@@ -161,21 +173,29 @@ void paintEdges(Canvas canvas, List<SystemEdge> edges, Map<String, Rect> rects, 
   }
 }
 
-/// Interactieve graaf (knijpen om te zoomen, slepen om te schuiven).
+/// Interactieve graaf (knijpen om te zoomen, slepen om te schuiven). Stappen
+/// en transitielabels zijn aantikbaar.
 class SystemGraph extends StatelessWidget {
-  const SystemGraph({super.key, required this.system, required this.onNodeTap, this.highlightNodeId});
+  const SystemGraph({super.key, required this.system, required this.onNodeTap, this.onEdgeTap, this.highlightNodeId});
 
   final TechniqueSystem system;
   final ValueChanged<SystemNode> onNodeTap;
+  final ValueChanged<SystemEdge>? onEdgeTap;
   final String? highlightNodeId;
 
-  static const metrics = GraphMetrics();
+  static const metrics = GraphMetrics(nodeW: 120, nodeH: 52);
+
+  /// Met transities meer ruimte tussen de lagen, zoals in FlowRoll.
+  static const labelledMetrics = GraphMetrics(nodeW: 120, nodeH: 52, gapX: 18, gapY: 104);
+
+  static const _labelW = 132.0;
 
   @override
   Widget build(BuildContext context) {
     final k = context.k;
-    final rects = layoutSystem(system, metrics);
-    final size = _canvasSize(rects, metrics.pad);
+    final m = system.edges.any((e) => e.label.trim().isNotEmpty) ? labelledMetrics : metrics;
+    final rects = layoutSystem(system, m);
+    final size = _canvasSize(rects, m.pad);
     return LayoutBuilder(
       builder: (context, box) {
         final canvas = Size(math.max(size.width, box.maxWidth), math.max(size.height, box.maxHeight));
@@ -183,13 +203,14 @@ class SystemGraph extends StatelessWidget {
         final placed = rects.map((id, r) => MapEntry(id, r.shift(shift)));
         return InteractiveViewer(
           constrained: false,
-          minScale: 0.5,
+          minScale: 0.4,
           maxScale: 2.5,
           boundaryMargin: const EdgeInsets.all(48),
           child: SizedBox(
             width: canvas.width,
             height: canvas.height,
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
                   child: CustomPaint(painter: _EdgePainter(edges: system.edges, rects: placed, color: k.textMuted)),
@@ -200,11 +221,58 @@ class SystemGraph extends StatelessWidget {
                       rect: placed[n.id]!,
                       child: _NodeBox(node: n, highlighted: n.id == highlightNodeId, onTap: () => onNodeTap(n)),
                     ),
+                for (final e in system.edges)
+                  if (e.label.trim().isNotEmpty && placed[e.from] != null && placed[e.to] != null)
+                    Builder(
+                      builder: (context) {
+                        final mid = edgeMidpoint(placed[e.from]!, placed[e.to]!);
+                        return Positioned(
+                          left: mid.dx - _labelW / 2,
+                          top: mid.dy - 20,
+                          width: _labelW,
+                          child: Center(child: _EdgeLabel(text: e.label, onTap: onEdgeTap == null ? null : () => onEdgeTap!(e))),
+                        );
+                      },
+                    ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Transitielabel op een pijl (donker kaartje, max. 3 regels).
+class _EdgeLabel extends StatelessWidget {
+  const _EdgeLabel({required this.text, this.onTap});
+  final String text;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Semantics(
+      button: onTap != null,
+      label: 'Transitie: $text',
+      child: Material(
+        color: k.isDark ? const Color(0xFF0B0E12) : k.text,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+            child: Text(
+              text,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: context.t.labelSm.copyWith(color: k.isDark ? k.text : k.surface, height: 1.25, letterSpacing: 0),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="nl"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-error-container": "#ffdad6", "on-primary-fixed-variant": "#005048", "error-container": "#93000a", "surface-container-high": "#262a30", "secondary-container": "#03c6b2", "secondary": "#44e2cd", "surface-container-lowest": "#0a0e13", "inverse-surface": "#e0e2ea", "on-background": "#e0e2ea", "tertiary-fixed-dim": "#4edea3", "on-tertiary": "#003824", "secondary-fixed-dim": "#3cddc7", "surface-container-highest": "#31353b", "on-error": "#690005", "on-tertiary-fixed-variant": "#005236", "tertiary-fixed": "#6ffbbe", "on-surface": "#e0e2ea", "on-secondary-fixed-variant": "#005047", "outline-variant": "#3c4947", "on-secondary": "#003731", "secondary-fixed": "#62fae3", "surface-variant": "#31353b", "background": "#101419", "error": "#ffb4ab", "surface-container-low": "#181c21", "on-surface-variant": "#bbcac6", "on-primary-container": "#00423b", "primary": "#4fdbc8", "outline": "#859490", "primary-fixed-dim": "#4fdbc8", "surface-dim": "#101419", "tertiary-container": "#16bb83", "on-secondary-fixed": "#00201c", "surface-bright": "#36393f", "on-primary": "#003731", "primary-container": "#14b8a6", "tertiary": "#4edea3", "inverse-on-surface": "#2d3136", "surface-container": "#1c2025", "on-secondary-container": "#004d44", "primary-fixed": "#71f8e4", "inverse-primary": "#006b5f", "surface": "#101419", "on-tertiary-container": "#00442c", "on-primary-fixed": "#00201c", "on-tertiary-fixed": "#002113", "surface-tint": "#4fdbc8" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin": "1rem", "space-xs": "0.25rem", "gutter-desktop": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-lg": "1.5rem", "space-md": "1rem", "margin-desktop": "2rem", "space-xl": "2rem", "margin-tablet": "1.5rem" }, fontFamily: { "display-lg-mobile": ["Inter"], "body-md": ["Inter"], "label-sm": ["Inter"], "display-lg": ["Inter"], "headline-sm": ["Inter"], "metric-numeral": ["Inter"], "body-lg": ["Inter"], "label-md": ["Inter"], "label-lg": ["Inter"], "body-sm": ["Inter"], "headline-md": ["Inter"], "headline-lg": ["Inter"] }, fontSize: { "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "600" }], "metric-numeral": ["44px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }] } } } };</script></head><body class="bg-surface text-on-surface font-body-md text-body-md flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-40 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.25)]"><div class="h-16 px-gutter flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><img alt="Kinetic horizontal lockup logo with modern geometric K icon and clean athletic bold wordmark 'KINETIC' with subtle metabolic dot in letter I, teal and dark slate.. Brand logo. - Primary color: #0d9488
+- Font: inter
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain shrink-0" src="https://lh3.googleusercontent.com/aida/ALJJyrA7krB5qINAI2WVc6XKE1aJHKooWrtohmct8mTlOl1Zq0UU7_rhVpPeIhRmFp5-4AtR8Jh2dRrBYxkd4Vr15HiYfqLvt8h-53397qC1D6oZPFKUICmxRdWljM5rT0ju8ZseqoE5oyTXD-N1qdMNkdDlGe12-Ve9uuY_87OkLUH4enZBqbtuqtQX54dzstUkDoRZ3WvUWoCohtrUjc7Ct9tbDzd9vRyBia8zHDYsGhwM"/><div class="flex flex-col min-w-0"><span class="text-headline-sm font-headline-sm text-on-surface truncate leading-tight">Kinetic Eet Logboek</span><span class="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1.5"><span class="inline-block w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>Telemetry Active</span></div></div><div class="flex items-center gap-space-sm shrink-0"><div class="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container text-label-sm font-label-sm text-secondary"><span class="material-symbols-outlined text-[16px]">monitoring</span><span>114 mg/dL</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-28 bg-surface min-h-screen"><div class="flex flex-col w-full px-gutter space-y-space-md pb-space-xl">
+<!-- Top Fight Cut Context Banner -->
+<div class="flex flex-col w-full bg-surface-container rounded-xl p-space-md space-y-space-sm shadow-md">
+<div class="flex items-center justify-between gap-space-xs">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="inline-flex items-center justify-center w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-label-md font-label-md text-on-surface uppercase tracking-wider truncate">Dagoverzicht Brandstof &amp; Cut</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary text-label-sm font-label-sm shrink-0" id="badge-target">79% in target</span>
+</div>
+<div class="flex flex-wrap items-center gap-space-xs">
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container-high text-on-surface text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">sports_kabaddi</span>
+<span>Combat Sambo Open</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container-high text-error text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[16px]">scale</span>
+<span>-1.4 kg cut fase</span>
+</div>
+</div>
+<!-- Macro Barometer Main -->
+<div class="pt-space-xs space-y-space-sm">
+<div class="flex items-baseline justify-between">
+<div>
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase">Koolhydraten Totaal</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="text-display-lg-mobile font-display-lg-mobile text-primary tracking-tight transition-all duration-300" id="carb-logged">165</span>
+<span class="text-headline-sm font-headline-sm text-on-surface-variant">/ 210g</span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Resterend</span>
+<p class="text-headline-sm font-headline-sm text-tertiary transition-all duration-300" id="carb-remaining">45g</p>
+</div>
+</div>
+<!-- Segmented Carbs Bar -->
+<div class="w-full bg-surface-container-highest h-3 rounded-full flex overflow-hidden">
+<div class="bg-primary/80 transition-all duration-500 ease-out" id="bar-ontbijt" style="width: 21.4%;" title="Ontbijt: 45g"></div>
+<div class="bg-primary transition-all duration-500 ease-out ml-0.5" id="bar-lunch" style="width: 31%;" title="Lunch: 65g"></div>
+<div class="bg-secondary-container transition-all duration-500 ease-out ml-0.5" id="bar-preworkout" style="width: 20%;" title="Pre-Workout: 42g"></div>
+<div class="bg-tertiary transition-all duration-500 ease-out ml-0.5" id="bar-extra" style="width: 6.2%;" title="Extra carbs: 13g"></div>
+</div>
+<!-- Sub Macros: Protein & Fat -->
+<div class="grid grid-cols-2 gap-space-sm pt-space-xs">
+<div class="flex flex-col bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center justify-between text-label-sm font-label-sm text-on-surface-variant">
+<span>Eiwit</span>
+<span class="text-on-surface font-semibold" id="protein-total">145 / 170g</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full mt-1.5 overflow-hidden">
+<div class="bg-secondary h-full rounded-full transition-all duration-500" id="protein-bar" style="width: 85%;"></div>
+</div>
+</div>
+<div class="flex flex-col bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center justify-between text-label-sm font-label-sm text-on-surface-variant">
+<span>Vetten</span>
+<span class="text-on-surface font-semibold" id="fat-total">52 / 65g</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full mt-1.5 overflow-hidden">
+<div class="bg-outline-variant h-full rounded-full transition-all duration-500" id="fat-bar" style="width: 80%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Carb Logger Actions -->
+<div class="pt-space-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Direct Toevoegen (Snelle Input)</span>
+<span class="text-label-sm font-label-sm text-tertiary opacity-0 transition-opacity duration-200" id="quick-feedback">Bijgewerkt!</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center p-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest active:scale-95 transition-all text-center cursor-pointer" onclick="addCarbs(15, 'Dextrose')">
+<span class="text-label-md font-label-md text-primary font-bold">+15g</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant truncate w-full">Dextrose</span>
+</button>
+<button class="flex flex-col items-center justify-center p-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest active:scale-95 transition-all text-center cursor-pointer" onclick="addCarbs(30, 'Snack/Fruit')">
+<span class="text-label-md font-label-md text-primary font-bold">+30g</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant truncate w-full">Snack/Fruit</span>
+</button>
+<button class="flex flex-col items-center justify-center p-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest active:scale-95 transition-all text-center cursor-pointer" onclick="addCarbs(50, 'Maaltijd')">
+<span class="text-label-md font-label-md text-primary font-bold">+50g</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant truncate w-full">Maaltijd</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Primary Action Button -->
+<button class="w-full flex items-center justify-center gap-space-sm py-3.5 px-4 bg-primary text-on-primary rounded-xl font-label-lg text-label-lg shadow-md active:scale-[0.98] transition-all hover:bg-primary/90 cursor-pointer" id="btn-add-meal" onclick="openAddMealModal()">
+<span class="material-symbols-outlined text-[20px]">restaurant</span>
+<span>+ Maaltijd of Snelle Carbs Toevoegen</span>
+</button>
+<!-- Glucose & Glycemische Respons Timeline -->
+<div class="flex flex-col space-y-space-sm">
+<div class="flex items-center justify-between">
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Maaltijden &amp; Glycemie</h2>
+<span class="text-label-sm font-label-sm text-on-surface-variant" id="meal-count-label">3 inzendingen</span>
+</div>
+<div class="space-y-space-sm" id="timeline-list">
+<!-- Timeline Card 1: Pre-Workout -->
+<div class="bg-surface-container rounded-xl p-space-md shadow-sm space-y-space-sm cursor-pointer select-none transition-all hover:bg-surface-container-high group border border-transparent hover:border-surface-container-highest" onclick="toggleCard('card-detail-1', this)">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+</div>
+<div>
+<span class="text-headline-sm font-headline-sm text-on-surface block leading-tight">Pre-Workout Brandstof</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">17:15 • 45m voor Combat Sambo Sparring</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 shrink-0">
+<span class="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-label-sm font-label-sm">Pre-training</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200 card-arrow">expand_more</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant pt-1">
+<span>1 Banaan + Volkoren toast met honing</span>
+<span class="text-on-surface font-semibold shrink-0">42g carbs</span>
+</div>
+<!-- Glucose buffer telemetry preview -->
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low text-label-sm font-label-sm">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-tertiary text-[16px]">show_chart</span>
+<span class="text-on-surface font-semibold">5.9 → 6.8 mmol/L</span>
+</div>
+<span class="text-tertiary truncate max-w-[190px]">Ideale stabiele corridor</span>
+</div>
+<!-- Expandable Drawer -->
+<div class="hidden pt-space-xs space-y-2 text-body-sm font-body-sm text-on-surface-variant border-t border-surface-container-highest mt-2" id="card-detail-1">
+<div class="grid grid-cols-3 gap-2 text-center pt-2">
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Actieve IOB</span>
+<span class="text-body-md font-body-md text-on-surface font-semibold">0.4 E</span>
+</div>
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Absorptiesnelheid</span>
+<span class="text-body-md font-body-md text-secondary font-semibold">Middel-Hoog</span>
+</div>
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Hypo Risico</span>
+<span class="text-body-md font-body-md text-tertiary font-semibold">Zeer Laag</span>
+</div>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low text-label-sm font-label-sm space-y-1">
+<div class="flex justify-between text-on-surface-variant"><span>Glycemische piekvertraging:</span><span class="text-on-surface font-semibold">~28 min</span></div>
+<div class="flex justify-between text-on-surface-variant"><span>Doelbereik sensor:</span><span class="text-tertiary font-semibold">98% In Range</span></div>
+</div>
+<p class="text-label-sm font-label-sm text-on-surface-variant leading-relaxed">
+          Optimale bloedsuikercurve gemeten door sensor. Voldoende leverglycogeen opgebouwd zonder piekende hyper-glycemie voor 5 rondes intensieve mat-tijd.
+        </p>
+</div>
+</div>
+<!-- Timeline Card 2: Lunch -->
+<div class="bg-surface-container rounded-xl p-space-md shadow-sm space-y-space-sm cursor-pointer select-none transition-all hover:bg-surface-container-high group border border-transparent hover:border-surface-container-highest" onclick="toggleCard('card-detail-2', this)">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-secondary-container/10 text-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">rice_bowl</span>
+</div>
+<div>
+<span class="text-headline-sm font-headline-sm text-on-surface block leading-tight">Lunch: Herstel &amp; Glycogeen</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">12:30 • Rustige herstelfase</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 shrink-0">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface text-label-sm font-label-sm">Herstel</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200 card-arrow">expand_more</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant pt-1">
+<span>Zilvervliesrijst, kipfilet &amp; broccoli</span>
+<span class="text-on-surface font-semibold shrink-0">65g carbs • 48g eiwit</span>
+</div>
+<!-- Glucose buffer telemetry preview -->
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low text-label-sm font-label-sm">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[16px]">trending_up</span>
+<span class="text-on-surface font-semibold">Piek 7.6 mmol/L (+50m)</span>
+</div>
+<span class="text-secondary truncate max-w-[190px]">Geleidelijke daling, geen crash</span>
+</div>
+<!-- Expandable Drawer -->
+<div class="hidden pt-space-xs space-y-2 text-body-sm font-body-sm text-on-surface-variant border-t border-surface-container-highest mt-2" id="card-detail-2">
+<div class="grid grid-cols-3 gap-2 text-center pt-2">
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Bolus Ratio</span>
+<span class="text-body-md font-body-md text-on-surface font-semibold">1:12</span>
+</div>
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Insuline Afgifte</span>
+<span class="text-body-md font-body-md text-secondary font-semibold">5.4 E</span>
+</div>
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Glycemische Index</span>
+<span class="text-body-md font-body-md text-tertiary font-semibold">Laag-Medium</span>
+</div>
+</div>
+<p class="text-label-sm font-label-sm text-on-surface-variant leading-relaxed pt-1">
+          Vezelrijke koolhydraatbron met hoog volume compenseert eerdere ochtendkrachttraining. Bolusverhouding 1:12 gaf strakke respons binnen de 4.0 - 8.0 corridor.
+        </p>
+</div>
+</div>
+<!-- Timeline Card 3: Ontbijt -->
+<div class="bg-surface-container rounded-xl p-space-md shadow-sm space-y-space-sm cursor-pointer select-none transition-all hover:bg-surface-container-high group border border-transparent hover:border-surface-container-highest" onclick="toggleCard('card-detail-3', this)">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-outline/20 text-on-surface flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">wb_twilight</span>
+</div>
+<div>
+<span class="text-headline-sm font-headline-sm text-on-surface block leading-tight">Ontbijt: Ochtend Basis</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">07:45 • Ochtendstart</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 shrink-0">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant text-label-sm font-label-sm">Ochtend</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200 card-arrow">expand_more</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant pt-1">
+<span>Havermout, blauwe bessen &amp; whey</span>
+<span class="text-on-surface font-semibold shrink-0">45g carbs • 35g eiwit</span>
+</div>
+<!-- Glucose buffer telemetry preview -->
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low text-label-sm font-label-sm">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-tertiary text-[16px]">check_circle</span>
+<span class="text-on-surface font-semibold">Max 7.2 mmol/L</span>
+</div>
+<span class="text-tertiary truncate max-w-[190px]">Binnen streefwaarde</span>
+</div>
+<!-- Expandable Drawer -->
+<div class="hidden pt-space-xs space-y-2 text-body-sm font-body-sm text-on-surface-variant border-t border-surface-container-highest mt-2" id="card-detail-3">
+<div class="grid grid-cols-3 gap-2 text-center pt-2">
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Vastende Glucose</span>
+<span class="text-body-md font-body-md text-on-surface font-semibold">5.4 mmol/L</span>
+</div>
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Spike Amplitude</span>
+<span class="text-body-md font-body-md text-tertiary font-semibold">+1.8 mmol/L</span>
+</div>
+<div class="bg-surface-container-highest p-2 rounded-lg">
+<span class="block text-label-sm font-label-sm text-on-surface-variant">Hersteltijd</span>
+<span class="text-body-md font-body-md text-secondary font-semibold">75 min</span>
+</div>
+</div>
+<p class="text-label-sm font-label-sm text-on-surface-variant leading-relaxed pt-1">
+          Stabiel wakker geworden op 5.4 mmol/L. Langzame opname havermout met vetten van chiazaad voorkwam insulineresistentie pieken in de ochtend.
+        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Metabool Trainingsinzicht Callout Card -->
+<div class="bg-surface-container rounded-xl p-space-md space-y-space-sm border-l-4 border-primary">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">lightbulb</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">Metabool Trainingsinzicht</h3>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">
+      Observatie: Snelle koolhydraten ~25-35 min vóór hoge-intensiteit sparring houden je glucose stabiel tijdens explosieve scrambles en voorkomen acute dalers tijdens mat-tijd.
+    </p>
+<a class="inline-flex items-center gap-1 text-label-md font-label-md text-primary hover:text-secondary transition-colors pt-1" href="#">
+<span>Bekijk correlatie grafieken met sparring volume</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</main>
+<!-- Interactive Toast Notification Container -->
+<div class="fixed top-20 inset-x-4 z-50 transform -translate-y-16 opacity-0 pointer-events-none transition-all duration-300 ease-out max-w-md mx-auto" id="dexcom-toast">
+<div class="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-surface-container-high/95 backdrop-blur-md border border-primary/30 shadow-2xl text-on-surface">
+<div class="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="text-label-md font-label-md text-primary font-semibold truncate" id="toast-title">+15g Dextrose toegevoegd</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+        Dexcom synchronisatie actief
+      </span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[16px] shrink-0">sensors</span>
+</div>
+</div>
+<!-- Meal Log Modal / Bottom Sheet Overlay -->
+<div class="hidden fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300" id="meal-modal" onclick="handleBackdropClick(event)">
+<div class="w-full max-w-lg bg-surface-container rounded-t-2xl p-space-md pb-8 shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-y-auto transform transition-transform duration-300 translate-y-0" onclick="event.stopPropagation()">
+<!-- Sheet Drag handle -->
+<div class="w-12 h-1.5 rounded-full bg-surface-container-highest mx-auto -mt-1 mb-1"></div>
+<div class="flex items-center justify-between border-b border-surface-container-highest pb-3">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">restaurant</span>
+</div>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Maaltijd of Carbs Loggen</h2>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest flex items-center justify-center text-on-surface-variant transition-colors cursor-pointer" onclick="closeAddMealModal()" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Input Fields -->
+<div class="space-y-3">
+<label class="block">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider block mb-1.5">Maaltijd of Snack Beschrijving</span>
+<input class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-on-surface border border-surface-container-highest focus:border-primary focus:outline-none text-body-md font-body-md transition-colors" id="modal-meal-name" placeholder="bijv. Havermout met banaan of Rijst met kip" type="text"/>
+</label>
+<!-- Macros Grid -->
+<div class="grid grid-cols-3 gap-2">
+<label class="block">
+<span class="text-label-sm font-label-sm text-primary uppercase tracking-wider block mb-1 font-semibold">Carbs (g)</span>
+<input class="w-full px-3 py-2 rounded-lg bg-surface-container-low text-primary font-bold text-headline-sm border border-surface-container-highest focus:border-primary focus:outline-none text-center" id="modal-carbs" max="250" min="1" type="number" value="30"/>
+</label>
+<label class="block">
+<span class="text-label-sm font-label-sm text-secondary uppercase tracking-wider block mb-1 font-semibold">Eiwit (g)</span>
+<input class="w-full px-3 py-2 rounded-lg bg-surface-container-low text-secondary font-bold text-headline-sm border border-surface-container-highest focus:border-secondary focus:outline-none text-center" id="modal-protein" max="150" min="0" type="number" value="20"/>
+</label>
+<label class="block">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold">Vetten (g)</span>
+<input class="w-full px-3 py-2 rounded-lg bg-surface-container-low text-on-surface font-bold text-headline-sm border border-surface-container-highest focus:border-surface-variant focus:outline-none text-center" id="modal-fats" max="100" min="0" type="number" value="8"/>
+</label>
+</div>
+<!-- Quick carb presets inside modal -->
+<div class="space-y-1.5">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider block">Snelle Waarde Kiezen</span>
+<div class="grid grid-cols-3 gap-2">
+<button class="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-primary text-label-sm font-semibold transition-all active:scale-95 text-center cursor-pointer" onclick="setModalCarbValue(15)" type="button">15g Dextrose</button>
+<button class="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-primary text-label-sm font-semibold transition-all active:scale-95 text-center cursor-pointer" onclick="setModalCarbValue(30)" type="button">30g Snack</button>
+<button class="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-primary text-label-sm font-semibold transition-all active:scale-95 text-center cursor-pointer" onclick="setModalCarbValue(50)" type="button">50g Maaltijd</button>
+</div>
+</div>
+<!-- Glucose context tags -->
+<div class="space-y-1.5">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider block">Glucose &amp; Training Context</span>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="context-selectors">
+<button class="context-btn px-2.5 py-1.5 rounded-lg text-label-sm font-semibold bg-primary text-on-primary transition-all text-center cursor-pointer" onclick="selectContext(this, 'Voor training')" type="button">Voor training</button>
+<button class="context-btn px-2.5 py-1.5 rounded-lg text-label-sm font-semibold bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer" onclick="selectContext(this, 'Na training')" type="button">Na training</button>
+<button class="context-btn px-2.5 py-1.5 rounded-lg text-label-sm font-semibold bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer" onclick="selectContext(this, 'Herstel')" type="button">Herstel</button>
+<button class="context-btn px-2.5 py-1.5 rounded-lg text-label-sm font-semibold bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all text-center cursor-pointer" onclick="selectContext(this, 'Snack')" type="button">Snack</button>
+</div>
+</div>
+</div>
+<!-- Modal Actions -->
+<div class="flex items-center gap-3 pt-2">
+<button class="w-1/3 py-3 px-4 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-label-md font-semibold transition-colors text-center cursor-pointer" onclick="closeAddMealModal()" type="button">Annuleren</button>
+<button class="w-2/3 py-3 px-4 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-label-md font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer" onclick="saveMealModal()" type="button">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>Opslaan in Dagoverzicht</span>
+</button>
+</div>
+</div>
+</div>
+<script>
+  let currentCarbs = 165;
+  const targetCarbs = 210;
+  let totalProtein = 145;
+  const targetProtein = 170;
+  let totalFats = 52;
+  const targetFats = 65;
+  let mealCount = 3;
+  let selectedContext = 'Voor training';
+  let toastTimer = null;
+
+  function showDexcomToast(message) {
+    const toast = document.getElementById('dexcom-toast');
+    const toastTitle = document.getElementById('toast-title');
+    if (!toast || !toastTitle) return;
+
+    toastTitle.textContent = message;
+    
+    // Clear ongoing timer
+    if (toastTimer) clearTimeout(toastTimer);
+
+    // Show toast
+    toast.classList.remove('opacity-0', '-translate-y-16', 'pointer-events-none');
+    toast.classList.add('opacity-100', 'translate-y-0');
+
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('opacity-100', 'translate-y-0');
+      toast.classList.add('opacity-0', '-translate-y-16', 'pointer-events-none');
+    }, 2800);
+  }
+
+  function updateCarbVisuals() {
+    const loggedEl = document.getElementById('carb-logged');
+    const remainingEl = document.getElementById('carb-remaining');
+    const badgeEl = document.getElementById('badge-target');
+
+    if (loggedEl) loggedEl.textContent = currentCarbs;
+    const remaining = Math.max(0, targetCarbs - currentCarbs);
+    if (remainingEl) remainingEl.textContent = remaining + 'g';
+
+    const pct = Math.min(100, Math.round((currentCarbs / targetCarbs) * 100));
+    if (badgeEl) badgeEl.textContent = pct + '% in target';
+
+    // Update segmented bar
+    const extraBar = document.getElementById('bar-extra');
+    if (extraBar) {
+      // Base is 45(breakfast) + 65(lunch) + 42(preworkout) = 152g (72.4%)
+      // Remaining up to target is allocated to extraBar
+      const extraGrams = Math.max(0, currentCarbs - 152);
+      const extraWidth = Math.min(27.6, (extraGrams / targetCarbs) * 100);
+      extraBar.style.width = Math.max(2, extraWidth) + '%';
+    }
+  }
+
+  function addCarbs(amount, label) {
+    currentCarbs += amount;
+    updateCarbVisuals();
+
+    // Show subtle Dexcom sync confirmation toast
+    showDexcomToast('+' + amount + 'g ' + label + ' toegevoegd');
+
+    // Quick feedback in header
+    const feedbackEl = document.getElementById('quick-feedback');
+    if (feedbackEl) {
+      feedbackEl.textContent = '+' + amount + 'g ' + label + '!';
+      feedbackEl.style.opacity = '1';
+      setTimeout(() => {
+        feedbackEl.style.opacity = '0';
+      }, 1600);
+    }
+  }
+
+  function toggleCard(id, cardEl) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const arrow = cardEl ? cardEl.querySelector('.card-arrow') : null;
+
+    if (el.classList.contains('hidden')) {
+      el.classList.remove('hidden');
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+      el.classList.add('hidden');
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  function openAddMealModal() {
+    const modal = document.getElementById('meal-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      const nameInput = document.getElementById('modal-meal-name');
+      if (nameInput) setTimeout(() => nameInput.focus(), 150);
+    }
+  }
+
+  function closeAddMealModal() {
+    const modal = document.getElementById('meal-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
+
+  function handleBackdropClick(e) {
+    if (e.target.id === 'meal-modal') {
+      closeAddMealModal();
+    }
+  }
+
+  function setModalCarbValue(val) {
+    const input = document.getElementById('modal-carbs');
+    if (input) input.value = val;
+  }
+
+  function selectContext(btn, name) {
+    selectedContext = name;
+    document.querySelectorAll('.context-btn').forEach(b => {
+      b.classList.remove('bg-primary', 'text-on-primary');
+      b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+    });
+    btn.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+    btn.classList.add('bg-primary', 'text-on-primary');
+  }
+
+  function saveMealModal() {
+    const carbs = parseInt(document.getElementById('modal-carbs').value) || 0;
+    const protein = parseInt(document.getElementById('modal-protein').value) || 0;
+    const fats = parseInt(document.getElementById('modal-fats').value) || 0;
+    const mealName = document.getElementById('modal-meal-name').value.trim() || 'Extra Koolhydraten';
+
+    if (carbs <= 0 && protein <= 0) {
+      alert('Vul minimaal een aantal koolhydraten of eiwitten in.');
+      return;
+    }
+
+    currentCarbs += carbs;
+    totalProtein += protein;
+    totalFats += fats;
+    mealCount += 1;
+
+    // Update macros UI
+    updateCarbVisuals();
+
+    const protEl = document.getElementById('protein-total');
+    if (protEl) protEl.textContent = totalProtein + ' / ' + targetProtein + 'g';
+    const protBar = document.getElementById('protein-bar');
+    if (protBar) protBar.style.width = Math.min(100, Math.round((totalProtein / targetProtein) * 100)) + '%';
+
+    const fatEl = document.getElementById('fat-total');
+    if (fatEl) fatEl.textContent = totalFats + ' / ' + targetFats + 'g';
+    const fatBar = document.getElementById('fat-bar');
+    if (fatBar) fatBar.style.width = Math.min(100, Math.round((totalFats / targetFats) * 100)) + '%';
+
+    const countLabel = document.getElementById('meal-count-label');
+    if (countLabel) countLabel.textContent = mealCount + ' inzendingen';
+
+    // Insert new timeline item
+    const timelineList = document.getElementById('timeline-list');
+    if (timelineList) {
+      const now = new Date();
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const newCardId = 'card-detail-' + Date.now();
+
+      const newCard = document.createElement('div');
+      newCard.className = 'bg-surface-container rounded-xl p-space-md shadow-sm space-y-space-sm cursor-pointer select-none transition-all hover:bg-surface-container-high group border border-transparent hover:border-surface-container-highest animate-fade-in';
+      newCard.setAttribute('onclick', "toggleCard('" + newCardId + "', this)");
+      newCard.innerHTML = `
+        <div class="flex items-start justify-between gap-space-xs">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-tertiary/20 text-tertiary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[18px]">restaurant</span>
+            </div>
+            <div>
+              <span class="text-headline-sm font-headline-sm text-on-surface block leading-tight">${mealName}</span>
+              <span class="text-body-sm font-body-sm text-on-surface-variant">${timeStr} • ${selectedContext}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary text-label-sm font-label-sm">${selectedContext}</span>
+            <span class="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200 card-arrow">expand_more</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant pt-1">
+          <span>Toegevoegd via snelformulier</span>
+          <span class="text-on-surface font-semibold shrink-0">${carbs}g carbs • ${protein}g eiwit</span>
+        </div>
+        <div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low text-label-sm font-label-sm">
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-tertiary text-[16px]">sensors</span>
+            <span class="text-on-surface font-semibold">Dexcom CGM Gekoppeld</span>
+          </div>
+          <span class="text-tertiary">Real-time correlatie actief</span>
+        </div>
+        <div class="hidden pt-space-xs space-y-2 text-body-sm font-body-sm text-on-surface-variant border-t border-surface-container-highest mt-2" id="${newCardId}">
+          <div class="grid grid-cols-3 gap-2 text-center pt-2">
+            <div class="bg-surface-container-highest p-2 rounded-lg">
+              <span class="block text-label-sm font-label-sm text-on-surface-variant">Carbs</span>
+              <span class="text-body-md font-body-md text-primary font-semibold">${carbs}g</span>
+            </div>
+            <div class="bg-surface-container-highest p-2 rounded-lg">
+              <span class="block text-label-sm font-label-sm text-on-surface-variant">Eiwit</span>
+              <span class="text-body-md font-body-md text-secondary font-semibold">${protein}g</span>
+            </div>
+            <div class="bg-surface-container-highest p-2 rounded-lg">
+              <span class="block text-label-sm font-label-sm text-on-surface-variant">Vetten</span>
+              <span class="text-body-md font-body-md text-on-surface font-semibold">${fats}g</span>
+            </div>
+          </div>
+          <p class="text-label-sm font-label-sm text-on-surface-variant leading-relaxed pt-1">
+            Nieuw gelogde brandstofinname. Berekende metabole belasting gesynchroniseerd met geplande intensieve trainingsblokken.
+          </p>
+        </div>
+      `;
+      timelineList.insertBefore(newCard, timelineList.firstChild);
+    }
+
+    closeAddMealModal();
+    showDexcomToast('+' + carbs + 'g ' + mealName + ' toegevoegd');
+
+    // Reset input
+    document.getElementById('modal-meal-name').value = '';
+    document.getElementById('modal-carbs').value = '30';
+    document.getElementById('modal-protein').value = '20';
+    document.getElementById('modal-fats').value = '8';
+  }
+</script>
+<nav class="fixed bottom-0 inset-x-0 z-40 pb-safe bg-surface-container/95 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.35)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16 px-space-xs relative"><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="kinetic---vandaag" href="#"><span class="material-symbols-outlined text-[22px]">local_fire_department</span><span class="text-label-sm font-label-sm">Vandaag</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="kinetic---training" href="#"><span class="material-symbols-outlined text-[22px]">fitness_center</span><span class="text-label-sm font-label-sm">Training</span></a><div class="flex items-center justify-center -translate-y-3"><a aria-label="Start Sessie" class="w-12 h-12 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-md active:scale-95 transition-transform hover:bg-primary" data-path="kinetic---live-sessie-(interactief-dark-mode)" href="#"><span class="material-symbols-outlined text-[26px]">add</span></a></div><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant transition-colors hover:text-on-surface" data-path="kinetic---technieken" href="#"><span class="material-symbols-outlined text-[22px]">shield</span><span class="text-label-sm font-label-sm">Technieken</span></a><a aria-current="page" class="flex flex-col items-center justify-center w-14 h-14 transition-colors text-primary font-bold" data-path="kinetic---eet-logboek-(interactief-dark-mode)" href="#"><span class="material-symbols-outlined text-[22px]">restaurant</span><span class="text-label-sm font-label-sm">Eten</span></a></div></nav>
+</body></html>

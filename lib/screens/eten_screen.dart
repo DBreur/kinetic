@@ -16,6 +16,7 @@ import '../state/kinetic_store.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/charts.dart';
 import '../widgets/kinetic_widgets.dart';
+import '../widgets/food_preset_widgets.dart';
 import '../widgets/sheets.dart';
 
 class EtenScreen extends StatelessWidget {
@@ -50,14 +51,27 @@ class EtenScreen extends StatelessWidget {
           _FuelOverview(entries: entries.reversed.toList(), responses: responses, hyper: hyper),
           const SizedBox(height: 12),
           BigButton(
-            label: '+ Maaltijd of Snelle Carbs Toevoegen',
+            label: '+ Maaltijd of correctie toevoegen',
             icon: Icons.restaurant_menu,
             onPressed: () => showMealSheet(context),
           ),
           const SizedBox(height: 12),
-          const _CarbPresets(),
+          const PresetManagerCard(training: false),
           const SizedBox(height: 12),
-          const _MacroBarometer(),
+          if (store.nutritionGoalsEnabled)
+            const _MacroBarometer()
+          else
+            KCard(
+              padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+              child: Row(
+                children: [
+                  Icon(Icons.speed, size: 20, color: k.textMuted),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text('Dagdoel voeding staat uit', style: context.t.caption)),
+                  TextButton(onPressed: () => store.setNutritionGoalsEnabled(true), child: const Text('Aanzetten')),
+                ],
+              ),
+            ),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -248,7 +262,8 @@ class _FuelOverview extends StatelessWidget {
     final store = KineticScope.of(context);
     final k = context.k;
     final total = store.carbsToday;
-    final target = store.carbsTarget;
+    // Zonder dagdoel schaalt de balk op het totaal.
+    final target = store.nutritionGoalsEnabled ? store.carbsTarget : (total > 0 ? total : 1.0);
 
     // Hoogste glucose binnen 2 uur na een maaltijd van vandaag.
     FoodLogEntry? peakEntry;
@@ -302,14 +317,18 @@ class _FuelOverview extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(grams(total), style: context.t.metric.copyWith(fontSize: 40)),
-                        const SizedBox(width: 4),
-                        Text('g', style: context.t.subtitle.copyWith(color: k.accent)),
-                      ],
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(grams(total), style: context.t.metric.copyWith(fontSize: 40)),
+                          const SizedBox(width: 4),
+                          Text('g', style: context.t.subtitle.copyWith(color: k.accent)),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text('Koolhydraten totaal gelogd', style: context.t.caption),
@@ -392,10 +411,11 @@ class _FuelOverview extends StatelessWidget {
                     Text('${_legendName(e)} ${grams(e.carbs!)}g', style: context.t.caption),
                   ],
                 ),
-              Text(
-                total > target ? '${grams(total - target)}g boven dagdoel' : 'Dagdoel ${grams(target)}g',
-                style: context.t.caption.copyWith(color: total > target ? k.dangerInk : k.textMuted),
-              ),
+              if (store.nutritionGoalsEnabled)
+                Text(
+                  total > target ? '${grams(total - target)}g boven dagdoel' : 'Dagdoel ${grams(target)}g',
+                  style: context.t.caption.copyWith(color: total > target ? k.dangerInk : k.textMuted),
+                ),
             ],
           ),
         ],
@@ -407,64 +427,6 @@ class _FuelOverview extends StatelessWidget {
 Color _toneInk(KineticColors k, KTone tone) => toneColors(k, tone).$2;
 
 // ------------------------------------------------------------ presets
-
-class _CarbPresets extends StatelessWidget {
-  const _CarbPresets();
-
-  static const _presets = [
-    (15.0, '+15g Dextrose', 'Dextrose', Icons.bolt),
-    (30.0, '+30g Snack/Fruit', 'Snack/fruit', Icons.cookie_outlined),
-    (50.0, '+50g Maaltijd', 'Maaltijd', Icons.lunch_dining),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final store = KineticScope.of(context);
-    final k = context.k;
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (i, p) in _presets.indexed) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: KCard(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                onTap: () async {
-                  final messenger = ScaffoldMessenger.of(context);
-                  final before = store.carbsToday;
-                  final e = await store.logFood(description: p.$3, carbs: p.$1);
-                  if (e == null) {
-                    showToastOn(messenger, 'Opslaan mislukt', error: true);
-                    return;
-                  }
-                  showToastOn(
-                    messenger,
-                    'Koolhydraten ${grams(before)} → ${grams(store.carbsToday)}g',
-                    actionLabel: 'Ongedaan',
-                    onAction: () => store.deleteFood(e),
-                  );
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconTile(icon: p.$4, size: 36, color: k.accent),
-                    const SizedBox(height: 8),
-                    Text(
-                      p.$2,
-                      textAlign: TextAlign.center,
-                      style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
 
 // ---------------------------------------------------------- barometer
 
@@ -529,6 +491,13 @@ class _MacroBarometer extends StatelessWidget {
           ],
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx, false);
+              store.setNutritionGoalsEnabled(false);
+            },
+            child: const Text('Dagdoel uitzetten'),
+          ),
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuleren')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Opslaan')),
         ],

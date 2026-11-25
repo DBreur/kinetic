@@ -11,6 +11,8 @@ import '../../models/library.dart';
 import '../../models/technique.dart';
 import '../../theme/kinetic_theme.dart';
 import '../../widgets/kinetic_widgets.dart';
+import '../../widgets/technique_detail_widgets.dart';
+import '../../widgets/video_widgets.dart';
 
 // ------------------------------------------------------------ groepen
 
@@ -349,7 +351,7 @@ class _TechniqueSheet extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        if (e.description.isNotEmpty) ...[
+        if (own == null && e.description.isNotEmpty) ...[
           _SheetSection(
             icon: Icons.insights,
             label: 'Uitleg',
@@ -367,6 +369,17 @@ class _TechniqueSheet extends StatelessWidget {
         ],
         if (lib?.strikeCode != null) ...[
           _SheetSection(icon: Icons.tag, label: 'Telcode', child: Text(lib!.strikeCode!, style: context.t.bodyStrong)),
+          const SizedBox(height: 8),
+        ],
+        if (own != null) ...[
+          const SizedBox(height: 8),
+          TechniqueDetails(techniqueId: own.id),
+          const SizedBox(height: 8),
+        ] else if ((lib?.videoUrls ?? const []).isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const DetailHeader(icon: Icons.ondemand_video, title: "Video's"),
+          VideoList(urls: lib!.videoUrls),
+          Text("Voeg de techniek toe aan je vault om eigen video's, notities en beoordelingen te maken.", style: context.t.caption),
           const SizedBox(height: 8),
         ],
         if (e.disciplines.isNotEmpty) ...[
@@ -603,4 +616,91 @@ Future<bool> confirmDelete(BuildContext context, {required String title, require
     ),
   );
   return ok ?? false;
+}
+
+/// Uitklapbare groepskop (accordeon) voor Vault en Ontdekken.
+class GroupHeader extends StatelessWidget {
+  const GroupHeader({
+    super.key,
+    required this.group,
+    required this.count,
+    required this.focusCount,
+    required this.expanded,
+    required this.onTap,
+  });
+  final TechniqueGroup group;
+  final int count;
+  final int focusCount;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Semantics(
+      button: true,
+      expanded: expanded,
+      child: KCard(
+        padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+        onTap: onTap,
+        child: Row(
+          children: [
+            IconTile(icon: groupIcon(group), size: 40, color: groupColor(context, group)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(group.label, style: context.t.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(
+                    focusCount > 0 ? '${group.description} • $focusCount in focus' : group.description,
+                    style: context.t.caption,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            CountBadge(count: count, highlight: focusCount > 0),
+            const SizedBox(width: 4),
+            AnimatedRotation(
+              turns: expanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: Icon(Icons.expand_more, color: k.textSecondary, size: 26),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CountBadge extends StatelessWidget {
+  const CountBadge({super.key, required this.count, required this.highlight});
+  final int count;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: highlight ? k.primaryTint : k.well,
+        borderRadius: BorderRadius.circular(KRadius.full),
+      ),
+      child: Text(
+        '$count',
+        style: context.t.caption.copyWith(
+          color: highlight ? k.accent : k.textSecondary,
+          fontWeight: FontWeight.w700,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
 }

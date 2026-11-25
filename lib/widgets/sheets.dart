@@ -8,9 +8,13 @@ import 'package:material_ui/material_ui.dart';
 import '../core/formatters.dart';
 import '../core/glucose_rules.dart';
 import '../core/meal_impact.dart';
+import '../core/preset_text.dart';
 import '../core/sparring_timer.dart';
+import '../models/food_preset.dart';
 import '../theme/kinetic_theme.dart';
+import 'food_preset_widgets.dart';
 import 'kinetic_widgets.dart';
+import 'start_training_sheet.dart';
 
 double? parseNum(String s) {
   final t = s.trim().replaceAll(',', '.');
@@ -39,11 +43,26 @@ class _MealSheetState extends State<MealSheet> {
   bool _saving = false;
   String? _error;
 
+  /// Preset-enkelvoud → aantal (−/+).
+  Map<String, int> _presetCounts = {};
+
+  /// −/+ op een preset: werkt de omschrijving en de koolhydraten bij.
+  Map<String, int> _presetDelta(FoodPreset preset, int delta) {
+    final r = applyPresetChange(text: _name.text, counts: _presetCounts, preset: preset, delta: delta);
+    final carbs = ((parseNum(_carbs.text) ?? 0) + r.carbsDelta).clamp(0.0, 2000.0);
+    setState(() {
+      _presetCounts = r.counts;
+      _name.text = r.text;
+      _carbs.text = carbs > 0 ? grams(carbs) : '';
+    });
+    return r.counts;
+  }
+
   @override
   void initState() {
     super.initState();
     final store = KineticScope.read(context);
-    _context = widget.initialContext ?? (store.isSparringActive ? MealContext.acute : MealContext.recovery);
+    _context = widget.initialContext ?? (store.isTrainingActive ? MealContext.acute : MealContext.recovery);
     for (final c in [_carbs, _insulin]) {
       c.addListener(() => setState(() {}));
     }
@@ -62,8 +81,8 @@ class _MealSheetState extends State<MealSheet> {
     final protein = parseNum(_protein.text);
     final fat = parseNum(_fat.text);
     final insulin = parseNum(_insulin.text);
-    if (carbs == null && protein == null && fat == null) {
-      setState(() => _error = 'Vul minstens één macro in.');
+    if (carbs == null && protein == null && fat == null && insulin == null) {
+      setState(() => _error = 'Vul koolhydraten, een macro of insuline in.');
       return;
     }
     if ([carbs, protein, fat, insulin].any((v) => v != null && (v < 0 || v > 1000))) {
@@ -79,7 +98,9 @@ class _MealSheetState extends State<MealSheet> {
       _error = null;
     });
     final store = KineticScope.read(context);
-    final name = _name.text.trim().isEmpty ? 'Maaltijd' : _name.text.trim();
+    final name = _name.text.trim().isEmpty
+        ? (carbs == null && protein == null && fat == null ? 'Correctie' : 'Maaltijd')
+        : _name.text.trim();
     final saved = await store.logFood(
       description: name,
       carbs: carbs,
@@ -87,6 +108,7 @@ class _MealSheetState extends State<MealSheet> {
       fat: fat,
       context: _context,
       insulinUnits: insulin,
+      presetCounts: _presetCounts,
     );
     if (!mounted) return;
     if (saved == null) {
@@ -117,10 +139,12 @@ class _MealSheetState extends State<MealSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Maaltijd of snelle carbs', style: context.t.headline),
+        Text('Maaltijd of correctie', style: context.t.headline),
         const SizedBox(height: 4),
         Text('Wordt opgeslagen in Supabase en meteen in je macrobarometer verwerkt.', style: context.t.caption),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        PresetQuickPicker(counts: _presetCounts, onDelta: _presetDelta),
+        const SizedBox(height: 16),
         TextField(
           controller: _name,
           textCapitalization: TextCapitalization.sentences,
@@ -257,13 +281,13 @@ Future<void> showQuickActions(BuildContext context) {
           Text('Snelle actie', style: sheetContext.t.headline),
           const SizedBox(height: 16),
           tile(
-            store.isSparringActive ? 'Terug naar sparring' : 'Start Sparring',
-            store.isSparringActive ? 'Sessie loopt' : store.sparringConfig.summary,
-            Icons.sports_mma,
+            store.isTrainingActive ? 'Terug naar de training' : 'Start training',
+            store.isTrainingActive ? 'Sessie loopt' : 'Discipline en begin- en eindtijd kiezen',
+            Icons.sports_martial_arts,
             k.primary,
             () => openLiveSession(context),
           ),
-          tile('Snelle Carbs', 'Maaltijd of dextrose loggen', Icons.bolt, k.warning, store.requestMealSheet),
+          tile('Maaltijd of correctie', 'Koolhydraten en/of insuline loggen', Icons.restaurant, k.warning, store.requestMealSheet),
           tile('Inwegen', 'Gewicht registreren & fight prep', Icons.monitor_weight_outlined, k.blue,
               () => Navigator.of(context).pushNamed('/competitions')),
           tile('Sensor Kalibratie', 'Vingerprik vergelijken met je CGM', Icons.water_drop_outlined, k.purple,
@@ -274,10 +298,13 @@ Future<void> showQuickActions(BuildContext context) {
   );
 }
 
-/// Start (of hervat) de live sessie en opent het juiste scherm.
+/// Opent de lopende training (of de start-sheet als er geen loopt).
 void openLiveSession(BuildContext context) {
   final store = KineticScope.read(context);
-  if (!store.isSparringActive) store.startSparring();
+  if (!store.isTrainingActive) {
+    showStartTrainingSheet(context);
+    return;
+  }
   final rest = store.sparring?.phase == SparringPhase.rest;
   Navigator.of(context).pushNamed(rest ? '/ronde-rust' : '/live-session');
 }

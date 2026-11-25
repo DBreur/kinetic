@@ -14,6 +14,7 @@ import '../models/weigh_in.dart';
 import '../state/kinetic_store.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/charts.dart';
+import '../widgets/competition_editor.dart';
 import '../widgets/kinetic_widgets.dart';
 import '../widgets/sheets.dart';
 
@@ -61,7 +62,7 @@ class CompetitionsScreen extends StatelessWidget {
 // ------------------------------------------------------------- helpers
 
 /// +88 kg-klasse zonder eigen doel: je moet er bóven zitten.
-bool _isMinimumClass(Competition? c) => c?.weightLimitType == WeightLimitType.over && c?.targetWeightKg == null;
+bool _isMinimumClass(Competition? c) => c?.isMinimumClass ?? false;
 
 /// De eerste weging van het kamp (hooguit 8 weken terug).
 WeighIn? _campStart(List<WeighIn> weighIns, DateTime now) {
@@ -191,8 +192,14 @@ class _CompetitionCard extends StatelessWidget {
                   Text('Geen wedstrijd gepland', style: context.t.title),
                   const SizedBox(height: 4),
                   Text(
-                    'Wedstrijden komen uit je bestaande competitions-tabel. Je kunt hier wel gewoon inwegen.',
+                    'Plan je volgende wedstrijd voor een aftelling en gewichtscorridor. Inwegen kan altijd.',
                     style: context.t.caption,
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () => showCompetitionEditor(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Wedstrijd plannen'),
                   ),
                 ],
               ),
@@ -229,7 +236,7 @@ class _CompetitionCard extends StatelessWidget {
       if (minimum) {
         deltaPill = c.isWithinLimit(current)
             ? const KPill('Boven grens', tone: KTone.success, icon: Icons.check, dense: true)
-            : KPill('+${dec1(target - current + 0.1)} kg aankomen', tone: KTone.warning, dense: true);
+            : KPill('+${dec1(c.gainNeededKg(current)!)} kg aankomen', tone: KTone.warning, dense: true);
       } else if (d.abs() < 0.05) {
         deltaPill = const KPill('Op doel', tone: KTone.success, icon: Icons.check, dense: true);
       } else if (d < 0) {
@@ -271,6 +278,12 @@ class _CompetitionCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 KPill(limitTag, tone: KTone.primary, dense: true),
               ],
+              IconButton(
+                tooltip: 'Wedstrijd aanpassen',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => showCompetitionEditor(context, existing: c),
+                icon: Icon(Icons.edit_outlined, size: 20, color: k.textSecondary),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -299,7 +312,7 @@ class _CompetitionCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    ?deltaPill,
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerRight,
@@ -336,16 +349,21 @@ class _CompetitionCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                // Pill op een eigen regel: naast Huidig/Doel past hij niet op 360dp.
+                if (deltaPill != null) ...[deltaPill, const SizedBox(height: 8)] else const SizedBox(height: 4),
                 KProgressBar(value: progress, height: 10),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text(
-                      start == null ? 'Start kamp' : 'Start kamp (${dec1(start)} kg)',
-                      style: context.t.labelSm.copyWith(color: k.textMuted),
+                    Expanded(
+                      child: Text(
+                        start == null ? 'Start kamp' : 'Start kamp (${dec1(start)} kg)',
+                        style: context.t.labelSm.copyWith(color: k.textMuted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text('Doelweging', style: context.t.labelSm.copyWith(color: k.textMuted)),
                   ],
                 ),
@@ -375,7 +393,7 @@ class _CompetitionCard extends StatelessWidget {
     final limit = c.weightLimitKg!;
     return c.isWithinLimit(current)
         ? (Icons.check_circle, k.successInk, 'Boven de klassegrens (> ${dec1(limit)} kg)')
-        : (Icons.trending_up, k.warningInk, 'Nog +${dec1(limit - current + 0.1)} kg aankomen voor de +${dec1(limit)} kg-klasse');
+        : (Icons.trending_up, k.warningInk, 'Nog +${dec1(c.gainNeededKg(current)!)} kg aankomen voor de +${dec1(limit)} kg-klasse');
   }
   final p = plan;
   if (p == null) return (Icons.info_outline, k.textSecondary, 'Registreer een weging om je corridor te berekenen');
@@ -432,7 +450,7 @@ class _WeighInCard extends StatelessWidget {
         final ok = comp!.isWithinLimit(draft);
         deltaText = ok
             ? 'Boven de klassegrens (${dec1(target)} kg)'
-            : 'Nog aan te komen: +${dec1((target - draft) + 0.1)} kg (min. > ${dec1(target)} kg)';
+            : 'Nog aan te komen: +${dec1(comp.gainNeededKg(draft)!)} kg (min. > ${dec1(target)} kg)';
         deltaColor = ok ? k.successInk : k.warningInk;
         deltaIcon = ok ? Icons.check_circle : Icons.trending_up;
       } else if (d.abs() < 0.05) {
@@ -685,7 +703,9 @@ class _TrajectoryCard extends StatelessWidget {
                 child: MetricTile(
                   inWell: true,
                   label: 'Restant',
-                  value: p == null ? '--' : '${dec1(p.deltaKg.abs())} kg',
+                  value: minimum && current != null
+                      ? '${dec1(c!.gainNeededKg(current)!)} kg'
+                      : (p == null ? '--' : '${dec1(p.deltaKg.abs())} kg'),
                   valueColor: k.accent,
                 ),
               ),
@@ -761,10 +781,14 @@ class _Agenda extends StatelessWidget {
       children: [
         SectionTitle(
           'Wedstrijd & Weeg Agenda',
-          trailing: Text('${all.length} ${all.length == 1 ? 'toernooi' : 'toernooien'}', style: context.t.caption),
+          trailing: TextButton.icon(
+            onPressed: () => showCompetitionEditor(context),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Wedstrijd'),
+          ),
         ),
         if (all.isEmpty)
-          KCard(child: Text('Nog geen wedstrijden in je agenda. Ze komen uit je bestaande competitions-tabel.', style: context.t.caption)),
+          KCard(child: Text('Nog geen wedstrijden in je agenda. Tik op "+ Wedstrijd" om er een te plannen.', style: context.t.caption)),
         for (final c in upcoming) ...[
           _UpcomingItem(comp: c, isNext: c.id == nextId, now: now, currentKg: store.currentWeightKg),
           const SizedBox(height: 8),
@@ -806,12 +830,13 @@ class _UpcomingItem extends StatelessWidget {
       rightColor = room >= 0 ? k.successInk : k.warningInk;
     } else if (limit != null && currentKg != null && c.weightLimitType == WeightLimitType.over) {
       final ok = c.isWithinLimit(currentKg!);
-      right = ok ? 'Boven grens' : 'Nog +${dec1(limit - currentKg! + 0.1)} kg';
+      right = ok ? 'Boven grens' : 'Nog +${dec1(c.gainNeededKg(currentKg!) ?? (limit - currentKg! + 0.1))} kg';
       rightColor = ok ? k.successInk : k.warningInk;
     } else {
       right = c.weightClass.isEmpty ? 'Open klasse' : c.weightClass;
     }
     return KCard(
+      onTap: () => showCompetitionEditor(context, existing: c),
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,6 +909,7 @@ class _PastItem extends StatelessWidget {
     final color = place == null ? k.textMuted : (c.resultPlace == 1 ? k.warningInk : k.accent);
     final record = (c.resultWins != null || c.resultLosses != null) ? '${c.resultWins ?? 0}W • ${c.resultLosses ?? 0}V' : null;
     return KCard(
+      onTap: () => showCompetitionEditor(context, existing: comp),
       padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

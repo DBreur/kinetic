@@ -277,6 +277,8 @@ class TelemetryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Hartslag staat uit (instelling): alleen glucose.
+    if (!KineticScope.of(context).showHeartRate) return const DexcomLiveCard();
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,

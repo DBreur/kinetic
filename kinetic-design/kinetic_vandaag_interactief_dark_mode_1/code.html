@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-tint": "#4fdbc8", "on-tertiary-fixed-variant": "#005236", "tertiary": "#4edea3", "on-background": "#e0e2ea", "on-surface-variant": "#bbcac6", "on-tertiary": "#003824", "surface-container-lowest": "#0a0e13", "on-primary-fixed-variant": "#005048", "on-secondary": "#003731", "on-tertiary-container": "#00442c", "primary": "#4fdbc8", "surface": "#101419", "surface-dim": "#101419", "primary-container": "#14b8a6", "on-primary-fixed": "#00201c", "on-error-container": "#ffdad6", "inverse-primary": "#006b5f", "secondary-container": "#03c6b2", "surface-bright": "#36393f", "tertiary-fixed": "#6ffbbe", "on-surface": "#e0e2ea", "secondary": "#44e2cd", "background": "#101419", "outline": "#859490", "primary-fixed": "#71f8e4", "tertiary-fixed-dim": "#4edea3", "secondary-fixed-dim": "#3cddc7", "on-primary": "#003731", "outline-variant": "#3c4947", "inverse-on-surface": "#2d3136", "on-secondary-fixed": "#00201c", "tertiary-container": "#16bb83", "on-secondary-fixed-variant": "#005047", "on-secondary-container": "#004d44", "surface-container": "#1c2025", "surface-container-highest": "#31353b", "inverse-surface": "#e0e2ea", "surface-container-high": "#262a30", "error": "#ffb4ab", "on-error": "#690005", "error-container": "#93000a", "surface-variant": "#31353b", "on-tertiary-fixed": "#002113", "on-primary-container": "#00423b", "secondary-fixed": "#62fae3", "primary-fixed-dim": "#4fdbc8", "surface-container-low": "#181c21" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin-tablet": "1.5rem", "space-lg": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-md": "1rem", "margin": "1rem", "gutter-desktop": "1.5rem", "margin-desktop": "2rem", "space-xs": "0.25rem", "space-xl": "2rem" }, "fontFamily": { "metric-numeral": ["Inter"], "body-sm": ["Inter"], "label-lg": ["Inter"], "display-lg": ["Inter"], "body-lg": ["Inter"], "display-lg-mobile": ["Inter"], "headline-lg": ["Inter"], "label-md": ["Inter"], "label-sm": ["Inter"], "headline-md": ["Inter"], "body-md": ["Inter"], "headline-sm": ["Inter"] }, "fontSize": { "metric-numeral": ["44px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "700" }], "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }], "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400" }], "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }], "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "600" }] } } } }</script><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#101419;color:#e0e2ea;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen flex flex-col selection:bg-primary selection:text-on-primary"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.35)] pt-safe"><div class="h-16 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0 flex-1"><img alt="Kinetic Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/ALJJyrDi8n02xiUJEQ4gVhnnjindIyBda-I_cL9I-wwQCI7sjGXjArFrfJw9poszZTgFYluCVzorSP-tJ5Ss_mjvnyJi2PRDKdXuSD5ssTT8mNfJuozHM54R9hlx3rMdh5f652xtla_3lHFYN8CSyvAD8wbDbNnQGNuJ8cS3bKQnsRMzmoXLFf0KHo0aTTnjBJP9DJHLwo28sX6PLoas3qSozVKdxGzFGvfu7w46CCFy1-9x"/><div class="flex items-center gap-space-xs min-w-0"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight truncate">Vandaag</span><span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span></div></div><div class="flex items-center gap-space-sm flex-shrink-0"><button class="w-11 h-11 flex items-center justify-center rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors active:scale-95" id="telemetryHeaderBtn"><span class="material-symbols-outlined text-[20px]">vital_signs</span></button><button class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(79,219,200,0.35)] active:scale-95 transition-transform" id="profileHeaderBtn"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></button></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full px-margin space-y-space-md select-none">
+<!-- FIGHT PREP BANNER & WEIGHT STATUS -->
+<section class="w-full rounded-xl bg-surface-container-high p-space-md shadow-md flex flex-col gap-space-sm relative overflow-hidden transition-all duration-300">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-primary uppercase tracking-wider">Combat Sambo Open</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-lowest px-2 py-0.5 rounded-full">Nog 18 dagen</span>
+</div>
+<div class="flex items-end justify-between mt-1">
+<div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Huidig gewicht</p>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-headline-lg text-headline-lg text-on-surface" id="currentWeightDisplay">78.4</span>
+<span class="font-label-md text-label-md text-on-surface-variant">kg</span>
+<span class="font-label-sm text-label-sm text-tertiary ml-1.5 font-bold">-1.4 kg target</span>
+</div>
+</div>
+<button class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container text-primary font-label-md text-label-md active:scale-95 transition-all shadow-sm hover:bg-surface-container-highest border border-primary/20 hover:border-primary/50" id="openWeighInBtn">
+<span id="openWeighInBtnText">Inwegen &amp; Prep</span>
+<span class="material-symbols-outlined text-[18px] transition-transform duration-200" id="weighInChevron">expand_more</span>
+</button>
+</div>
+<!-- Collapsible Weigh-in / Water Cut Drawer -->
+<div class="hidden mt-space-sm pt-space-sm bg-surface-container-lowest p-space-md rounded-lg space-y-space-md transition-all duration-300" id="prepDrawer">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Gewichtsreductie &amp; Water-cut</span>
+<span class="font-label-sm text-label-sm text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full">On Track (Zone B)</span>
+</div>
+<!-- Mini timeline bar -->
+<div class="w-full bg-surface-container-high h-2.5 rounded-full overflow-hidden flex">
+<div class="bg-primary h-full w-[65%] rounded-full transition-all duration-500" id="weightProgressBar"></div>
+</div>
+<div class="flex justify-between text-on-surface-variant font-label-sm text-label-sm">
+<span>Start: 81.2 kg</span>
+<span class="text-primary font-semibold" id="prepTargetDisplay">Nog 1.4 kg tot 77.0 kg</span>
+<span>Doel: 77.0 kg</span>
+</div>
+<!-- Quick Stepper for weight entry -->
+<div class="flex items-center justify-between bg-surface-container p-space-sm rounded-lg">
+<span class="font-body-sm text-body-sm text-on-surface">Direct logging</span>
+<div class="flex items-center gap-2">
+<button class="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center font-headline-sm text-headline-sm active:scale-90 transition-transform hover:bg-surface-bright" id="btnMinusWeight">−</button>
+<span class="font-label-lg text-label-lg text-on-surface min-w-[54px] text-center" id="drawerWeightVal">78.4 kg</span>
+<button class="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center font-headline-sm text-headline-sm active:scale-90 transition-transform hover:bg-surface-bright" id="btnPlusWeight">+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-1">
+<div class="bg-surface-container p-2.5 rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Hydratatiedruk</span>
+<span class="font-label-md text-label-md text-primary mt-1 font-semibold" id="prepWaterGoalDisplay">4.5 L / dag</span>
+</div>
+<div class="bg-surface-container p-2.5 rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Natrium Protocol</span>
+<span class="font-label-md text-label-md text-tertiary mt-1 font-semibold">Laden (+20%)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- GLUCOSE & METABOLIC TELEMETRY CARD (Dexcom Style) -->
+<section class="w-full rounded-xl bg-surface-container p-space-md shadow-md space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">monitor_heart</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Continu Telemetrie</span>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-container-highest" id="glucoseStatusBadge">
+<span class="w-2 h-2 rounded-full bg-tertiary" id="glucoseStatusDot"></span>
+<span class="font-label-sm text-label-sm text-tertiary" id="glucoseStatusText">Binnen Range</span>
+</div>
+</div>
+<!-- Live Glucose Value Hero -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-baseline gap-space-xs">
+<span class="font-metric-numeral text-metric-numeral text-on-surface tracking-tight transition-all duration-200" id="liveGlucoseDisplay">6.4</span>
+<span class="font-label-md text-label-md text-on-surface-variant">mmol/L</span>
+<span class="material-symbols-outlined text-tertiary text-[22px] ml-1 transition-transform" id="glucoseTrendIcon">trending_flat</span>
+</div>
+<div class="text-right">
+<p class="font-label-sm text-label-sm text-on-surface-variant">IOB (Insuline Actief)</p>
+<p class="font-label-md text-label-md text-primary font-bold">0.4 E</p>
+</div>
+</div>
+<!-- Interactive Selected Point Readout -->
+<div class="bg-surface-container-high px-3 py-2 rounded-lg flex items-center justify-between transition-colors border border-outline-variant/30" id="graphInspectionBox">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant" id="inspectTime">Tijd: 17:45</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-bold" id="inspectValue">Waarde: 6.4 mmol/L</span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold" id="inspectStatus">Stabiel (Live)</span>
+</div>
+<!-- 12-Hour Scrollable Glucose Strip -->
+<div class="w-full overflow-x-auto pb-1 scroll-smooth">
+<div class="min-w-[460px] h-28 relative flex flex-col justify-end pt-2">
+<!-- Safe Range Box Background (4.0 - 9.0 mmol/L zone) -->
+<div class="absolute inset-x-0 bottom-6 top-6 bg-primary/5 rounded pointer-events-none"></div>
+<!-- Target lines labels -->
+<div class="absolute right-0 top-5 text-[10px] text-outline font-mono">9.0</div>
+<div class="absolute right-0 bottom-6 text-[10px] text-outline font-mono">4.2</div>
+<!-- SVG Line chart & Clickable telemetry nodes -->
+<svg class="w-full h-20 overflow-visible z-10" viewbox="0 0 440 80">
+<!-- Guide lines -->
+<line stroke="#31353b" stroke-dasharray="3,3" stroke-width="1" x1="0" x2="440" y1="18" y2="18"></line>
+<line stroke="#31353b" stroke-dasharray="3,3" stroke-width="1" x1="0" x2="440" y1="62" y2="62"></line>
+<!-- Smooth path connecting points -->
+<path d="M 10 52 C 40 48, 70 58, 100 45 C 130 32, 160 38, 190 28 C 220 18, 250 44, 280 40 C 310 36, 340 48, 370 42 C 400 36, 420 40, 430 39" fill="none" stroke="#14b8a6" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- Interactive Node Points -->
+<g class="cursor-pointer">
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="10" cy="52" data-status="Ochtend Vast" data-time="06:00" data-trend="trending_flat" data-val="5.1" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="55" cy="50" data-status="Pre-Koffie" data-time="07:30" data-trend="trending_flat" data-val="5.4" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="100" cy="45" data-status="Ontbijt Peak" data-time="09:00" data-trend="trending_up" data-val="6.1" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="145" cy="35" data-status="Techniek Sessie" data-time="10:30" data-trend="trending_up" data-val="7.2" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="190" cy="28" data-status="Stijging Cardio" data-time="12:00" data-trend="north" data-val="8.3" fill="#f59e0b" r="6"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="235" cy="42" data-status="Herstel" data-time="13:15" data-trend="trending_down" data-val="6.6" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="280" cy="40" data-status="Middag Snack" data-time="14:30" data-trend="trending_flat" data-val="6.8" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="325" cy="46" data-status="Normaal" data-time="15:45" data-trend="trending_down" data-val="5.9" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node transition-transform duration-150 hover:scale-125" cx="370" cy="42" data-status="Pre-Training" data-time="17:00" data-trend="trending_flat" data-val="6.4" fill="#14b8a6" r="5"></circle>
+<circle class="glucose-node ring-2 ring-primary transition-transform duration-150 hover:scale-125" cx="430" cy="39" data-status="Stabiel (Live)" data-time="17:45 (Nu)" data-trend="trending_flat" data-val="6.4" fill="#4fdbc8" r="6"></circle>
+</g>
+</svg>
+<!-- Time Axis Labels -->
+<div class="flex justify-between text-on-surface-variant font-label-sm text-label-sm px-1 pt-1">
+<span>06:00</span>
+<span>09:00</span>
+<span>12:00</span>
+<span>15:00</span>
+<span>18:00 (Nu)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- QUICK ACTION GRID -->
+<section class="grid grid-cols-2 gap-space-sm w-full">
+<!-- Big Teal Card: Live Session Launch -->
+<div class="col-span-2 rounded-xl bg-primary-container p-space-md text-on-primary shadow-lg cursor-pointer active:scale-[0.98] transition-all flex items-center justify-between hover:brightness-105 border border-primary/20" id="startSessionCard">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[20px]" id="sessionStatusIcon">sports_mma</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wide opacity-90 font-semibold" id="sessionStatusBadge">Mat-Modus • Stand-by</span>
+</div>
+<p class="font-headline-md text-headline-md font-bold" id="sessionTitle">Start Live Sparring</p>
+<p class="font-body-sm text-body-sm opacity-90" id="sessionSubtitle">Sensor lock &amp; Round Timer gereed</p>
+</div>
+<div class="w-12 h-12 rounded-full bg-on-primary/15 flex items-center justify-center flex-shrink-0 transition-transform shadow-inner" id="sessionPlayBtnWrapper">
+<span class="material-symbols-outlined text-[30px]" id="sessionPlayIcon">play_arrow</span>
+</div>
+</div>
+<!-- Quick Carb & Meal Logger -->
+<div class="rounded-xl bg-surface-container p-space-md space-y-space-xs cursor-pointer active:scale-95 transition-all hover:bg-surface-container-high border border-transparent hover:border-outline-variant/30" id="btnOpenMealModal">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">restaurant</span>
+</div>
+<p class="font-headline-sm text-headline-sm text-on-surface">Eten &amp; Carbs</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Snel loggen (<span id="quickCarbBadgeVal">35</span>g carbs)</p>
+</div>
+<!-- Quick Hydration / Prep check -->
+<div class="rounded-xl bg-surface-container p-space-md space-y-space-xs cursor-pointer active:scale-95 transition-all hover:bg-surface-container-high border border-transparent hover:border-outline-variant/30 relative overflow-hidden" id="quickHydrateBtn">
+<div class="flex items-center justify-between">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">water_drop</span>
+</div>
+<span class="font-label-sm text-label-sm text-tertiary bg-tertiary/10 px-1.5 py-0.5 rounded font-mono font-semibold" id="quickHydratePlusBadge">+250ml</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<p class="font-headline-sm text-headline-sm text-on-surface">Vocht</p>
+<span class="font-label-md text-label-md text-primary font-bold" id="waterCounter">3.2 L</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Tik voor +250ml</p>
+</div>
+</section>
+<!-- TODAY'S SCHEDULED FIGHT TRAINING -->
+<section class="w-full rounded-xl bg-surface-container p-space-md space-y-space-sm shadow-md transition-all duration-300 border border-transparent" id="matTrainingCard">
+<div class="flex items-center justify-between cursor-pointer" id="trainingHeaderToggle">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-on-surface">Geplande Mat-Tijd</span>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-200" id="trainingFoldChevron">expand_more</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm text-primary bg-primary/10 px-2.5 py-0.5 rounded-full font-semibold">18:30 - 20:00</span>
+<button class="flex items-center gap-1 px-2 py-0.5 rounded-full border text-tertiary border-tertiary/40 bg-tertiary/10 font-label-sm text-label-sm transition-all active:scale-90" id="toggleAttendanceBtn" title="Deelnamestatus wijzigen">
+<span class="material-symbols-outlined text-[14px]" id="attendanceIcon">check_circle</span>
+<span id="attendanceStatusText">Bevestigd</span>
+</button>
+</div>
+</div>
+<!-- Collapsible Training Details -->
+<div class="space-y-space-sm transition-all duration-300" id="trainingDetailsContainer">
+<div class="flex gap-space-md items-center">
+<div class="w-14 h-14 rounded-xl bg-surface-container-high flex flex-col items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[26px]">sports_kabaddi</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-headline-sm text-headline-sm text-on-surface truncate">BJJ Sparring &amp; Conditioning</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Rounds: 6 x 6 min • Gi Optioneel</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-2.5 rounded-lg flex items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs min-w-0">
+<span class="material-symbols-outlined text-secondary text-[18px] flex-shrink-0">verified</span>
+<span class="font-body-sm text-body-sm text-on-surface truncate">Tactisch focus: Single Leg finish &amp; Armbar Escape</span>
+</div>
+<button class="text-primary hover:text-primary-fixed text-xs font-label-sm underline flex-shrink-0" id="toggleFocusDrillBtn">Notitie</button>
+</div>
+</div>
+</section>
+<!-- DAILY ATHLETIC TELEMETRY STATS -->
+<section class="space-y-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant px-1 uppercase tracking-wider">Dagelijkse Output</span>
+<div class="grid grid-cols-2 gap-space-sm">
+<!-- Kcal Card -->
+<div class="rounded-xl bg-surface-container p-space-md flex flex-col justify-between cursor-pointer active:scale-95 transition-transform hover:bg-surface-container-high" id="cardKcal">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Verbranding</span>
+<span class="material-symbols-outlined text-tertiary text-[18px]">local_fire_department</span>
+</div>
+<div class="mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface" id="kcalDisplay">840</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-0.5">kcal</span>
+</div>
+<span class="font-body-sm text-body-sm text-tertiary mt-1">62% van dagdoel</span>
+</div>
+<!-- Time on Mat Card -->
+<div class="rounded-xl bg-surface-container p-space-md flex flex-col justify-between cursor-pointer active:scale-95 transition-transform hover:bg-surface-container-high" id="cardMatTime">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Tijd op Mat</span>
+<span class="material-symbols-outlined text-primary text-[18px]">timer</span>
+</div>
+<div class="mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface" id="matTimeDisplay">65</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-0.5">min</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Krachttraining voltooid</span>
+</div>
+<!-- HRV / Readiness -->
+<div class="rounded-xl bg-surface-container p-space-md flex flex-col justify-between cursor-pointer active:scale-95 transition-transform hover:bg-surface-container-high" id="cardHrv">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">HRV Herstel</span>
+<span class="material-symbols-outlined text-tertiary text-[18px]">favorite</span>
+</div>
+<div class="mt-2 flex items-baseline gap-1">
+<span class="font-headline-lg text-headline-lg text-tertiary">88%</span>
+<span class="font-label-sm text-label-sm text-tertiary font-bold">Hoog</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">Groen licht voor sparren</span>
+</div>
+<!-- Active Recovery -->
+<div class="rounded-xl bg-surface-container p-space-md flex flex-col justify-between cursor-pointer active:scale-95 transition-transform hover:bg-surface-container-high" id="cardSleep">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Slaap Herstel</span>
+<span class="material-symbols-outlined text-secondary text-[18px]">bedtime</span>
+</div>
+<div class="mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface">7h 42m</span>
+</div>
+<span class="font-body-sm text-body-sm text-tertiary mt-1">Diepe slaap 1h 48m</span>
+</div>
+</div>
+</section>
+<!-- MODAL / POPUP: QUICK MEAL / CARBS LOGGING -->
+<div class="fixed inset-0 z-50 bg-surface-container-lowest/80 backdrop-blur-sm hidden items-center justify-center p-space-md" id="mealModal">
+<div class="w-full max-w-sm bg-surface-container p-space-md rounded-2xl shadow-xl space-y-space-md animate-in fade-in zoom-in-95 duration-150 border border-outline-variant/40">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Snelle Maaltijdregistratie</h3>
+<button class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant active:scale-90 hover:text-on-surface" id="closeMealModal">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="space-y-space-sm">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Koolhydraten (Gram)</label>
+<div class="flex items-center justify-between bg-surface-container-lowest p-space-sm rounded-lg">
+<button class="w-10 h-10 rounded bg-surface-container-high text-primary font-bold text-lg active:scale-90 hover:bg-surface-bright" id="carbMinus">-</button>
+<span class="font-headline-sm text-headline-sm text-on-surface" id="carbDisplay">35 g</span>
+<button class="w-10 h-10 rounded bg-surface-container-high text-primary font-bold text-lg active:scale-90 hover:bg-surface-bright" id="carbPlus">+</button>
+</div>
+</div>
+<div class="space-y-space-sm">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Type Inname</label>
+<div class="grid grid-cols-2 gap-space-xs">
+<button class="meal-type-btn py-2 px-3 rounded-lg bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold" data-type="Pre-Sparring">Pre-Sparring</button>
+<button class="meal-type-btn py-2 px-3 rounded-lg bg-surface-container-high text-on-surface-variant font-label-md text-label-md" data-type="Snelle Suikers">Snelle Suikers</button>
+</div>
+</div>
+<button class="w-full py-3 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-md active:scale-95 transition-all font-bold hover:brightness-105" id="saveMealBtn">
+        Opslaan &amp; Telemetrie Updaten
+      </button>
+</div>
+</div>
+<!-- TOAST NOTIFICATION -->
+<div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-primary-container text-on-primary-container px-4 py-2.5 rounded-full font-label-md text-label-md shadow-2xl hidden items-center gap-2 border border-primary/40 pointer-events-none transition-all duration-200" id="liveToast">
+<span class="material-symbols-outlined text-[20px]" id="toastIcon">check_circle</span>
+<span class="font-semibold" id="toastMsg">Actie geregistreerd</span>
+</div>
+</div>
+<script>
+  // DOM Elements
+  const openWeighInBtn = document.getElementById('openWeighInBtn');
+  const weighInChevron = document.getElementById('weighInChevron');
+  const prepDrawer = document.getElementById('prepDrawer');
+  const btnMinusWeight = document.getElementById('btnMinusWeight');
+  const btnPlusWeight = document.getElementById('btnPlusWeight');
+  const currentWeightDisplay = document.getElementById('currentWeightDisplay');
+  const drawerWeightVal = document.getElementById('drawerWeightVal');
+  const prepTargetDisplay = document.getElementById('prepTargetDisplay');
+  const weightProgressBar = document.getElementById('weightProgressBar');
+
+  const glucoseNodes = document.querySelectorAll('.glucose-node');
+  const inspectTime = document.getElementById('inspectTime');
+  const inspectValue = document.getElementById('inspectValue');
+  const inspectStatus = document.getElementById('inspectStatus');
+  const liveGlucoseDisplay = document.getElementById('liveGlucoseDisplay');
+  const glucoseTrendIcon = document.getElementById('glucoseTrendIcon');
+  const glucoseStatusBadge = document.getElementById('glucoseStatusBadge');
+  const glucoseStatusDot = document.getElementById('glucoseStatusDot');
+  const glucoseStatusText = document.getElementById('glucoseStatusText');
+
+  const startSessionCard = document.getElementById('startSessionCard');
+  const sessionStatusBadge = document.getElementById('sessionStatusBadge');
+  const sessionTitle = document.getElementById('sessionTitle');
+  const sessionSubtitle = document.getElementById('sessionSubtitle');
+  const sessionPlayIcon = document.getElementById('sessionPlayIcon');
+  const sessionPlayBtnWrapper = document.getElementById('sessionPlayBtnWrapper');
+
+  const quickHydrateBtn = document.getElementById('quickHydrateBtn');
+  const waterCounter = document.getElementById('waterCounter');
+  const quickHydratePlusBadge = document.getElementById('quickHydratePlusBadge');
+
+  const matTrainingCard = document.getElementById('matTrainingCard');
+  const trainingHeaderToggle = document.getElementById('trainingHeaderToggle');
+  const trainingDetailsContainer = document.getElementById('trainingDetailsContainer');
+  const trainingFoldChevron = document.getElementById('trainingFoldChevron');
+  const toggleAttendanceBtn = document.getElementById('toggleAttendanceBtn');
+  const attendanceIcon = document.getElementById('attendanceIcon');
+  const attendanceStatusText = document.getElementById('attendanceStatusText');
+  const toggleFocusDrillBtn = document.getElementById('toggleFocusDrillBtn');
+
+  const btnOpenMealModal = document.getElementById('btnOpenMealModal');
+  const mealModal = document.getElementById('mealModal');
+  const closeMealModal = document.getElementById('closeMealModal');
+  const saveMealBtn = document.getElementById('saveMealBtn');
+  const carbMinus = document.getElementById('carbMinus');
+  const carbPlus = document.getElementById('carbPlus');
+  const carbDisplay = document.getElementById('carbDisplay');
+  const quickCarbBadgeVal = document.getElementById('quickCarbBadgeVal');
+  const mealTypeBtns = document.querySelectorAll('.meal-type-btn');
+
+  const liveToast = document.getElementById('liveToast');
+  const toastMsg = document.getElementById('toastMsg');
+  const toastIcon = document.getElementById('toastIcon');
+
+  const navItems = document.querySelectorAll('.nav-tab-item');
+  const telemetryHeaderBtn = document.getElementById('telemetryHeaderBtn');
+  const profileHeaderBtn = document.getElementById('profileHeaderBtn');
+
+  const cardKcal = document.getElementById('cardKcal');
+  const cardMatTime = document.getElementById('cardMatTime');
+  const cardHrv = document.getElementById('cardHrv');
+  const cardSleep = document.getElementById('cardSleep');
+
+  // State
+  let currentWeight = 78.4;
+  let targetWeight = 77.0;
+  let currentCarbs = 35;
+  let waterLiters = 3.2;
+  let selectedMealType = 'Pre-Sparring';
+  let isSparringActive = false;
+  let isAttendanceConfirmed = true;
+  let isTrainingFolded = false;
+  let toastTimeout = null;
+
+  function showToast(msg, iconName = 'check_circle') {
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastMsg.textContent = msg;
+    toastIcon.textContent = iconName;
+    liveToast.classList.remove('hidden');
+    liveToast.classList.add('flex');
+    liveToast.style.transform = 'translate(-50%, 0) scale(1)';
+    toastTimeout = setTimeout(() => {
+      liveToast.classList.add('hidden');
+      liveToast.classList.remove('flex');
+    }, 2400);
+  }
+
+  // 1. Toggle Weigh-in Drawer & Dynamic updates
+  openWeighInBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = prepDrawer.classList.toggle('hidden');
+    weighInChevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+    if (!isHidden) {
+      showToast('Inwegen & Cut Protocol geopend', 'scale');
+    }
+  });
+
+  // Weight Stepper
+  btnMinusWeight.addEventListener('click', (e) => {
+    e.stopPropagation();
+    currentWeight = Math.max(70.0, +(currentWeight - 0.1).toFixed(1));
+    updateWeightUI();
+  });
+
+  btnPlusWeight.addEventListener('click', (e) => {
+    e.stopPropagation();
+    currentWeight = Math.min(90.0, +(currentWeight + 0.1).toFixed(1));
+    updateWeightUI();
+  });
+
+  function updateWeightUI() {
+    const formatted = currentWeight.toFixed(1);
+    currentWeightDisplay.textContent = formatted;
+    drawerWeightVal.textContent = formatted + " kg";
+    const diff = (currentWeight - targetWeight).toFixed(1);
+    prepTargetDisplay.textContent = diff > 0 ? `Nog ${diff} kg tot ${targetWeight.toFixed(1)} kg` : `Doel bereikt! (${diff} kg)`;
+    // Dynamic progress bar calculation (start 81.2 to 77.0)
+    const progress = Math.min(100, Math.max(10, Math.round(((81.2 - currentWeight) / (81.2 - 77.0)) * 100)));
+    weightProgressBar.style.width = `${progress}%`;
+    showToast(`Gewicht bijgewerkt: ${formatted} kg`, 'monitor_weight');
+  }
+
+  // 2. Interactive Dexcom Glucose Inspector
+  glucoseNodes.forEach(node => {
+    node.addEventListener('click', () => {
+      glucoseNodes.forEach(n => n.classList.remove('ring-2', 'ring-primary', 'scale-125'));
+      node.classList.add('ring-2', 'ring-primary', 'scale-125');
+
+      const val = parseFloat(node.getAttribute('data-val'));
+      const time = node.getAttribute('data-time');
+      const status = node.getAttribute('data-status');
+      const trend = node.getAttribute('data-trend') || 'trending_flat';
+
+      inspectTime.textContent = 'Tijd: ' + time;
+      inspectValue.textContent = 'Waarde: ' + val.toFixed(1) + ' mmol/L';
+      inspectStatus.textContent = status;
+      liveGlucoseDisplay.textContent = val.toFixed(1);
+      glucoseTrendIcon.textContent = trend;
+
+      // Dynamic color/badge update based on range
+      if (val > 8.0) {
+        inspectStatus.className = 'font-label-sm text-label-sm text-amber-400 font-semibold';
+        glucoseStatusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        glucoseStatusText.className = 'font-label-sm text-label-sm text-amber-400';
+        glucoseStatusText.textContent = 'Verhoogd';
+      } else if (val < 4.5) {
+        inspectStatus.className = 'font-label-sm text-label-sm text-rose-400 font-semibold';
+        glucoseStatusDot.className = 'w-2 h-2 rounded-full bg-rose-400';
+        glucoseStatusText.className = 'font-label-sm text-label-sm text-rose-400';
+        glucoseStatusText.textContent = 'Laag (Hypo alert)';
+      } else {
+        inspectStatus.className = 'font-label-sm text-label-sm text-tertiary font-semibold';
+        glucoseStatusDot.className = 'w-2 h-2 rounded-full bg-tertiary';
+        glucoseStatusText.className = 'font-label-sm text-label-sm text-tertiary';
+        glucoseStatusText.textContent = 'Binnen Range';
+      }
+      showToast(`${time}: ${val.toFixed(1)} mmol/L (${status})`, 'vital_signs');
+    });
+  });
+
+  // 3. Live Sparring CTA Toggle & Active State
+  startSessionCard.addEventListener('click', () => {
+    isSparringActive = !isSparringActive;
+    if (isSparringActive) {
+      startSessionCard.classList.remove('bg-primary-container');
+      startSessionCard.classList.add('bg-emerald-600', 'ring-2', 'ring-primary');
+      sessionStatusBadge.textContent = 'LIVE OP DE MAT • RONDE 1/6';
+      sessionTitle.textContent = 'Sparring Actief';
+      sessionSubtitle.textContent = 'Round timer 05:48 • Hartslag 158 bpm';
+      sessionPlayIcon.textContent = 'pause';
+      showToast('Live Sparring Sessie Gestart! Sensor Lock Actief', 'timer');
+    } else {
+      startSessionCard.classList.add('bg-primary-container');
+      startSessionCard.classList.remove('bg-emerald-600', 'ring-2', 'ring-primary');
+      sessionStatusBadge.textContent = 'Mat-Modus • Stand-by';
+      sessionTitle.textContent = 'Start Live Sparring';
+      sessionSubtitle.textContent = 'Sensor lock & Round Timer gereed';
+      sessionPlayIcon.textContent = 'play_arrow';
+      showToast('Live Sessie Gepauzeerd / Beëindigd', 'stop_circle');
+    }
+  });
+
+  // 4. Quick Hydration increment (+250ml)
+  quickHydrateBtn.addEventListener('click', () => {
+    waterLiters = +(waterLiters + 0.25).toFixed(2);
+    waterCounter.textContent = waterLiters.toFixed(2) + ' L';
+    
+    // Quick micro-pulse animation on badge
+    quickHydratePlusBadge.classList.add('scale-125', 'text-primary');
+    setTimeout(() => {
+      quickHydratePlusBadge.classList.remove('scale-125', 'text-primary');
+    }, 200);
+
+    showToast('+250ml toegevoegd (' + waterLiters.toFixed(2) + ' L totaal)', 'water_drop');
+  });
+
+  // 5. Training Card: Fold / Unfold & Attendance Checkmark Toggle
+  trainingHeaderToggle.addEventListener('click', (e) => {
+    if (e.target.closest('#toggleAttendanceBtn')) return;
+    isTrainingFolded = !isTrainingFolded;
+    trainingDetailsContainer.classList.toggle('hidden', isTrainingFolded);
+    trainingFoldChevron.style.transform = isTrainingFolded ? 'rotate(180deg)' : 'rotate(0deg)';
+  });
+
+  toggleAttendanceBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isAttendanceConfirmed = !isAttendanceConfirmed;
+    if (isAttendanceConfirmed) {
+      attendanceIcon.textContent = 'check_circle';
+      attendanceStatusText.textContent = 'Bevestigd';
+      toggleAttendanceBtn.className = 'flex items-center gap-1 px-2 py-0.5 rounded-full border text-tertiary border-tertiary/40 bg-tertiary/10 font-label-sm text-label-sm transition-all active:scale-90';
+      showToast('Aanwezigheid bevestigd voor 18:30 mat-tijd', 'done_all');
+    } else {
+      attendanceIcon.textContent = 'cancel';
+      attendanceStatusText.textContent = 'Afgemeld';
+      toggleAttendanceBtn.className = 'flex items-center gap-1 px-2 py-0.5 rounded-full border text-error border-error/40 bg-error/10 font-label-sm text-label-sm transition-all active:scale-90';
+      showToast('Afgemeld voor mat-training', 'event_busy');
+    }
+  });
+
+  toggleFocusDrillBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showToast('Focus opgeslagen: Single leg drive to arm-triangle finish', 'sports_kabaddi');
+  });
+
+  // 6. Meal Modal Handling & Carbs Stepper
+  btnOpenMealModal.addEventListener('click', () => {
+    mealModal.classList.remove('hidden');
+    mealModal.classList.add('flex');
+  });
+
+  closeMealModal.addEventListener('click', () => {
+    mealModal.classList.add('hidden');
+    mealModal.classList.remove('flex');
+  });
+
+  mealModal.addEventListener('click', (e) => {
+    if (e.target === mealModal) {
+      mealModal.classList.add('hidden');
+      mealModal.classList.remove('flex');
+    }
+  });
+
+  carbMinus.addEventListener('click', () => {
+    currentCarbs = Math.max(0, currentCarbs - 5);
+    carbDisplay.textContent = currentCarbs + ' g';
+  });
+
+  carbPlus.addEventListener('click', () => {
+    currentCarbs = Math.min(200, currentCarbs + 5);
+    carbDisplay.textContent = currentCarbs + ' g';
+  });
+
+  mealTypeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      mealTypeBtns.forEach(b => {
+        b.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
+        b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+      });
+      btn.classList.add('bg-primary-container', 'text-on-primary-container', 'font-semibold');
+      btn.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+      selectedMealType = btn.getAttribute('data-type');
+    });
+  });
+
+  saveMealBtn.addEventListener('click', () => {
+    mealModal.classList.add('hidden');
+    mealModal.classList.remove('flex');
+    quickCarbBadgeVal.textContent = currentCarbs;
+    showToast(`${currentCarbs}g carbs geregistreerd (${selectedMealType})`, 'nutrition');
+  });
+
+  // 7. Interactive Bottom Navigation Bar
+  navItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      navItems.forEach(nav => {
+        nav.classList.remove('text-primary');
+        nav.classList.add('text-on-surface-variant');
+        nav.removeAttribute('aria-current');
+      });
+      item.classList.add('text-primary');
+      item.classList.remove('text-on-surface-variant');
+      item.setAttribute('aria-current', 'page');
+
+      const targetPath = item.getAttribute('data-path');
+      showToast(`Navigatie: ${item.querySelector('span:last-child').textContent}`, 'tab');
+    });
+  });
+
+  // Header quick triggers
+  telemetryHeaderBtn.addEventListener('click', () => {
+    showToast('Realtime sensor telemetrie actief • Status 100%', 'sensors');
+  });
+
+  profileHeaderBtn.addEventListener('click', () => {
+    showToast('Atleet profiel: Combat Sambo 78.4kg', 'person');
+  });
+
+  // Daily output cards feedback
+  cardKcal.addEventListener('click', () => showToast('Actieve verbranding: 840 / 1350 kcal doel', 'local_fire_department'));
+  cardMatTime.addEventListener('click', () => showToast('65 min mat sessie geregistreerd vandaag', 'timer'));
+  cardHrv.addEventListener('click', () => showToast('HRV 88 ms • Optimaal hersteld voor intensieve sparring', 'favorite'));
+  cardSleep.addEventListener('click', () => showToast('Slaapkwaliteit 91% • Diepe slaap 1h 48m', 'bedtime'));
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.45)]" data-active-classes="text-primary font-label-md"><div class="flex items-center justify-around h-16 px-space-xs max-w-lg mx-auto relative"><a aria-current="page" class="nav-tab-item flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 transition-colors active:scale-95 text-primary font-label-md" data-path="vandaag" href="#"><span class="material-symbols-outlined text-[22px]">local_fire_department</span><span class="font-label-sm text-label-sm mt-0.5">Vandaag</span></a><a class="nav-tab-item flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="training" href="#"><span class="material-symbols-outlined text-[22px]">fitness_center</span><span class="font-label-sm text-label-sm mt-0.5">Training</span></a><div class="flex items-center justify-center -mt-5"><button class="w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_16px_rgba(20,184,166,0.45)] hover:bg-primary transition-all active:scale-90" data-path="sessie-starten" id="quickAddCentralBtn" title="Snel toevoegen"><span class="material-symbols-outlined text-[28px]">add</span></button></div><a class="nav-tab-item flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="technieken" href="#"><span class="material-symbols-outlined text-[22px]">shield</span><span class="font-label-sm text-label-sm mt-0.5">Technieken</span></a><a class="nav-tab-item flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="eten" href="#"><span class="material-symbols-outlined text-[22px]">nutrition</span><span class="font-label-sm text-label-sm mt-0.5">Eten</span></a></div></nav>
+<script>
+  // Center Floating Plus action
+  document.getElementById('quickAddCentralBtn')?.addEventListener('click', () => {
+    btnOpenMealModal.click();
+  });
+</script>
+</body></html>

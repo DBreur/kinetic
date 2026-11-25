@@ -32,6 +32,7 @@ class FoodLogRepository {
     MealContext? context,
     double? mmol,
     double? insulinUnits,
+    Map<String, int> presetCounts = const {},
   }) async {
     final row = await _client
         .from('food_log_entries')
@@ -45,6 +46,7 @@ class FoodLogRepository {
           'context': context?.dbName,
           'mmol': mmol,
           'insulin_units': insulinUnits,
+          'preset_counts': presetCounts,
         })
         .select()
         .single();

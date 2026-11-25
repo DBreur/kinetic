@@ -1,6 +1,7 @@
 // technieken_screen.dart: de Technieken-tab met drie sub-tabs:
 //  - Technieken: de Technique Vault (alle eigen + bibliotheektechnieken,
 //    accordeons per groep, +1 Rep en "Focus in Sessie" voor de live mat);
+//  - Combo's: combinaties van technieken in volgorde;
 //  - Systemen: flow-grafen van posities en technieken;
 //  - Ontdekken: de gedeelde bibliotheek doorzoeken en overnemen.
 // De shell levert de top bar en de navigatie; dit scherm alleen de inhoud.
@@ -9,11 +10,12 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme/kinetic_theme.dart';
 import '../widgets/kinetic_widgets.dart';
+import 'techniques/combinations_view.dart';
 import 'techniques/discover_view.dart';
 import 'techniques/systems_view.dart';
 import 'techniques/vault_view.dart';
 
-enum TechniekenTab { vault, systems, discover }
+enum TechniekenTab { vault, combos, systems, discover }
 
 class TechniekenScreen extends StatefulWidget {
   const TechniekenScreen({super.key, this.initialTab = TechniekenTab.vault});
@@ -38,6 +40,7 @@ class _TechniekenScreenState extends State<TechniekenScreen> {
             child: KSegmented<TechniekenTab>(
               options: const [
                 (TechniekenTab.vault, 'Technieken'),
+                (TechniekenTab.combos, "Combo's"),
                 (TechniekenTab.systems, 'Systemen'),
                 (TechniekenTab.discover, 'Ontdekken'),
               ],
@@ -51,7 +54,7 @@ class _TechniekenScreenState extends State<TechniekenScreen> {
           Expanded(
             child: IndexedStack(
               index: _tab.index,
-              children: const [VaultView(), SystemsView(), DiscoverView()],
+              children: const [VaultView(), CombinationsView(), SystemsView(), DiscoverView()],
             ),
           ),
         ],

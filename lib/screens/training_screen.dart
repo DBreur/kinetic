@@ -11,8 +11,11 @@ import '../models/training_session.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/charts.dart';
 import '../widgets/kinetic_widgets.dart';
+import '../widgets/food_preset_widgets.dart';
 import '../widgets/sheets.dart';
 import '../widgets/start_training_sheet.dart';
+import '../widgets/training_sheets.dart';
+import '../widgets/video_widgets.dart';
 import 'log_training_screen.dart';
 
 enum TrainingPeriod {
@@ -226,14 +229,14 @@ class _TrainingScreenState extends State<TrainingScreen> {
                   MaterialPageRoute<void>(builder: (_) => const LogTrainingScreen()),
                 ),
                 icon: Icon(Icons.edit_note, size: 20, color: k.accent),
-                label: const Text('Training loggen'),
+                label: const Text('Loggen'),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          if (store.isSparringActive)
+          if (store.isTrainingActive)
             BigButton(
-              label: 'Terug naar de mat',
+              label: 'Terug naar de training',
               icon: Icons.sports_mma,
               height: 56,
               onPressed: () => openLiveSession(context),
@@ -245,6 +248,8 @@ class _TrainingScreenState extends State<TrainingScreen> {
               height: 56,
               onPressed: () => showStartTrainingSheet(context),
             ),
+          const SizedBox(height: 12),
+          const PresetManagerCard(training: true),
           const SizedBox(height: 16),
           _ChipRow(
             children: [
@@ -322,7 +327,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
                       Expanded(
                         child: MetricTile(
                           inWell: true,
-                          label: 'Gem. glucose',
+                          label: 'Glucose',
                           value: avg == null ? '—' : dec1(avg),
                           valueColor: avg == null ? k.textMuted : zoneInk(k, avg),
                           sub: tir == null ? 'Geen CGM-data' : '${(tir * 100).round()}% in bereik',
@@ -489,7 +494,16 @@ class _SessionCard extends StatelessWidget {
       context,
       builder: (ctx) {
         final k = ctx.k;
+        // Live uit de store, zodat aanpassingen aan de voeding meteen zichtbaar zijn.
+        final store = KineticScope.of(ctx);
+        final cur = store.sessions.where((x) => x.id == s.id).firstOrNull ?? s;
         final notes = _sessionNotes(s);
+        final warmups = s.blocks.where((b) => b['kind'] == 'warmup').toList();
+        final spars = s.blocks.where((b) => b['kind'] == 'sparring' && (b['goal'] != null || b['round_goals'] != null)).toList();
+        final techLogs = s.blocks
+            .where((b) => b['kind'] == 'technique' && (((b['reps'] as num?) ?? 0) > 0 || ((b['seconds'] as num?) ?? 0) > 0 || b['measure'] != null))
+            .toList();
+        final combos = s.blocks.where((b) => b['kind'] == 'combination').toList();
         final results = s.techniqueResults;
         final rpe = _sessionRpe(s);
         return Column(
@@ -536,6 +550,91 @@ class _SessionCard extends StatelessWidget {
                 children: [for (final t in s.coveredTechniques) KPill(t)],
               ),
             ],
+            if (warmups.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Warming-up'),
+              for (final w in warmups)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: KWell(child: Text('${w['minutes'] ?? '?'} min', style: ctx.t.bodyStrong)),
+                ),
+            ],
+            if (spars.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Sparren & doelen'),
+              for (final b in spars)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: KWell(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${b['rounds'] ?? 0} rondes', style: ctx.t.bodyStrong),
+                        if ((b['goal'] as String? ?? '').isNotEmpty)
+                          _GoalLine(text: 'Doel: ${b['goal']}', done: b['goal_done'] == true),
+                        for (final g in (b['round_goals'] as List? ?? const []))
+                          if (g is Map) _GoalLine(text: '${g['goal']}', done: g['done'] == true),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+            if (techLogs.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Technieken gelogd'),
+              for (final b in techLogs)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: KWell(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Text('${b['name']}', style: ctx.t.bodyStrong)),
+                            Text(
+                              b['measure'] == 'time'
+                                  ? durationLabel((((b['seconds'] as num?) ?? 0) ~/ 60).toInt())
+                                  : '${b['reps'] ?? 0} reps',
+                              style: ctx.t.caption,
+                            ),
+                          ],
+                        ),
+                        if ((b['note'] as String? ?? '').trim().isNotEmpty)
+                          Text('${b['note']}', style: ctx.t.caption.copyWith(color: k.text)),
+                        if (store.techniques.where((t) => t.id == b['technique_id']).firstOrNull case final tech?
+                            when tech.videoUrls.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          VideoList(urls: tech.videoUrls, dense: true),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+            if (combos.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Combinaties'),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [for (final c in combos) KPill('${c['name']} • ${c['reps'] ?? 1}×')],
+              ),
+            ],
+            if (cur.nutrition.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              FormLabel(
+                'Voeding tijdens de training',
+                trailing: '${grams(cur.nutrition.fold<double>(0, (a, n) => a + n.carbs))} g koolh.',
+                trailingColor: k.accent,
+              ),
+              NutritionLogList(
+                items: cur.nutrition,
+                onCount: (n, c) => store.updateSessionNutrition(s.id, id: n.id, count: c),
+                onTime: (n, at) => store.updateSessionNutrition(s.id, id: n.id, at: at),
+                onDelete: (n) => store.updateSessionNutrition(s.id, id: n.id, delete: true),
+              ),
+            ],
             if (notes.isNotEmpty) ...[
               const SizedBox(height: 20),
               const FormLabel('Notities'),
@@ -544,6 +643,27 @@ class _SessionCard extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _GoalLine extends StatelessWidget {
+  const _GoalLine({required this.text, required this.done});
+  final String text;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 16, color: done ? k.success : k.textMuted),
+          const SizedBox(width: 6),
+          Expanded(child: Text(text, style: context.t.caption.copyWith(color: k.text))),
+        ],
+      ),
     );
   }
 }

@@ -134,7 +134,8 @@ class _FightPrepBanner extends StatelessWidget {
         : '${comp.name} • ${days == 0 ? 'Vandaag!' : 'Nog $days ${days == 1 ? 'dag' : 'dagen'}'}';
     String? delta;
     if (weight != null && target != null) {
-      final d = target - weight;
+      // Minimumklasse: strikt boven de grens, dus dezelfde +0.1 als op Wedstrijden.
+      final d = comp?.gainNeededKg(weight) ?? (target - weight);
       delta = d.abs() < 0.05 ? ' (op gewicht)' : ' (${d > 0 ? '+' : ''}${dec1(d)} kg target)';
     }
     void open() => Navigator.of(context).pushNamed('/competitions');
@@ -341,7 +342,7 @@ class _TrendCard extends StatefulWidget {
 }
 
 class _TrendCardState extends State<_TrendCard> {
-  int _hours = 6;
+  int _hours = 3;
 
   @override
   Widget build(BuildContext context) {
@@ -390,7 +391,7 @@ class _TrendCardState extends State<_TrendCard> {
           if (tir != null) ...[
             const SizedBox(height: 8),
             Text(
-              '${(tir * 100).round()}% in doelbereik (laatste $_hours uur) • tik op de lijn voor details',
+              '${(tir * 100).round()}% in doelbereik (laatste $_hours uur) • houd een punt ingedrukt voor details',
               style: context.t.caption,
             ),
           ],
@@ -417,8 +418,7 @@ class _TrainingCardState extends State<_TrainingCard> {
     final store = KineticScope.of(context);
     final k = context.k;
     final p = store.nextPlannedTraining;
-    final active = store.isSparringActive;
-    final cfg = store.sparringConfig;
+    final active = store.isTrainingActive;
     final clearance = store.clearanceForNextRound();
     final expanded = _expanded ?? clearance.level != ClearanceLevel.safe;
     final (_, toneFg) = toneColors(k, clearanceTone(clearance.level));
@@ -478,31 +478,35 @@ class _TrainingCardState extends State<_TrainingCard> {
         children: [
           header,
           const SizedBox(height: 16),
-          KWell(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
-              children: [
-                Icon(active ? Icons.sports_mma : Icons.timer_outlined, color: k.accent, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    active && t != null
-                        ? '${store.sessionTitle} • ${t.phase == SparringPhase.rest ? 'Rust' : 'Ronde'} ${t.round}/${t.config.rounds}'
-                        : '${configShort(cfg)} Live Sparring',
-                    style: context.t.body.copyWith(color: k.text),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          // Alleen als er een training loopt: status (geen spar-format meer;
+          // sparren voeg je tijdens de training toe).
+          if (active && store.training != null) ...[
+            KWell(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(t != null ? Icons.sports_mma : Icons.timer_outlined, color: k.accent, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      t != null
+                          ? '${store.sessionTitle} • sparren ${t.phase == SparringPhase.rest ? 'rust' : 'ronde'} ${t.round}/${t.config.rounds}'
+                          : '${store.sessionTitle} • tot ${hhmm(store.training!.endsAt)}',
+                      style: context.t.body.copyWith(color: k.text),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  active ? mmss(store.roundSecondsRemaining) : '${restClock(cfg)} rust',
-                  style: context.t.caption.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    t != null ? mmss(store.roundSecondsRemaining) : durationLabel(store.training!.elapsedSeconds(store.now()) ~/ 60),
+                    style: context.t.caption.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
           // Pre-Training Check: status meteen zichtbaar, uitleg uitklapbaar.
           Material(
             color: k.primaryTint,
@@ -561,7 +565,7 @@ class _TrainingCardState extends State<_TrainingCard> {
           const SizedBox(height: 16),
           if (active)
             BigButton(
-              label: 'Terug naar de mat',
+              label: 'Terug naar de training',
               icon: Icons.sports_mma,
               height: 56,
               onPressed: () {
@@ -683,6 +687,7 @@ class _QuickButtons extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (store.waterEnabled) ...[
           Expanded(
             child: KCard(
               onTap: () async {
@@ -719,6 +724,7 @@ class _QuickButtons extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+          ],
           Expanded(
             child: KCard(
               onTap: store.requestMealSheet,
@@ -737,7 +743,10 @@ class _QuickButtons extends StatelessWidget {
                     TextSpan(
                       children: [
                         TextSpan(text: grams(store.carbsToday), style: context.t.metricMd),
-                        TextSpan(text: ' / ${grams(store.carbsTarget)}g', style: context.t.unit),
+                        TextSpan(
+                          text: store.nutritionGoalsEnabled ? ' / ${grams(store.carbsTarget)}g' : ' g vandaag',
+                          style: context.t.unit,
+                        ),
                       ],
                     ),
                   ),
@@ -796,7 +805,7 @@ class _DailyOutput extends StatelessWidget {
               inWell: true,
               label: 'Tijd op mat',
               value: '$mat min',
-              sub: store.isSparringActive ? 'Sessie loopt' : 'Vandaag',
+              sub: store.isTrainingActive ? 'Sessie loopt' : 'Vandaag',
               icon: Icons.timer_outlined,
             ),
           ),

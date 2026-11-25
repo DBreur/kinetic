@@ -33,10 +33,10 @@ void main() {
   shotTest('tt_vandaag_active', (s, dark) async {
     await s.pumpApp(dark: dark, height: 1500);
     s.store.plannedTrainings = const [];
-    s.store.startSparring(title: 'Combat Sambo');
+    s.store.startTraining(discipline: 'Combat Sambo', startsAt: s.store.now(), endsAt: s.store.now().add(const Duration(minutes: 90)));
     await s.settle();
     await s.shot('tt_vandaag_active');
-    await s.store.finishSparring(save: false);
+    await s.store.finishTraining(save: false);
   });
 
   shotTest('tt_training', (s, dark) async {
@@ -97,7 +97,7 @@ void main() {
     expect(s.store.sessionTitle, 'Combat Sambo');
     expect(s.store.sessionTechniques.map((t) => t.name), contains('Seoi Nage'));
     await s.shot('tt_started');
-    await s.store.finishSparring(save: false);
+    await s.store.finishTraining(save: false);
   });
 
   shotTest('tt_log', (s, dark) async {

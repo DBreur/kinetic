@@ -52,7 +52,7 @@ class ShellScreen extends StatelessWidget {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (store.isSparringActive) const _LiveSessionBar(),
+          if (store.isTrainingActive) const _LiveSessionBar(),
           const KineticNavBar(),
         ],
       ),
@@ -159,9 +159,23 @@ class _LiveSessionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
     final k = context.k;
-    final t = store.sparring!;
-    final rest = t.phase == SparringPhase.rest;
-    final color = rest ? k.primary : k.danger;
+    final tr = store.training!;
+    final t = store.sparring;
+    final now = store.now();
+    final rest = t?.phase == SparringPhase.rest;
+    final color = t == null ? k.primary : (rest ? k.primary : k.danger);
+    final String label;
+    final int seconds;
+    if (t != null) {
+      label = '${rest ? 'RUST' : 'SPARREN'} • Ronde ${t.round}/${t.config.rounds}${t.isPaused ? ' • gepauzeerd' : ''}';
+      seconds = store.roundSecondsRemaining;
+    } else if (!tr.hasStarted(now)) {
+      label = '${tr.displayTitle.toUpperCase()} • start ${hhmm(tr.startsAt)}';
+      seconds = tr.secondsUntilStart(now);
+    } else {
+      label = '${tr.displayTitle.toUpperCase()} • tot ${hhmm(tr.endsAt)}';
+      seconds = tr.elapsedSeconds(now);
+    }
     return Material(
       color: color.withValues(alpha: k.isDark ? 0.16 : 0.10),
       child: InkWell(
@@ -171,17 +185,17 @@ class _LiveSessionBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
-              LiveDot(color: color, active: !t.isPaused),
+              LiveDot(color: color, active: !(t?.isPaused ?? false)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${rest ? 'RUST' : store.sessionTitle.toUpperCase()} • Ronde ${t.round}/${t.config.rounds}${t.isPaused ? ' • gepauzeerd' : ''}',
+                  label,
                   style: context.t.labelSm.copyWith(color: k.text),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(mmss(store.roundSecondsRemaining), style: context.t.subtitle.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+              Text(seconds >= 3600 ? '${seconds ~/ 3600}:${two((seconds % 3600) ~/ 60)}:${two(seconds % 60)}' : mmss(seconds), style: context.t.subtitle.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
               const SizedBox(width: 8),
               Icon(Icons.open_in_full, size: 18, color: k.textSecondary),
             ],

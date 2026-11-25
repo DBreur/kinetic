@@ -1,6 +1,6 @@
 // start_training_sheet.dart: "Training starten" vanaf Vandaag of Training:
-// discipline, format (rondes/werk/rust) en focus-technieken kiezen en de
-// live sessie meteen starten. Bevat ook de techniekkiezer uit de vault en
+// discipline, begin- en eindtijd en technieken kiezen. De trainingsklok loopt
+// pas vanaf de begintijd; sparren voeg je tijdens de training toe. Bevat ook de techniekkiezer uit de vault en
 // een paar gedeelde helpers voor glucoseverloop en mat-clearance die
 // Vandaag, Training en Training loggen samen gebruiken.
 
@@ -17,7 +17,6 @@ import '../models/planned_training.dart';
 import '../models/technique.dart';
 import '../theme/kinetic_theme.dart';
 import 'kinetic_widgets.dart';
-import 'sheets.dart';
 
 /// Disciplines die je kunt starten of loggen.
 const kDisciplines = ['Combat Sambo', 'Sport Sambo', 'BJJ', 'Judo', 'Kracht', 'Overig'];
@@ -226,8 +225,8 @@ class _StartTrainingSheet extends StatefulWidget {
 class _StartTrainingSheetState extends State<_StartTrainingSheet> {
   late String _discipline;
   final _name = TextEditingController();
-  late int _format; // 0..2 = preset, 3 = eigen
-  late SparringConfig _custom;
+  late DateTime _startsAt;
+  late DateTime _endsAt;
   late List<String> _ids;
   bool _picking = false;
 
@@ -238,10 +237,13 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
     final p = widget.planned;
     _discipline = disciplineFor(p);
     if (_discipline == 'Overig' && p != null) _name.text = p.displayTitle == 'Overig' ? '' : p.displayTitle;
-    _custom = store.sparringConfig;
-    final preset = kFormatPresets.indexWhere((f) => sameConfig(f.config, store.sparringConfig));
-    _format = preset >= 0 ? preset : 3;
-    if (_discipline == 'Kracht') _format = 2;
+    // Begin: de geplande tijd (als die vandaag nog komt of net begon),
+    // anders nu, afgerond op 5 minuten. Eind: geplande duur of 90 min.
+    final now = store.now();
+    final rounded = DateTime(now.year, now.month, now.day, now.hour, now.minute - now.minute % 5);
+    final plannedOk = p != null && p.startsAt.isAfter(now.subtract(const Duration(hours: 2))) && daysUntil(p.startsAt, now: now) == 0;
+    _startsAt = plannedOk ? p.startsAt : rounded;
+    _endsAt = _startsAt.add(Duration(minutes: p?.durationMinutes ?? 90));
 
     // Technieken: die van de geplande training (eigen id of bibliotheek-id),
     // anders de focus-technieken uit de vault.
@@ -263,7 +265,28 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
     super.dispose();
   }
 
-  SparringConfig get _config => _format < kFormatPresets.length ? kFormatPresets[_format].config : _custom;
+  Future<void> _pickTime({required bool start}) async {
+    final current = start ? _startsAt : _endsAt;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(current),
+      helpText: start ? 'Begintijd' : 'Eindtijd',
+      builder: (ctx, child) => MediaQuery(data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true), child: child!),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      var t = DateTime(_startsAt.year, _startsAt.month, _startsAt.day, picked.hour, picked.minute);
+      if (start) {
+        final length = _endsAt.difference(_startsAt);
+        _startsAt = t;
+        _endsAt = t.add(length);
+      } else {
+        // Eindtijd vóór de begintijd = na middernacht.
+        if (!t.isAfter(_startsAt)) t = t.add(const Duration(days: 1));
+        _endsAt = t;
+      }
+    });
+  }
 
   String get _title {
     if (_discipline != 'Overig') return _discipline;
@@ -300,8 +323,14 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
   void _start() {
     final store = KineticScope.read(context);
     final nav = Navigator.of(context);
-    if (!store.isSparringActive) {
-      store.startSparring(title: _title, config: _config, techniqueIds: _ids);
+    if (!store.isTrainingActive) {
+      store.startTraining(
+        discipline: _discipline,
+        title: _discipline == 'Overig' ? _title : '',
+        startsAt: _startsAt,
+        endsAt: _endsAt,
+        techniqueIds: _ids,
+      );
     }
     nav.pop();
     final rest = store.sparring?.phase == SparringPhase.rest;
@@ -313,9 +342,10 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
     final store = KineticScope.of(context);
     final k = context.k;
     final p = widget.planned;
-    final active = store.isSparringActive;
+    final active = store.isTrainingActive;
     final clearance = store.clearanceForNextRound();
-    final cfg = _config;
+    final minutes = _endsAt.difference(_startsAt).inMinutes;
+    final startsLater = _startsAt.isAfter(store.now());
 
     // Snelle keuzes: gekozen, focus en de eerste andere eigen technieken.
     final byId = {for (final t in store.techniques) t.id: t};
@@ -334,7 +364,7 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
         const SizedBox(height: 4),
         Text(
           p == null
-              ? 'Kies discipline, format en focus. De rondeklok start meteen.'
+              ? 'Kies discipline, tijden en technieken. Sparren voeg je tijdens de training toe.'
               : 'Gepland: ${p.displayTitle} • ${hhmm(p.startsAt)}${p.location.trim().isEmpty ? '' : ' • ${p.location.trim()}'}',
           style: context.t.caption,
         ),
@@ -349,7 +379,7 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Er loopt al een sessie (${store.sessionTitle}). Rond die eerst af om een nieuwe te starten.',
+                    'Er loopt al een training (${store.sessionTitle}). Rond die eerst af om een nieuwe te starten.',
                     style: context.t.caption.copyWith(color: k.text),
                   ),
                 ),
@@ -377,29 +407,24 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
           ),
         ],
         const SizedBox(height: 20),
-        FormLabel('Format', trailing: 'Totaal ±${configMinutes(cfg)} min'),
+        FormLabel('Tijden', trailing: durationLabel(minutes)),
         Row(
           children: [
-            Expanded(child: _formatTile(0)),
+            Expanded(child: _timeTile('Begin', _startsAt, () => _pickTime(start: true))),
             const SizedBox(width: 8),
-            Expanded(child: _formatTile(1)),
+            Expanded(child: _timeTile('Einde', _endsAt, () => _pickTime(start: false))),
           ],
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: _formatTile(2)),
-            const SizedBox(width: 8),
-            Expanded(child: _formatTile(3)),
-          ],
-        ),
-        if (_format == 3) ...[
-          const SizedBox(height: 6),
-          SparringConfigEditor(value: _custom, onChanged: (c) => setState(() => _custom = c), showTitle: false),
+        if (startsLater) ...[
+          const SizedBox(height: 8),
+          Text(
+            'De training opent meteen; de klok begint om ${hhmm(_startsAt)}.',
+            style: context.t.caption.copyWith(color: k.accent),
+          ),
         ],
         const SizedBox(height: 20),
         FormLabel(
-          'Focus technieken',
+          'Technieken',
           trailing: _ids.isEmpty ? 'Geen gekozen' : '${_ids.length} gekozen',
           trailingColor: _ids.isEmpty ? null : k.accent,
         ),
@@ -428,13 +453,13 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
           ],
         ),
         const SizedBox(height: 8),
-        Text('Deze technieken krijgen live tellers op de mat.', style: context.t.caption),
+        Text('Focus-technieken zijn al gekozen; tijdens de training kun je er meer toevoegen.', style: context.t.caption),
         const SizedBox(height: 20),
         const FormLabel('Pre-training check'),
         ClearanceNote(clearance: clearance),
         const SizedBox(height: 20),
         BigButton(
-          label: active ? 'Terug naar de mat' : 'Start training',
+          label: active ? 'Terug naar de training' : 'Start training',
           icon: active ? Icons.sports_mma : Icons.play_arrow_rounded,
           height: 56,
           onPressed: _picking ? null : _start,
@@ -443,42 +468,36 @@ class _StartTrainingSheetState extends State<_StartTrainingSheet> {
     );
   }
 
-  Widget _formatTile(int i) {
+  Widget _timeTile(String label, DateTime at, VoidCallback onTap) {
     final k = context.k;
-    final selected = _format == i;
-    final custom = i == kFormatPresets.length;
-    final label = custom ? 'Eigen' : kFormatPresets[i].label;
-    final sub = custom
-        ? (_format == 3 ? '${configShort(_custom)} / ${restClock(_custom)}' : 'Rondes instellen')
-        : kFormatPresets[i].sub;
     return Material(
-      color: selected ? k.primaryTint : k.well,
+      color: k.well,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(KRadius.md),
-        side: BorderSide(color: selected ? k.primary : k.border, width: selected ? 1.5 : 1),
+        side: BorderSide(color: k.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => setState(() => _format = i),
+        onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 64),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
-                Icon(custom ? Icons.tune : Icons.timer_outlined, size: 20, color: selected ? k.accent : k.textSecondary),
+                Icon(Icons.schedule, size: 20, color: k.accent),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(label, style: context.t.subtitle.copyWith(color: selected ? k.accent : k.text)),
-                      Text(sub, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(label, style: context.t.caption),
+                      Text(hhmm(at), style: context.t.title.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
                     ],
                   ),
                 ),
-                if (selected) Icon(Icons.check_circle, size: 18, color: k.accent),
+                Icon(Icons.edit_outlined, size: 16, color: k.textMuted),
               ],
             ),
           ),

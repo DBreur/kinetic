@@ -3,6 +3,8 @@
 // worden nooit overschreven: we lezen alleen wat hier staat en schrijven via
 // gerichte updates van losse kolommen (zie ProfileRepository).
 
+import 'food_preset.dart';
+
 enum GlucoseSource {
   dexcomShare('dexcomShare', 'Dexcom Share'),
   nightscout('nightscout', 'Nightscout'),
@@ -41,6 +43,16 @@ class KineticProfile {
   /// mmol/L daling per eenheid insuline.
   final double correctionFactor;
 
+  /// Eigen voedingspresets (kolom `food_checklist`).
+  final List<FoodPreset> foodPresets;
+
+  /// Presets voor voeding tijdens een training (kolom `carb_presets`), los
+  /// van de maaltijdpresets (bv. "Dextro", "Sportdrank").
+  final List<FoodPreset> trainingPresets;
+
+  /// Eigen titels voor video's (videolink → titel, kolom `video_labels`).
+  final Map<String, String> videoLabels;
+
   const KineticProfile({
     required this.id,
     this.username = '',
@@ -54,6 +66,9 @@ class KineticProfile {
     this.dailyLowBelow = 3.9,
     this.hyperLimit = 10.0,
     this.correctionFactor = 2.0,
+    this.foodPresets = const [],
+    this.trainingPresets = const [],
+    this.videoLabels = const {},
   });
 
   factory KineticProfile.fromJson(Map<String, dynamic> j) => KineticProfile(
@@ -69,6 +84,12 @@ class KineticProfile {
     dailyLowBelow: ((j['daily_low_below'] as num?) ?? 3.9).toDouble(),
     hyperLimit: ((j['hyper_limit'] as num?) ?? 10.0).toDouble(),
     correctionFactor: ((j['correction_factor'] as num?) ?? 2.0).toDouble(),
+    foodPresets: ((j['food_checklist'] as List?) ?? const []).map(FoodPreset.fromJson).toList(),
+    trainingPresets: ((j['carb_presets'] as List?) ?? const []).map(FoodPreset.fromJson).toList(),
+    videoLabels: {
+      for (final e in ((j['video_labels'] as Map?) ?? const {}).entries)
+        if (e.value is String) e.key as String: e.value as String,
+    },
   );
 
   KineticProfile copyWith({
@@ -80,6 +101,9 @@ class KineticProfile {
     double? weightKg,
     double? dailyLowBelow,
     double? hyperLimit,
+    List<FoodPreset>? foodPresets,
+    List<FoodPreset>? trainingPresets,
+    Map<String, String>? videoLabels,
   }) => KineticProfile(
     id: id,
     username: username,
@@ -93,5 +117,8 @@ class KineticProfile {
     dailyLowBelow: dailyLowBelow ?? this.dailyLowBelow,
     hyperLimit: hyperLimit ?? this.hyperLimit,
     correctionFactor: correctionFactor,
+    foodPresets: foodPresets ?? this.foodPresets,
+    trainingPresets: trainingPresets ?? this.trainingPresets,
+    videoLabels: videoLabels ?? this.videoLabels,
   );
 }

@@ -298,6 +298,7 @@ class BigButton extends StatelessWidget {
     this.foreground,
     this.outlined = false,
     this.vertical = false,
+    this.fitLabel = false,
   });
 
   final String label;
@@ -314,6 +315,9 @@ class BigButton extends StatelessWidget {
 
   /// Icoon boven het label (zoals de bedieningsknoppen op de mat).
   final bool vertical;
+
+  /// Label altijd op één regel; krimpt mee in smalle knoppen.
+  final bool fitLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -365,14 +369,28 @@ class BigButton extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[Icon(icon, color: fg, size: 26), const SizedBox(height: 6)],
-                      text,
+                      // Eén regel, krimpt mee in smalle knoppen (icoon + 2 regels past niet in 72px).
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            style: text.style,
+                          ),
+                        ),
+                      ),
                     ],
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[Icon(icon, color: fg, size: 22), const SizedBox(width: 10)],
-                      Flexible(child: text),
+                      Flexible(
+                        child: fitLabel
+                            ? FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1, style: text.style))
+                            : text,
+                      ),
                     ],
                   ),
           ),
@@ -395,7 +413,9 @@ class KChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = context.k;
     final active = color ?? k.primary;
-    final fg = selected ? (color == null ? k.onPrimary : Colors.white) : k.textSecondary;
+    // Eigen kleur: tekst contrasteert met de achtergrond (bv. k.text is wit in dark mode).
+    final onColor = ThemeData.estimateBrightnessForColor(active) == Brightness.dark ? Colors.white : const Color(0xFF101419);
+    final fg = selected ? (color == null ? k.onPrimary : onColor) : k.textSecondary;
     return Material(
       color: selected ? active : k.well,
       shape: RoundedRectangleBorder(
@@ -412,12 +432,21 @@ class KChip extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 40),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: 6)],
-                Text(label, style: context.t.caption.copyWith(color: fg, fontWeight: FontWeight.w600, fontSize: 13)),
-              ],
+            // Eén Text (icoon als WidgetSpan): breekt netjes af in een smalle
+            // Wrap en houdt z'n natuurlijke breedte in een horizontale lijst.
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  if (icon != null) ...[
+                    WidgetSpan(alignment: PlaceholderAlignment.middle, child: Icon(icon, size: 16, color: fg)),
+                    const WidgetSpan(child: SizedBox(width: 6)),
+                  ],
+                  TextSpan(text: label),
+                ],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: context.t.caption.copyWith(color: fg, fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
         ),
@@ -524,7 +553,7 @@ class MetricTile extends StatelessWidget {
         ),
         if (sub != null) ...[
           const SizedBox(height: 4),
-          Text(sub!, style: context.t.caption.copyWith(color: subColor ?? k.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(sub!, style: context.t.caption.copyWith(color: subColor ?? k.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
         ],
       ],
     );
@@ -690,12 +719,8 @@ class KineticTopBar extends StatelessWidget {
                 ),
               ),
               ...actions,
-              IconButton(
-                tooltip: store.darkMode ? 'Licht thema' : 'Donker thema',
-                onPressed: store.toggleTheme,
-                icon: Icon(store.darkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined, color: k.textSecondary),
-              ),
-              const SizedBox(width: 2),
+              // Thema wisselen kan alleen nog via de schakelaar in Instellingen.
+              const SizedBox(width: 6),
               KAvatar(
                 initials: store.initials,
                 onTap: () => Navigator.of(context).pushNamed('/telemetrie-export'),
@@ -796,7 +821,10 @@ void showToastOn(ScaffoldMessengerState messenger, String message, {String? acti
           Expanded(child: Text(message)),
         ],
       ),
-      duration: const Duration(seconds: 3),
+      // Met "Ongedaan" iets langer zichtbaar, maar altijd vanzelf weg
+      // (een SnackBar met actie blijft anders staan tot je hem wegtikt).
+      duration: Duration(seconds: actionLabel == null ? 3 : 4),
+      persist: false,
       action: actionLabel == null ? null : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),
     ),
   );
