@@ -47,3 +47,21 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// Na een release-build staat de APK ook als kinetic-<versie>-b<build>.apk
+// naast app-release.apk in build/app/outputs/flutter-apk/ (versie en
+// buildnummer komen uit `version:` in pubspec.yaml, bv. 2.0.0+23).
+val kineticApkName = "kinetic-${flutter.versionName}-b${flutter.versionCode}.apk"
+val kineticApkSource = layout.buildDirectory.file("outputs/apk/release/app-release.apk")
+val kineticApkTarget = layout.buildDirectory.dir("outputs/flutter-apk")
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    doLast {
+        val src = kineticApkSource.get().asFile
+        if (src.exists()) {
+            val dir = kineticApkTarget.get().asFile
+            dir.mkdirs()
+            src.copyTo(dir.resolve(kineticApkName), overwrite = true)
+            println("Kinetic release-APK: ${dir.resolve(kineticApkName)}")
+        }
+    }
+}

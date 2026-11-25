@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # Build-nummer moet hoger blijven dan wat op de telefoon staat (was +20),
 # anders weigert Android de update en wist `flutter run` de app-data.
 # 2.1.0+22: design-map, licht/donker, Systemen/Ontdekken (telefoon had +21).
-version: 2.1.0+22
+version: 2.0.0+23
 
 environment:
   sdk: ^3.14.0
