@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:kinetic/core/meal_impact.dart';
 import 'package:kinetic/models/competition.dart';
 import 'package:kinetic/models/food_log_entry.dart';
+import 'package:kinetic/models/food_preset.dart';
 import 'package:kinetic/models/glucose.dart';
 import 'package:kinetic/models/kinetic_profile.dart';
 import 'package:kinetic/models/library.dart';
@@ -73,7 +74,21 @@ KineticStore seededStore({
   ];
   store.seedForPreview(
     email: 'atleet@example.com',
-    profile: const KineticProfile(id: 'user-1', dexcomUsername: 'atleet', weightKg: 78.4, trainingLimit: 5.0),
+    profile: const KineticProfile(
+      id: 'user-1',
+      dexcomUsername: 'atleet',
+      weightKg: 78.4,
+      trainingLimit: 5.0,
+      foodPresets: [
+        FoodPreset(singular: 'Appel', plural: 'Appels', carbs: 16, unitAmount: 135, unitLabel: 'g'),
+        FoodPreset(singular: 'Glas melk', plural: 'Glazen melk', carbs: 4, unitAmount: 80, unitLabel: 'ml'),
+        FoodPreset(singular: 'Banaan', plural: 'Bananen', carbs: 23),
+      ],
+      trainingPresets: [
+        FoodPreset(singular: 'Dextro', plural: "Dextro's", carbs: 3),
+        FoodPreset(singular: 'Sportdrank', plural: 'Sportdranken', carbs: 30, unitAmount: 500, unitLabel: 'ml'),
+      ],
+    ),
     glucose: GlucoseSnapshot(
       reading: GlucoseReading(latestMmol, trend, now.subtract(const Duration(minutes: 2))),
       history: history,

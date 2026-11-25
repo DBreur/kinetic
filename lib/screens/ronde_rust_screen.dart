@@ -14,6 +14,7 @@ import '../theme/kinetic_theme.dart';
 import '../widgets/charts.dart';
 import '../widgets/kinetic_widgets.dart';
 import '../widgets/telemetry_widgets.dart';
+import '../widgets/training_sheets.dart';
 import 'live_session_screen.dart';
 
 class RondeRustScreen extends StatefulWidget {
@@ -47,7 +48,16 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
   void _onEvent() {
     if (!mounted || _leaving) return;
     final t = _store.sparring;
-    if (t == null) return;
+    if (t == null) {
+      // Sparblok gestopt of afgerond: terug naar de training.
+      _leaving = true;
+      if (_store.isTrainingActive) {
+        Navigator.of(context).pushReplacementNamed('/live-session');
+      } else {
+        Navigator.of(context).maybePop();
+      }
+      return;
+    }
     if (t.phase == SparringPhase.work) {
       _leaving = true;
       HapticFeedback.heavyImpact();
@@ -90,6 +100,7 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
     final t = store.sparring;
     if (t == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final next = t.round + 1;
+    final noTimer = !store.restTimerEnabled;
     final clearance = store.clearanceForNextRound();
     final r = store.reading;
     final hypo = liveHypo(store);
@@ -98,8 +109,8 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
         children: [
           SessionTopBar(
             title: 'Ronde rust',
-            status: t.restHeld ? 'WACHT OP GLUCOSE' : 'HERSTEL • R${t.round} VOLTOOID',
-            statusTone: t.restHeld ? KTone.danger : KTone.info,
+            status: t.restHeld && !noTimer ? 'WACHT OP GLUCOSE' : 'HERSTEL • R${t.round} VOLTOOID',
+            statusTone: t.restHeld && !noTimer ? KTone.danger : KTone.info,
             live: !t.restHeld,
           ),
           Expanded(
@@ -123,9 +134,15 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
                   const SizedBox(height: 12),
                   const _BreathingGuide(),
                   const SizedBox(height: 20),
-                  _Interventions(urgent: clearance.level == ClearanceLevel.danger),
+                  BigButton(
+                    height: 64,
+                    label: 'Voeding loggen',
+                    icon: Icons.restaurant,
+                    style: clearance.level == ClearanceLevel.danger ? KButtonStyle.critical : KButtonStyle.secondary,
+                    onPressed: () => showNutritionSheet(context),
+                  ),
                   const SizedBox(height: 20),
-                  _CoachFocus(round: next),
+                  _NextRoundGoals(round: next),
                   const SizedBox(height: 12),
                   const TechniqueFocusCard(),
                 ],
@@ -135,17 +152,19 @@ class _RondeRustScreenState extends State<RondeRustScreen> {
           BottomActionBar(
             child: Row(
               children: [
-                Expanded(
-                  child: BigButton(
-                    height: 72,
-                    vertical: true,
-                    label: '+30s Rust',
-                    icon: Icons.more_time,
-                    style: KButtonStyle.secondary,
-                    onPressed: () => store.addRestSeconds(30),
+                if (!noTimer) ...[
+                  Expanded(
+                    child: BigButton(
+                      height: 72,
+                      vertical: true,
+                      label: '+30s Rust',
+                      icon: Icons.more_time,
+                      style: KButtonStyle.secondary,
+                      onPressed: () => store.addRestSeconds(30),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
+                  const SizedBox(width: 10),
+                ],
                 Expanded(
                   flex: 2,
                   child: BigButton(
@@ -177,8 +196,11 @@ class _RestTimerCard extends StatelessWidget {
     final k = context.k;
     final t = context.t;
     final store = KineticScope.of(context);
-    final held = timer.restHeld;
+    final noTimer = !store.restTimerEnabled;
+    // Zonder rusttimer is "vastgehouden" normaal: geen rood WACHT-scherm.
+    final held = timer.restHeld && !noTimer;
     final next = timer.round + 1;
+    final restElapsed = store.now().difference(timer.phaseStartedAt).inSeconds;
     final total = timer.config.rounds;
     final remaining = store.roundSecondsRemaining;
     final ringColor = held
@@ -213,7 +235,7 @@ class _RestTimerCard extends StatelessWidget {
               size: 228,
               stroke: 12,
               // Vastgehouden: volle rode ring.
-              progress: held ? 0 : timer.phaseProgress(store.now()),
+              progress: held || noTimer ? 0 : timer.phaseProgress(store.now()),
               color: ringColor,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -225,13 +247,13 @@ class _RestTimerCard extends StatelessWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      held ? 'WACHT' : mmss(remaining),
+                      held ? 'WACHT' : mmss(noTimer ? restElapsed : remaining),
                       style: t.timer.copyWith(fontSize: held ? 48 : 60, color: held ? k.dangerInk : k.text),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    held ? 'GLUCOSE EERST' : 'HERSTELTIJD',
+                    held ? 'GLUCOSE EERST' : (noTimer ? 'RUST • GEEN TIMER' : 'HERSTELTIJD'),
                     style: t.label.copyWith(color: held ? k.dangerInk : k.textSecondary, fontWeight: FontWeight.w700, letterSpacing: 1.2),
                   ),
                 ],
@@ -243,7 +265,7 @@ class _RestTimerCard extends StatelessWidget {
             onPressed: onSkip,
             style: TextButton.styleFrom(minimumSize: const Size(0, 52), foregroundColor: k.accent),
             icon: const Icon(Icons.fast_forward_rounded, size: 22),
-            label: Text('Sla rust over • Start R$next direct', style: t.bodyStrong.copyWith(color: k.accent)),
+            label: Text(noTimer ? 'Start R$next' : 'Sla rust over • Start R$next direct', style: t.bodyStrong.copyWith(color: k.accent)),
           ),
         ],
       ),
@@ -362,104 +384,25 @@ class _BreathingGuideState extends State<_BreathingGuide> with SingleTickerProvi
   }
 }
 
-// ------------------------------------------------------------- interventies
+// ------------------------------------------------------------- doelen
 
-class _Interventions extends StatelessWidget {
-  const _Interventions({required this.urgent});
-
-  /// Hypo: dextrose wordt de rode hoofdactie.
-  final bool urgent;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    final g = KineticScope.of(context).fastCarbGrams;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Eyebrow('Acute mat-interventies', color: k.warningInk, icon: Icons.medical_services_outlined),
-        const SizedBox(height: 10),
-        BigButton(
-          height: 64,
-          label: '+${g}g Dextrose (Snelwerkende Gel)',
-          icon: Icons.bolt,
-          style: urgent ? KButtonStyle.critical : KButtonStyle.primary,
-          color: urgent ? null : k.warning,
-          outlined: !urgent,
-          foreground: urgent ? null : k.warningInk,
-          onPressed: () => logMatIntervention(context, dextrose: true),
-        ),
-        const SizedBox(height: 10),
-        BigButton(
-          height: 64,
-          label: '+200ml Isotone Drank (14g Koolh.)',
-          icon: Icons.local_drink,
-          color: k.blue,
-          outlined: true,
-          onPressed: () => logMatIntervention(context, dextrose: false),
-        ),
-      ],
-    );
-  }
-}
-
-// ------------------------------------------------------------- coach focus
-
-class _CoachFocus extends StatelessWidget {
-  const _CoachFocus({required this.round});
+/// Doel van de volgende ronde en van het hele sparren (afvinkbaar; tik op
+/// de kaart om het rondedoel aan te passen).
+class _NextRoundGoals extends StatelessWidget {
+  const _NextRoundGoals({required this.round});
   final int round;
 
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    final t = context.t;
-    final store = KineticScope.of(context);
-    final text = store.coachFocusFor(round);
-    final custom = (store.coachFocus[round] ?? '').trim().isNotEmpty;
-    return Semantics(
-      button: true,
-      label: 'Coach focus ronde $round: $text. Tik om te bewerken.',
-      excludeSemantics: true,
-      child: KCard(
-        onTap: () => _edit(context, store, text),
-        child: Row(
-          children: [
-            IconTile(icon: Icons.record_voice_over, color: k.purple, size: 44),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Eyebrow('Coach focus • ronde $round', color: k.purple),
-                  const SizedBox(height: 4),
-                  Text(
-                    text,
-                    style: store.sessionTechniques.isEmpty && !custom
-                        ? t.body.copyWith(color: k.textSecondary)
-                        : t.title.copyWith(fontSize: 20, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.edit_outlined, size: 20, color: k.textSecondary),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _edit(BuildContext context, KineticStore store, String current) async {
-    final ctrl = TextEditingController(text: store.coachFocus[round] ?? '');
+  Future<void> _edit(BuildContext context, KineticStore store, String blockId, int index, String current) async {
+    final ctrl = TextEditingController(text: current);
     final v = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Instructie ronde $round'),
+        title: Text('Doel ronde ${index + 1}'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(hintText: current),
+          decoration: const InputDecoration(hintText: 'Zet Harai Goshi in'),
           onSubmitted: (s) => Navigator.pop(ctx, s),
         ),
         actions: [
@@ -469,6 +412,62 @@ class _CoachFocus extends StatelessWidget {
       ),
     );
     ctrl.dispose();
-    if (v != null) store.setCoachFocus(round, v.trim());
+    if (v != null) store.setRoundGoal(blockId, index, v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final store = KineticScope.of(context);
+    final block = store.training?.activeSparring;
+    if (block == null) return const SizedBox.shrink();
+    final prevIndex = round - 2;
+    final index = round - 1;
+    final prev = prevIndex >= 0 && prevIndex < block.rounds.length ? block.rounds[prevIndex] : null;
+    final next = index < block.rounds.length ? block.rounds[index] : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (prev != null && prev.goal.isNotEmpty) ...[
+          GoalCheck(
+            label: 'Doel ronde ${round - 1} gehaald?',
+            goal: prev.goal,
+            done: prev.goalDone,
+            onTap: () => store.toggleRoundGoal(block.id, prevIndex),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (next != null)
+          KCard(
+            onTap: () => _edit(context, store, block.id, index, next.goal),
+            child: Row(
+              children: [
+                IconTile(icon: Icons.flag_outlined, color: k.purple, size: 44),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Eyebrow('Doel ronde $round', color: k.purple),
+                      const SizedBox(height: 4),
+                      Text(
+                        next.goal.isEmpty ? 'Tik om een doel te zetten' : next.goal,
+                        style: next.goal.isEmpty
+                            ? context.t.body.copyWith(color: k.textSecondary)
+                            : context.t.title.copyWith(fontSize: 20, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.edit_outlined, size: 20, color: k.textSecondary),
+              ],
+            ),
+          ),
+        if (block.goal.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          GoalCheck(label: 'Doel sparren', goal: block.goal, done: block.goalDone, onTap: () => store.toggleSparringGoal(block.id)),
+        ],
+      ],
+    );
   }
 }

@@ -59,17 +59,24 @@ class SystemNode {
 class SystemEdge {
   final String from;
   final String to;
-  const SystemEdge({required this.from, required this.to});
+
+  /// Transitie: wat er gebeurt tussen de twee stappen ("Tegenstander sluit
+  /// zijn knieën"). Optioneel; staat als label op de pijl.
+  final String label;
+
+  const SystemEdge({required this.from, required this.to, this.label = ''});
 
   factory SystemEdge.fromJson(Map<String, dynamic> j) =>
-      SystemEdge(from: j['from'] as String, to: j['to'] as String);
+      SystemEdge(from: j['from'] as String, to: j['to'] as String, label: (j['label'] as String?) ?? '');
 
-  Map<String, dynamic> toJson() => {'from': from, 'to': to};
+  Map<String, dynamic> toJson() => {'from': from, 'to': to, if (label.trim().isNotEmpty) 'label': label.trim()};
 
+  SystemEdge copyWith({String? label}) => SystemEdge(from: from, to: to, label: label ?? this.label);
+
+  /// Gelijk = zelfde van/naar (het label telt niet mee).
   @override
   bool operator ==(Object other) =>
       other is SystemEdge && other.from == from && other.to == to;
-
   @override
   int get hashCode => Object.hash(from, to);
 }
@@ -147,6 +154,18 @@ class TechniqueSystem {
     createdAt: createdAt,
   );
 
+  /// Transitie-tekst van een bestaande pijl aanpassen.
+  TechniqueSystem withEdgeLabel(SystemEdge edge, String label) =>
+      copyWith(edges: [for (final e in edges) e == edge ? e.copyWith(label: label.trim()) : e]);
+
+  /// Node die aan een eigen techniek gekoppeld is, of null.
+  SystemNode? nodeForTechnique(String techniqueId) {
+    for (final n in nodes) {
+      if (n.techniqueId == techniqueId) return n;
+    }
+    return null;
+  }
+
   /// Verwijdert een node én alle pijlen van/naar die node.
   TechniqueSystem withoutNode(String nodeId) => copyWith(
     nodes: nodes.where((n) => n.id != nodeId).toList(),
@@ -154,9 +173,9 @@ class TechniqueSystem {
   );
 
   /// Voegt een pijl toe; negeert dubbele pijlen, lussen en onbekende nodes.
-  TechniqueSystem withEdge(String from, String to) {
+  TechniqueSystem withEdge(String from, String to, {String label = ''}) {
     final ids = nodes.map((n) => n.id).toSet();
-    final edge = SystemEdge(from: from, to: to);
+    final edge = SystemEdge(from: from, to: to, label: label);
     if (from == to ||
         !ids.contains(from) ||
         !ids.contains(to) ||

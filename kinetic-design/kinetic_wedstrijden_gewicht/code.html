@@ -1,26 +1,32 @@
 <!DOCTYPE html>
 
 <html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = { darkMode: 'class', theme: { extend: { 'colors': { 'background': '#0b0f14', 'surface': '#0b0f14', 'surface-container-lowest': '#0b0f14', 'surface-container-low': '#121820', 'surface-container': '#161e28', 'surface-container-high': '#1c2430', 'surface-container-highest': '#242f3e', 'on-surface': '#f8fafc', 'on-surface-variant': '#94a3b8', 'outline': '#64748b', 'outline-variant': '#1e293b', 'primary': '#2dd4bf', 'primary-container': '#14b8a6', 'on-primary': '#042f2e', 'secondary': '#10b981', 'secondary-container': 'rgba(20, 184, 166, 0.15)', 'on-secondary-container': '#2dd4bf', 'tertiary': '#4edea3' }, 'borderRadius': { 'DEFAULT': '0.25rem', 'lg': '0.5rem', 'xl': '0.75rem', 'full': '9999px' }, 'spacing': { 'gutter': '1rem', 'space-xl': '2rem', 'space-xs': '0.25rem', 'margin': '1rem', 'space-md': '1rem', 'space-lg': '1.5rem', 'space-sm': '0.5rem' }, 'fontFamily': { 'label-md': ['Inter'], 'body-md': ['Inter'], 'display-glucose': ['Inter'], 'display-timer': ['Inter'], 'headline-sm': ['Inter'], 'body-lg': ['Inter'], 'metric-unit': ['Inter'], 'headline-lg': ['Inter'], 'label-sm': ['Inter'], 'headline-md': ['Inter'] }, 'fontSize': { 'label-md': ['12px', { 'lineHeight': '16px', 'letterSpacing': '0.05em', 'fontWeight': '600' }], 'body-md': ['14px', { 'lineHeight': '20px', 'fontWeight': '400' }], 'display-glucose': ['44px', { 'lineHeight': '48px', 'letterSpacing': '-0.03em', 'fontWeight': '600' }], 'display-timer': ['56px', { 'lineHeight': '60px', 'letterSpacing': '-0.04em', 'fontWeight': '700' }], 'headline-sm': ['18px', { 'lineHeight': '24px', 'fontWeight': '600' }], 'body-lg': ['16px', { 'lineHeight': '24px', 'fontWeight': '400' }], 'metric-unit': ['13px', { 'lineHeight': '16px', 'letterSpacing': '0.02em', 'fontWeight': '500' }], 'headline-lg': ['30px', { 'lineHeight': '36px', 'letterSpacing': '-0.02em', 'fontWeight': '600' }], 'label-sm': ['11px', { 'lineHeight': '14px', 'letterSpacing': '0.04em', 'fontWeight': '500' }], 'headline-md': ['22px', { 'lineHeight': '28px', 'letterSpacing': '-0.015em', 'fontWeight': '600' }] } } } };</script><style>
     body {
       min-height: max(884px, 100dvh);
     }
+    .chart-dot {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .chart-dot:hover {
+      r: 6px;
+    }
   </style>
-</head><body class="bg-[#0b0f14] text-[#f8fafc] antialiased"><header class="fixed top-0 w-full z-50 bg-[#0b0f14]/85 backdrop-blur-xl border-b border-[#1c2430] pt-safe"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Kinetic Logo" class="h-8 w-8 rounded-xl object-contain shrink-0" src="https://lh3.googleusercontent.com/aida/ALJJyrBbGcw6zheKSBTsHMB2x3cXxxb08AaDpLXqEZaoNir5iR5JvzwoCfbT9orrRuPA_HfCyRzdMNQWuWaS4pvrn1k_FYazCddRstJshSVijrXzgV2JEHk-i4XoNuxTnWcxfW_cXCiSlK5pEj3pKCsilcqzOMNjoqquhfyLspwyYgZP7PAiBerTZeKlpFy9vko5OrKK5BnTpBDKvYLKP4q1HO7iLWk-7SMXFMPv7rS1ATKc"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-[#f8fafc] tracking-tight leading-tight">Kinetic</span><span class="font-label-sm text-label-sm text-[#94a3b8] font-medium leading-none">Today</span></div></div><a class="min-w-[44px] min-h-[44px] flex items-center justify-center" data-path="athlete-profile" href="#"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-[#1c2430]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCai2p_fNErH1GoBxMYAv9ddVW2wC8rXjJBYRWaY1rB-TQGTbLmPvTxpaOmcJUxLsgMi_u0jO0rtt4AZuvZxtlu8gLKL3Ul56o295OZvGUhV2hBczHT8okD_vOeLVOfHlu9K2GYxaiNfqB_Oyrkl0MMmvXNfIbbBvjoxR2hnv5OaUmjbA30cAABvasgIkLPZtOga7V8jw5bC4SEz9S6AXuOWlTZ9VxnDND1t_dM6Zs"/></a></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-[#0b0f14]"><div class="flex flex-col w-full px-margin pb-space-xl gap-space-lg">
+</head><body class="bg-[#0b0f14] text-[#f8fafc] antialiased selection:bg-primary/20"><header class="fixed top-0 w-full z-50 bg-[#0b0f14]/85 backdrop-blur-xl border-b border-[#1c2430] pt-safe"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Kinetic Logo" class="h-8 w-8 rounded-xl object-contain shrink-0" src="https://lh3.googleusercontent.com/aida/ALJJyrBbGcw6zheKSBTsHMB2x3cXxxb08AaDpLXqEZaoNir5iR5JvzwoCfbT9orrRuPA_HfCyRzdMNQWuWaS4pvrn1k_FYazCddRstJshSVijrXzgV2JEHk-i4XoNuxTnWcxfW_cXCiSlK5pEj3pKCsilcqzOMNjoqquhfyLspwyYgZP7PAiBerTZeKlpFy9vko5OrKK5BnTpBDKvYLKP4q1HO7iLWk-7SMXFMPv7rS1ATKc"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-[#f8fafc] tracking-tight leading-tight">Kinetic</span><span class="font-label-sm text-label-sm text-[#94a3b8] font-medium leading-none">Today</span></div></div><a class="min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer" data-path="athlete-profile" href="#"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-[#1c2430]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCai2p_fNErH1GoBxMYAv9ddVW2wC8rXjJBYRWaY1rB-TQGTbLmPvTxpaOmcJUxLsgMi_u0jO0rtt4AZuvZxtlu8gLKL3Ul56o295OZvGUhV2hBczHT8okD_vOeLVOfHlu9K2GYxaiNfqB_Oyrkl0MMmvXNfIbbBvjoxR2hnv5OaUmjbA30cAABvasgIkLPZtOga7V8jw5bC4SEz9S6AXuOWlTZ9VxnDND1t_dM6Zs"/></a></div></header><main class="flex flex-col relative w-full pt-16 pb-28 bg-[#0b0f14]"><div class="flex flex-col w-full px-margin pb-space-xl gap-space-lg">
 <!-- Sub-header & Status Chip -->
 <div class="flex items-center justify-between pt-space-xs">
 <div class="flex flex-col">
 <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Metabool Vechtersdashboard</span>
 <h1 class="font-headline-md text-headline-md text-on-surface">Fight Prep &amp; Gewicht</h1>
 </div>
-<div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high text-primary">
+<div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high text-primary border border-primary/20">
 <span class="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-<span class="font-label-sm text-label-sm text-on-surface">Kampdag -18</span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Kampdag -18</span>
 </div>
 </div>
 <!-- 1. Actieve Wedstrijd Banner (Upcoming Bout Card) -->
-<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-md">
+<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-md border border-white/5">
 <div class="flex justify-between items-start">
 <div class="flex flex-col">
 <div class="flex items-center gap-space-xs text-primary mb-1">
@@ -35,10 +41,10 @@
       </span>
 </div>
 <!-- Weight Trajectory Corridor Gauge -->
-<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col gap-2">
+<div class="bg-surface-container-low rounded-lg p-space-sm flex flex-col gap-2 border border-white/5">
 <div class="flex justify-between items-baseline font-body-sm text-body-sm">
-<span class="text-on-surface-variant">Huidig: <strong class="text-on-surface font-headline-sm text-headline-sm">78.4</strong> kg</span>
-<span class="text-primary font-label-md text-label-md bg-secondary-container/20 px-2 py-0.5 rounded text-secondary">-1.4 kg naar doel</span>
+<span class="text-on-surface-variant">Huidig: <strong class="text-on-surface font-headline-sm text-headline-sm" id="banner-current-weight">78.4</strong> kg</span>
+<span class="text-secondary font-label-md text-label-md bg-secondary-container/30 px-2 py-0.5 rounded border border-secondary/20" id="banner-delta-display">-1.4 kg naar doel</span>
 <span class="text-on-surface-variant">Target: <strong class="text-on-surface font-headline-sm text-headline-sm">77.0</strong> kg</span>
 </div>
 <!-- Linear Visual Track -->
@@ -46,7 +52,7 @@
 <!-- Target safe corridor indicator -->
 <div class="absolute left-[70%] right-[10%] top-0 bottom-0 bg-primary/20"></div>
 <!-- Progress bar from start weight (e.g. 81.5kg down to 78.4kg) -->
-<div class="h-full bg-primary rounded-full transition-all duration-500" style="width: 68%;"></div>
+<div class="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(45,212,191,0.5)]" id="banner-progress-bar" style="width: 68%;"></div>
 </div>
 <div class="flex justify-between text-on-surface-variant font-label-sm text-label-sm">
 <span>Start Kamp (81.5 kg)</span>
@@ -58,43 +64,43 @@
 </div>
 </div>
 <!-- 2. Snel Inwegen / Gewicht Loggen Card -->
-<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-md" id="weigh-in-widget">
+<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-md border border-white/5" id="weigh-in-widget">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-primary text-[20px]">monitor_weight</span>
 <span class="font-headline-sm text-headline-sm text-on-surface">Ochtend Inweging</span>
 </div>
-<span class="font-label-sm text-label-sm text-on-surface-variant">Nuchter • 07:15</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Nuchter • 07:15</span>
 </div>
 <!-- Stepper & Main Numeral Display -->
-<div class="flex items-center justify-between bg-surface-container-low p-space-md rounded-lg">
-<button aria-label="Verminder 0.1 kg" class="w-12 h-12 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface flex items-center justify-center active:scale-95 transition-all text-headline-sm font-bold shadow-sm" id="btn-decrease">
+<div class="flex items-center justify-between bg-surface-container-low p-space-md rounded-lg border border-white/5">
+<button aria-label="Verminder 0.1 kg" class="w-12 h-12 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface flex items-center justify-center active:scale-90 transition-transform text-headline-sm font-bold shadow-sm select-none" id="btn-decrease">
         -
       </button>
 <div class="flex flex-col items-center">
 <div class="flex items-baseline gap-1">
-<span class="font-metric-numeral text-metric-numeral text-on-surface font-bold tracking-tight" id="display-weight">78.4</span>
+<span class="font-metric-numeral text-metric-numeral text-on-surface font-bold tracking-tight transition-all" id="display-weight">78.4</span>
 <span class="font-headline-sm text-headline-sm text-on-surface-variant">kg</span>
 </div>
-<div class="flex items-center gap-1 text-secondary font-label-sm text-label-sm mt-1">
+<div class="flex items-center gap-1 text-secondary font-label-sm text-label-sm mt-1" id="daily-diff-badge">
 <span class="material-symbols-outlined text-[15px]">trending_down</span>
-<span>-0.3 kg t.o.v. gisteren</span>
+<span id="diff-text">-0.3 kg t.o.v. gisteren</span>
 </div>
 </div>
-<button aria-label="Verhoog 0.1 kg" class="w-12 h-12 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface flex items-center justify-center active:scale-95 transition-all text-headline-sm font-bold shadow-sm" id="btn-increase">
+<button aria-label="Verhoog 0.1 kg" class="w-12 h-12 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface flex items-center justify-center active:scale-90 transition-transform text-headline-sm font-bold shadow-sm select-none" id="btn-increase">
         +
       </button>
 </div>
 <!-- Metabolic Telemetry Grid (Hydration & Glucose Safety) -->
 <div class="grid grid-cols-2 gap-space-sm">
-<div class="flex flex-col bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex flex-col bg-surface-container-low p-space-sm rounded-lg border border-white/5">
 <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
 <span class="material-symbols-outlined text-[14px] text-primary">water_drop</span> Vocht / BIA
         </span>
 <span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">62.1%</span>
 <span class="font-label-sm text-label-sm text-secondary">Optimaal (Geen acute cut)</span>
 </div>
-<div class="flex flex-col bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex flex-col bg-surface-container-low p-space-sm rounded-lg border border-white/5">
 <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
 <span class="material-symbols-outlined text-[14px] text-tertiary">bloodtype</span> Nuchtere Glucose
         </span>
@@ -103,47 +109,55 @@
 </div>
 </div>
 <!-- Log Action Trigger with Feedback -->
-<button class="w-full h-12 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-2 active:scale-[0.99] transition-all shadow-sm" id="btn-submit-weight">
-<span class="material-symbols-outlined text-[20px]">save</span>
-<span>Gewicht Registreren</span>
+<button class="w-full h-12 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md font-semibold cursor-pointer" id="btn-submit-weight">
+<span class="material-symbols-outlined text-[20px]" id="submit-icon">save</span>
+<span id="submit-label">Gewicht Registreren</span>
 </button>
 </div>
 <!-- 3. Gewicht & Gewichtsverloop Grafiek (Interactive Weight Trajectory) -->
-<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-md">
+<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-md border border-white/5">
 <div class="flex items-center justify-between">
 <div>
 <h3 class="font-headline-sm text-headline-sm text-on-surface">Gewichtstraject &amp; Target Curve</h3>
-<span class="font-body-sm text-body-sm text-on-surface-variant">Laatste 14 dagen naar weeglimiet</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Klik op een datapunt om details te bekijken</span>
 </div>
-<div class="flex items-center gap-1.5 px-2 py-1 rounded bg-secondary-container/20 text-secondary">
+<div class="flex items-center gap-1.5 px-2 py-1 rounded bg-secondary-container/20 text-secondary border border-secondary/20">
 <span class="material-symbols-outlined text-[16px]">verified</span>
 <span class="font-label-sm text-label-sm font-semibold">Op Schema</span>
 </div>
 </div>
+<!-- Interactive Chart Inspection Pill -->
+<div class="flex items-center justify-between bg-surface-container-high/60 px-3 py-2 rounded-lg text-body-sm border border-primary/20" id="chart-tooltip-box">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-primary" id="tooltip-indicator"></span>
+<span class="text-on-surface-variant text-label-sm" id="tooltip-date">Vandaag (25 Mrt)</span>
+</div>
+<span class="text-primary font-semibold font-headline-sm text-label-md" id="tooltip-weight">78.4 kg <span class="text-on-surface-variant text-label-sm font-normal">(-0.3 kg)</span></span>
+</div>
 <!-- Telemetry SVG Chart -->
-<div class="w-full bg-surface-container-low rounded-lg p-space-sm flex flex-col">
+<div class="w-full bg-surface-container-low rounded-lg p-space-sm flex flex-col border border-white/5">
 <div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant mb-1">
 <span>81.0 kg</span>
-<span class="text-primary">Doellijn (77.0 kg)</span>
+<span class="text-primary font-medium">Doellijn (77.0 kg)</span>
 <span>76.5 kg</span>
 </div>
 <div class="relative w-full h-40">
-<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 320 120">
+<svg class="w-full h-full overflow-visible" id="weight-chart-svg" preserveaspectratio="none" viewbox="0 0 320 120">
 <!-- Safe Target Corridor Zone -->
 <polygon class="text-primary/10" fill="currentColor" points="0,55 320,105 320,115 0,75"></polygon>
 <!-- Target Guideline (Dashed line from 80.5kg to 77.0kg) -->
-<line class="text-outline" stroke="currentColor" stroke-dasharray="4,4" stroke-width="1.5" x1="0" x2="320" y1="65" y2="110"></line>
+<line class="text-outline/40" stroke="currentColor" stroke-dasharray="4,4" stroke-width="1.5" x1="0" x2="320" y1="65" y2="110"></line>
 <!-- Actual Recorded Trajectory Line -->
 <polyline class="text-primary" fill="none" points="0,62 30,68 60,64 90,72 120,70 150,78 180,82 210,80 240,86 270,90 300,92" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></polyline>
-<!-- Actual Data Points -->
-<circle class="fill-primary" cx="0" cy="62" r="3"></circle>
-<circle class="fill-primary" cx="60" cy="64" r="3"></circle>
-<circle class="fill-primary" cx="120" cy="70" r="3"></circle>
-<circle class="fill-primary" cx="180" cy="82" r="3"></circle>
-<circle class="fill-primary" cx="240" cy="86" r="3"></circle>
-<circle class="fill-secondary ring-2 ring-surface-container" cx="300" cy="92" r="4.5"></circle>
+<!-- Actual Interactive Data Points -->
+<circle class="fill-primary chart-dot" cx="0" cy="62" data-date="14 dagen geleden (11 Mrt)" data-diff="-0.0 kg" data-weight="80.8" r="4.5"></circle>
+<circle class="fill-primary chart-dot" cx="60" cy="64" data-date="10 dagen geleden (15 Mrt)" data-diff="-0.4 kg" data-weight="80.2" r="4.5"></circle>
+<circle class="fill-primary chart-dot" cx="120" cy="70" data-date="7 dagen geleden (18 Mrt)" data-diff="-0.6 kg" data-weight="79.6" r="4.5"></circle>
+<circle class="fill-primary chart-dot" cx="180" cy="82" data-date="4 dagen geleden (21 Mrt)" data-diff="-0.5 kg" data-weight="79.1" r="4.5"></circle>
+<circle class="fill-primary chart-dot" cx="240" cy="86" data-date="2 dagen geleden (23 Mrt)" data-diff="-0.4 kg" data-weight="78.7" r="4.5"></circle>
+<circle class="fill-secondary ring-2 ring-primary chart-dot" cx="300" cy="92" data-date="Vandaag (25 Mrt)" data-diff="-0.3 kg" data-weight="78.4" id="chart-dot-today" r="6"></circle>
 <!-- Target Weigh-in Flag -->
-<circle class="fill-tertiary" cx="320" cy="110" r="3"></circle>
+<circle class="fill-tertiary chart-dot" cx="320" cy="110" data-date="Officiële Weging (12 Apr)" data-diff="Doellimiet" data-weight="77.0" r="4.5"></circle>
 </svg>
 </div>
 <div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant mt-2 border-t border-surface-container-highest/40 pt-1">
@@ -156,64 +170,102 @@
 </div>
 <!-- Delta Summary Cards -->
 <div class="grid grid-cols-3 gap-space-sm text-center">
-<div class="bg-surface-container-low p-2 rounded-lg flex flex-col">
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col border border-white/5">
 <span class="font-label-sm text-label-sm text-on-surface-variant">Totaal Verlies</span>
-<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">-3.1 kg</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold" id="stat-total-lost">-3.1 kg</span>
 </div>
-<div class="bg-surface-container-low p-2 rounded-lg flex flex-col">
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col border border-white/5">
 <span class="font-label-sm text-label-sm text-on-surface-variant">Snelheid / Wk</span>
 <span class="font-headline-sm text-headline-sm text-secondary font-semibold">-0.48 kg</span>
 </div>
-<div class="bg-surface-container-low p-2 rounded-lg flex flex-col">
+<div class="bg-surface-container-low p-2 rounded-lg flex flex-col border border-white/5">
 <span class="font-label-sm text-label-sm text-on-surface-variant">Restant Noodzakelijk</span>
-<span class="font-headline-sm text-headline-sm text-primary font-semibold">1.4 kg</span>
+<span class="font-headline-sm text-headline-sm text-primary font-semibold" id="stat-remaining">1.4 kg</span>
 </div>
 </div>
 </div>
-<!-- 4. Wedstrijd Agenda & Historie -->
+<!-- 4. Wedstrijd Agenda & Historie (Interactive Accordions) -->
 <div class="flex flex-col gap-space-sm">
 <div class="flex items-center justify-between">
 <h3 class="font-headline-sm text-headline-sm text-on-surface">Wedstrijd &amp; Weeg Agenda</h3>
-<span class="font-label-sm text-label-sm text-on-surface-variant">3 Toernooien</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">3 Toernooien (klik voor details)</span>
 </div>
 <!-- Active Bout Item -->
-<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-sm gap-2">
+<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-sm gap-2 border border-primary/30 transition-all cursor-pointer bout-accordion" data-accordion="sambo-open">
 <div class="flex justify-between items-start">
 <div class="flex flex-col">
 <div class="flex items-center gap-1.5">
-<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
 <span class="font-label-sm text-label-sm text-primary font-semibold">In Voorbereiding (18 dagen)</span>
 </div>
 <span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">Dutch Combat Sambo Open</span>
 <span class="font-body-sm text-body-sm text-on-surface-variant">12 Apr 2025 • Weltergewicht (-77.0 kg) • A-Klasse</span>
 </div>
+<div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-primary text-[24px]">flag</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] transition-transform duration-200 accordion-arrow">expand_more</span>
 </div>
-<div class="flex items-center justify-between bg-surface-container-low p-2 rounded-lg text-on-surface-variant font-label-sm text-label-sm">
+</div>
+<div class="flex items-center justify-between bg-surface-container-low p-2 rounded-lg text-on-surface-variant font-label-sm text-label-sm border border-white/5">
 <span>Vrijdag 11 Apr: Vroege Inweging 18:00</span>
 <span class="text-on-surface font-semibold">Doel: 76.8 kg</span>
 </div>
+<!-- Hidden Accordion Body -->
+<div class="hidden pt-2 border-t border-surface-container-highest/60 flex-col gap-2 font-body-sm text-on-surface-variant accordion-content">
+<div class="grid grid-cols-2 gap-2 text-label-sm">
+<div class="bg-surface-container-low p-2 rounded">
+<span class="text-on-surface-variant block">Locatie:</span>
+<span class="text-on-surface font-medium">Sporthallen Zuid, Amsterdam</span>
+</div>
+<div class="bg-surface-container-low p-2 rounded">
+<span class="text-on-surface-variant block">Medische Keuring:</span>
+<span class="text-on-surface font-medium">11 Apr • 17:00 (T1D Med ID)</span>
+</div>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-1 leading-relaxed">
+        Officieel weegmoment is met sambo short/kurtka zonder schoeisel. Toegestane tolerantie: 0.0 kg. Na de weging is er 14 uur hersteltijd tot het toernooiverloop op zaterdagochtend.
+      </p>
+</div>
 </div>
 <!-- Scheduled Bout Item -->
-<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-sm gap-2">
+<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-sm gap-2 border border-white/5 transition-all cursor-pointer bout-accordion" data-accordion="bjj-open">
 <div class="flex justify-between items-start">
 <div class="flex flex-col">
 <div class="flex items-center gap-1.5">
 <span class="w-2 h-2 rounded-full bg-outline"></span>
-<span class="font-label-sm text-label-sm text-on-surface-variant">Gepland Kamp</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Gepland Kamp</span>
 </div>
 <span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">BJJ Amsterdam Open (Gi &amp; No-Gi)</span>
 <span class="font-body-sm text-body-sm text-on-surface-variant">24 Mei 2025 • Medium Heavy (-82.3 kg)</span>
 </div>
+<div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-on-surface-variant text-[24px]">event</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] transition-transform duration-200 accordion-arrow">expand_more</span>
 </div>
-<div class="flex items-center justify-between bg-surface-container-low p-2 rounded-lg text-on-surface-variant font-label-sm text-label-sm">
+</div>
+<div class="flex items-center justify-between bg-surface-container-low p-2 rounded-lg text-on-surface-variant font-label-sm text-label-sm border border-white/5">
 <span>Opbouw fase start na Combat Sambo</span>
 <span class="text-secondary font-semibold">+5.3 kg Speelruimte</span>
 </div>
+<!-- Hidden Accordion Body -->
+<div class="hidden pt-2 border-t border-surface-container-highest/60 flex-col gap-2 font-body-sm text-on-surface-variant accordion-content">
+<div class="grid grid-cols-2 gap-2 text-label-sm">
+<div class="bg-surface-container-low p-2 rounded">
+<span class="text-on-surface-variant block">IBJJF Reglement:</span>
+<span class="text-on-surface font-medium">Wegen met Gi direct voor partij</span>
+</div>
+<div class="bg-surface-container-low p-2 rounded">
+<span class="text-on-surface-variant block">Target Gewicht Gi:</span>
+<span class="text-on-surface font-medium">80.5 kg (inclusief pak)</span>
+</div>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-1 leading-relaxed">
+        Let op: IBJJF weegt vlak voor de mat. Dehydratatiestrategie is hier streng verboden wegens direct opeenvolgende wedstrijden en hypoglykemie-risico op de tatami.
+      </p>
+</div>
 </div>
 <!-- Past Bout Result -->
-<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-sm gap-2 opacity-85">
+<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-sm gap-2 border border-white/5 opacity-90 transition-all cursor-pointer bout-accordion" data-accordion="nk-sambo">
 <div class="flex justify-between items-start">
 <div class="flex flex-col">
 <div class="flex items-center gap-1.5">
@@ -223,83 +275,346 @@
 <span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">NK Combat Sambo 2024</span>
 <span class="font-body-sm text-body-sm text-on-surface-variant">Afgelopen • -77 kg Klasse</span>
 </div>
+<div class="flex items-center gap-2">
 <span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-on-surface">Official: 76.8 kg</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] transition-transform duration-200 accordion-arrow">expand_more</span>
+</div>
+</div>
+<!-- Hidden Accordion Body -->
+<div class="hidden pt-2 border-t border-surface-container-highest/60 flex-col gap-2 font-body-sm text-on-surface-variant accordion-content">
+<div class="grid grid-cols-3 gap-2 text-label-sm text-center">
+<div class="bg-surface-container-low p-1.5 rounded">
+<span class="text-on-surface-variant block text-label-sm">4 Partijen</span>
+<span class="text-primary font-bold">4 Win / 0 Loss</span>
+</div>
+<div class="bg-surface-container-low p-1.5 rounded">
+<span class="text-on-surface-variant block text-label-sm">Tijd in Range</span>
+<span class="text-secondary font-bold">96% (CGM)</span>
+</div>
+<div class="bg-surface-container-low p-1.5 rounded">
+<span class="text-on-surface-variant block text-label-sm">Herhydratatie</span>
+<span class="text-on-surface font-bold">2.2L O.R.S.</span>
 </div>
 </div>
 </div>
-<!-- 5. Weegprotocol & Metabole Richtlijnen voor T1D/Vechtsport -->
-<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-sm">
+</div>
+</div>
+<!-- 5. Weegprotocol & Metabole Richtlijnen voor T1D/Vechtsport (Interactive Checklist) -->
+<div class="flex flex-col bg-surface-container rounded-xl p-space-md shadow-md gap-space-sm border border-white/5">
+<div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-tertiary text-[22px]">health_and_safety</span>
 <h3 class="font-headline-sm text-headline-sm text-on-surface">T1D Weegprotocol &amp; Rehydratatie</h3>
 </div>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold" id="checklist-counter">0 / 3 Voldaan</span>
+</div>
 <p class="font-body-sm text-body-sm text-on-surface-variant">
-      Kritieke metabole richtlijnen voor vechters met Type-1 Diabetes tijdens de laatste week van de gewichtsafname.
+      Kritieke metabole richtlijnen voor vechters met Type-1 Diabetes tijdens de laatste week van de gewichtsafname. Tik op een protocol om af te vinken als gelezen of voltooid.
     </p>
-<!-- Protocol Bullet Cards -->
+<!-- Protocol Bullet Cards / Checklist -->
 <div class="flex flex-col gap-2 mt-1">
-<div class="flex items-start gap-3 bg-surface-container-low p-space-sm rounded-lg">
-<span class="material-symbols-outlined text-secondary text-[20px] shrink-0 mt-0.5">water_ph</span>
-<div class="flex flex-col">
-<span class="font-label-md text-label-md text-on-surface">Geen Extreme Uitdroging (Water Cut &lt; 2.5%)</span>
-<span class="font-body-sm text-body-sm text-on-surface-variant">
-            Ernstige dehydratatie vertraagt de subcutane insulineabsorptie dramatisch en vergroot het risico op euglykemische ketoacidose (DKA).
-          </span>
+<!-- Item 1 -->
+<div class="protocol-item flex items-start gap-3 bg-surface-container-low p-space-sm rounded-lg border border-white/5 cursor-pointer hover:border-primary/40 transition-all select-none" data-checked="false" id="proto-1">
+<button class="mt-0.5 text-on-surface-variant proto-checkbox flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[22px]">check_box_outline_blank</span>
+</button>
+<div class="flex flex-col flex-1">
+<span class="font-label-md text-label-md text-on-surface proto-title flex items-center justify-between">
+<span>Geen Extreme Uitdroging (Water Cut &lt; 2.5%)</span>
+<span class="material-symbols-outlined text-secondary text-[18px]">water_ph</span>
+</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant proto-desc">
+          Ernstige dehydratatie vertraagt de subcutane insulineabsorptie dramatisch en vergroot het risico op euglykemische ketoacidose (DKA).
+        </span>
 </div>
 </div>
-<div class="flex items-start gap-3 bg-surface-container-low p-space-sm rounded-lg">
-<span class="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">restaurant</span>
-<div class="flex flex-col">
-<span class="font-label-md text-label-md text-on-surface">Glycogeen Restoratie Post-Weeging</span>
-<span class="font-body-sm text-body-sm text-on-surface-variant">
-            Start 20 min na officiële weging met hypertone elektrolyten + maltodextrine. Verlaag de insuline-bolus ratio met 30-40% wegens verhoogde insulinegevoeligheid na calorische restrictie.
-          </span>
+<!-- Item 2 -->
+<div class="protocol-item flex items-start gap-3 bg-surface-container-low p-space-sm rounded-lg border border-white/5 cursor-pointer hover:border-primary/40 transition-all select-none" data-checked="false" id="proto-2">
+<button class="mt-0.5 text-on-surface-variant proto-checkbox flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[22px]">check_box_outline_blank</span>
+</button>
+<div class="flex flex-col flex-1">
+<span class="font-label-md text-label-md text-on-surface proto-title flex items-center justify-between">
+<span>Glycogeen Restoratie Post-Weeging</span>
+<span class="material-symbols-outlined text-primary text-[18px]">restaurant</span>
+</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant proto-desc">
+          Start 20 min na officiële weging met hypertone elektrolyten + maltodextrine. Verlaag de insuline-bolus ratio met 30-40% wegens verhoogde insulinegevoeligheid na calorische restrictie.
+        </span>
 </div>
 </div>
-<div class="flex items-start gap-3 bg-surface-container-low p-space-sm rounded-lg">
-<span class="material-symbols-outlined text-tertiary text-[20px] shrink-0 mt-0.5">monitor_heart</span>
-<div class="flex flex-col">
-<span class="font-label-md text-label-md text-on-surface">Sensor Calibratie bij Gewichtsschommeling</span>
-<span class="font-body-sm text-body-sm text-on-surface-variant">
-            Tijdens de 'weigh-in morning' een vingerprik-controle uitvoeren. Snelle shifts in interstitieel vocht kunnen CGM-afwijkingen tot 1.5 mmol/L veroorzaken.
-          </span>
+<!-- Item 3 -->
+<div class="protocol-item flex items-start gap-3 bg-surface-container-low p-space-sm rounded-lg border border-white/5 cursor-pointer hover:border-primary/40 transition-all select-none" data-checked="false" id="proto-3">
+<button class="mt-0.5 text-on-surface-variant proto-checkbox flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[22px]">check_box_outline_blank</span>
+</button>
+<div class="flex flex-col flex-1">
+<span class="font-label-md text-label-md text-on-surface proto-title flex items-center justify-between">
+<span>Sensor Calibratie bij Gewichtsschommeling</span>
+<span class="material-symbols-outlined text-tertiary text-[18px]">monitor_heart</span>
+</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant proto-desc">
+          Tijdens de 'weigh-in morning' een vingerprik-controle uitvoeren. Snelle shifts in interstitieel vocht kunnen CGM-afwijkingen tot 1.5 mmol/L veroorzaken.
+        </span>
 </div>
 </div>
 </div>
 </div>
 </div>
+<!-- Interactive Feedback Toast Notification -->
+<div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 bg-[#121820] text-on-surface border border-primary/50 shadow-2xl px-4 py-3 rounded-xl transition-all duration-300 opacity-0 pointer-events-none translate-y-[-12px]" id="toast-notification">
+<span class="material-symbols-outlined text-primary text-[20px]" id="toast-icon">check_circle</span>
+<span class="font-body-md text-body-md font-medium text-white" id="toast-message">78.4 kg geregistreerd in database</span>
+</div>
+</main>
+<!-- Bottom Navigation Bar with Interactive States -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe bg-[#0b0f14]/90 backdrop-blur-xl border-t border-[#1c2430]" id="main-nav"><div class="relative flex items-center justify-between h-16 px-gutter max-w-md mx-auto"><div class="flex items-center gap-space-xs flex-1 justify-around"><a class="nav-item min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-primary transition-colors cursor-pointer" data-tab="today" href="#"><span class="material-symbols-outlined text-[22px]">calendar_today</span><span class="font-label-sm text-label-sm font-semibold">Today</span></a><a class="nav-item min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#94a3b8] hover:text-[#f8fafc] transition-colors cursor-pointer" data-tab="training" href="#"><span class="material-symbols-outlined text-[22px]">sports_martial_arts</span><span class="font-label-sm text-label-sm">Training</span></a></div><div class="relative -top-5 px-space-xs flex justify-center"><button class="w-14 h-14 rounded-full bg-[#14b8a6] hover:bg-[#2dd4bf] text-[#042f2e] flex items-center justify-center shadow-[0_4px_16px_rgba(20,184,166,0.35)] active:scale-95 transition-all cursor-pointer" id="quick-action-btn"><span class="material-symbols-outlined text-[28px] font-bold">add</span></button></div><div class="flex items-center gap-space-xs flex-1 justify-around"><a class="nav-item min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#94a3b8] hover:text-[#f8fafc] transition-colors cursor-pointer" data-tab="techniques" href="#"><span class="material-symbols-outlined text-[22px]">menu_book</span><span class="font-label-sm text-label-sm">Techniques</span></a><a class="nav-item min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#94a3b8] hover:text-[#f8fafc] transition-colors cursor-pointer" data-tab="insights" href="#"><span class="material-symbols-outlined text-[22px]">monitoring</span><span class="font-label-sm text-label-sm">Insights</span></a></div></div></nav>
 <script>
-  (function initWeightWidget() {
+  (function initInteractiveDashboard() {
+    // State
     let currentWeight = 78.4;
+    const targetLimit = 77.0;
+    const startWeight = 81.5;
+    const yesterdayWeight = 78.7;
+
+    // Elements
     const weightDisplay = document.getElementById('display-weight');
     const btnDecrease = document.getElementById('btn-decrease');
     const btnIncrease = document.getElementById('btn-increase');
     const btnSubmit = document.getElementById('btn-submit-weight');
+    const submitLabel = document.getElementById('submit-label');
+    const submitIcon = document.getElementById('submit-icon');
+    const diffText = document.getElementById('diff-text');
 
-    if (!weightDisplay || !btnDecrease || !btnIncrease || !btnSubmit) return;
+    const bannerWeight = document.getElementById('banner-current-weight');
+    const bannerDelta = document.getElementById('banner-delta-display');
+    const bannerProgress = document.getElementById('banner-progress-bar');
+    const statRemaining = document.getElementById('stat-remaining');
+    const statTotalLost = document.getElementById('stat-total-lost');
 
-    btnDecrease.addEventListener('click', () => {
-      currentWeight = Math.max(50.0, Math.round((currentWeight - 0.1) * 10) / 10);
+    const toast = document.getElementById('toast-notification');
+    const toastMsg = document.getElementById('toast-message');
+
+    // Toast helper
+    let toastTimeout = null;
+    function showToast(message, isSuccess = true) {
+      if (!toast) return;
+      toastMsg.textContent = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-12px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-12px]');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+
+    // Update weights and calculations
+    function updateMetrics() {
       weightDisplay.textContent = currentWeight.toFixed(1);
+      bannerWeight.textContent = currentWeight.toFixed(1);
+
+      // Remaining delta
+      const remaining = (currentWeight - targetLimit).toFixed(1);
+      bannerDelta.textContent = (remaining > 0 ? `-${remaining}` : `+${Math.abs(remaining)}`) + ' kg naar doel';
+      statRemaining.textContent = `${Math.max(0, remaining)} kg`;
+
+      // Total lost
+      const totalLost = (currentWeight - startWeight).toFixed(1);
+      statTotalLost.textContent = `${totalLost} kg`;
+
+      // Difference with yesterday
+      const yesterdayDiff = (currentWeight - yesterdayWeight).toFixed(1);
+      if (yesterdayDiff <= 0) {
+        diffText.textContent = `${yesterdayDiff} kg t.o.v. gisteren`;
+      } else {
+        diffText.textContent = `+${yesterdayDiff} kg t.o.v. gisteren`;
+      }
+
+      // Progress bar percentage
+      const totalJourney = startWeight - targetLimit;
+      const progressMade = startWeight - currentWeight;
+      const pct = Math.min(100, Math.max(10, Math.round((progressMade / totalJourney) * 100)));
+      bannerProgress.style.width = pct + '%';
+
+      // Update today's dot in SVG chart
+      const todayDot = document.getElementById('chart-dot-today');
+      if (todayDot) {
+        todayDot.setAttribute('data-weight', currentWeight.toFixed(1));
+      }
+    }
+
+    // 1. Inweeg calculator (+ en - knoppen)
+    if (btnDecrease) {
+      btnDecrease.addEventListener('click', () => {
+        currentWeight = Math.max(50.0, Math.round((currentWeight - 0.1) * 10) / 10);
+        updateMetrics();
+      });
+    }
+
+    if (btnIncrease) {
+      btnIncrease.addEventListener('click', () => {
+        currentWeight = Math.min(120.0, Math.round((currentWeight + 0.1) * 10) / 10);
+        updateMetrics();
+      });
+    }
+
+    if (btnSubmit) {
+      btnSubmit.addEventListener('click', () => {
+        const loggedWeight = currentWeight.toFixed(1);
+        submitLabel.textContent = 'Opgeslagen!';
+        submitIcon.textContent = 'check';
+        btnSubmit.classList.remove('bg-primary', 'hover:bg-primary-container');
+        btnSubmit.classList.add('bg-secondary', 'text-on-secondary');
+
+        showToast(`${loggedWeight} kg geregistreerd in database`);
+
+        setTimeout(() => {
+          submitLabel.textContent = 'Gewicht Registreren';
+          submitIcon.textContent = 'save';
+          btnSubmit.classList.remove('bg-secondary', 'text-on-secondary');
+          btnSubmit.classList.add('bg-primary', 'hover:bg-primary-container');
+        }, 1600);
+      });
+    }
+
+    // 2. Interactive Chart Data Points
+    const chartDots = document.querySelectorAll('.chart-dot');
+    const tooltipDate = document.getElementById('tooltip-date');
+    const tooltipWeight = document.getElementById('tooltip-weight');
+
+    chartDots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        chartDots.forEach(d => {
+          d.setAttribute('r', '4.5');
+          d.classList.remove('ring-4', 'ring-teal-400/50');
+        });
+
+        dot.setAttribute('r', '7');
+        dot.classList.add('ring-4', 'ring-teal-400/50');
+
+        const date = dot.getAttribute('data-date');
+        const weight = dot.getAttribute('data-weight');
+        const diff = dot.getAttribute('data-diff');
+
+        if (tooltipDate && tooltipWeight) {
+          tooltipDate.textContent = date;
+          tooltipWeight.innerHTML = `${weight} kg <span class="text-on-surface-variant text-label-sm font-normal">(${diff})</span>`;
+        }
+      });
     });
 
-    btnIncrease.addEventListener('click', () => {
-      currentWeight = Math.min(120.0, Math.round((currentWeight + 0.1) * 10) / 10);
-      weightDisplay.textContent = currentWeight.toFixed(1);
+    // 3. Wedstrijd Agenda Accordions
+    const accordions = document.querySelectorAll('.bout-accordion');
+    accordions.forEach(acc => {
+      acc.addEventListener('click', (e) => {
+        const content = acc.querySelector('.accordion-content');
+        const arrow = acc.querySelector('.accordion-arrow');
+
+        if (!content) return;
+        const isHidden = content.classList.contains('hidden');
+
+        // Close all other open accordions smoothly
+        accordions.forEach(other => {
+          if (other !== acc) {
+            const otherContent = other.querySelector('.accordion-content');
+            const otherArrow = other.querySelector('.accordion-arrow');
+            if (otherContent) otherContent.classList.add('hidden');
+            if (otherArrow) otherArrow.style.transform = 'rotate(0deg)';
+          }
+        });
+
+        if (isHidden) {
+          content.classList.remove('hidden');
+          content.classList.add('flex');
+          if (arrow) arrow.style.transform = 'rotate(180deg)';
+        } else {
+          content.classList.add('hidden');
+          content.classList.remove('flex');
+          if (arrow) arrow.style.transform = 'rotate(0deg)';
+        }
+      });
     });
 
-    btnSubmit.addEventListener('click', () => {
-      const originalText = btnSubmit.innerHTML;
-      btnSubmit.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span><span>Opgeslagen!</span>';
-      btnSubmit.classList.remove('bg-primary', 'hover:bg-primary-container');
-      btnSubmit.classList.add('bg-secondary', 'text-on-secondary');
-      
-      setTimeout(() => {
-        btnSubmit.innerHTML = originalText;
-        btnSubmit.classList.remove('bg-secondary', 'text-on-secondary');
-        btnSubmit.classList.add('bg-primary', 'hover:bg-primary-container');
-      }, 1500);
+    // 4. T1D Protocol Checklist Interactivity
+    const protocolItems = document.querySelectorAll('.protocol-item');
+    const counterBadge = document.getElementById('checklist-counter');
+
+    function updateProtocolCounter() {
+      const checkedCount = document.querySelectorAll('.protocol-item[data-checked="true"]').length;
+      if (counterBadge) {
+        counterBadge.textContent = `${checkedCount} / 3 Voldaan`;
+        if (checkedCount === 3) {
+          counterBadge.classList.remove('bg-primary/10', 'text-primary');
+          counterBadge.classList.add('bg-secondary/20', 'text-secondary');
+        } else {
+          counterBadge.classList.remove('bg-secondary/20', 'text-secondary');
+          counterBadge.classList.add('bg-primary/10', 'text-primary');
+        }
+      }
+    }
+
+    protocolItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const isChecked = item.getAttribute('data-checked') === 'true';
+        const checkboxIcon = item.querySelector('.proto-checkbox span');
+        const title = item.querySelector('.proto-title');
+
+        if (!isChecked) {
+          item.setAttribute('data-checked', 'true');
+          item.classList.add('border-emerald-500/50', 'bg-surface-container-high/50');
+          if (checkboxIcon) {
+            checkboxIcon.textContent = 'check_box';
+            checkboxIcon.classList.add('text-secondary');
+            checkboxIcon.classList.remove('text-on-surface-variant');
+          }
+          if (title) title.classList.add('text-secondary');
+          showToast('Richtlijn gemarkeerd als gereed');
+        } else {
+          item.setAttribute('data-checked', 'false');
+          item.classList.remove('border-emerald-500/50', 'bg-surface-container-high/50');
+          if (checkboxIcon) {
+            checkboxIcon.textContent = 'check_box_outline_blank';
+            checkboxIcon.classList.remove('text-secondary');
+            checkboxIcon.classList.add('text-on-surface-variant');
+          }
+          if (title) title.classList.remove('text-secondary');
+        }
+        updateProtocolCounter();
+      });
     });
+
+    // 5. Bottom Navigation Tabs Interactivity
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(nav => {
+      nav.addEventListener('click', (e) => {
+        e.preventDefault();
+        navItems.forEach(n => {
+          n.classList.remove('text-primary');
+          n.classList.add('text-[#94a3b8]');
+          const label = n.querySelector('span:last-child');
+          if (label) label.classList.remove('font-semibold');
+        });
+
+        nav.classList.add('text-primary');
+        nav.classList.remove('text-[#94a3b8]');
+        const currentLabel = nav.querySelector('span:last-child');
+        if (currentLabel) currentLabel.classList.add('font-semibold');
+      });
+    });
+
+    // Quick Action button (+)
+    const quickActionBtn = document.getElementById('quick-action-btn');
+    if (quickActionBtn) {
+      quickActionBtn.addEventListener('click', () => {
+        const widget = document.getElementById('weigh-in-widget');
+        if (widget) {
+          widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          widget.classList.add('ring-2', 'ring-primary');
+          setTimeout(() => widget.classList.remove('ring-2', 'ring-primary'), 1200);
+        }
+      });
+    }
   })();
-</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-[#0b0f14]/90 backdrop-blur-xl border-t border-[#1c2430]" data-active-classes="text-primary font-semibold"><div class="relative flex items-center justify-between h-16 px-gutter max-w-md mx-auto"><div class="flex items-center gap-space-xs flex-1 justify-around"><a class="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#94a3b8] hover:text-[#f8fafc] transition-colors" data-path="today" href="#"><span class="material-symbols-outlined text-[22px]">calendar_today</span><span class="font-label-sm text-label-sm">Today</span></a><a class="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#94a3b8] hover:text-[#f8fafc] transition-colors" data-path="training" href="#"><span class="material-symbols-outlined text-[22px]">sports_martial_arts</span><span class="font-label-sm text-label-sm">Training</span></a></div><div class="relative -top-5 px-space-xs flex justify-center"><a class="w-14 h-14 rounded-full bg-[#14b8a6] hover:bg-[#2dd4bf] text-[#042f2e] flex items-center justify-center shadow-[0_4px_16px_rgba(20,184,166,0.35)] active:scale-95 transition-transform" data-path="log-training" href="#"><span class="material-symbols-outlined text-[28px] font-bold">add</span></a></div><div class="flex items-center gap-space-xs flex-1 justify-around"><a class="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#94a3b8] hover:text-[#f8fafc] transition-colors" data-path="techniques" href="#"><span class="material-symbols-outlined text-[22px]">menu_book</span><span class="font-label-sm text-label-sm">Techniques</span></a><a class="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[#94a3b8] hover:text-[#f8fafc] transition-colors" data-path="insights" href="#"><span class="material-symbols-outlined text-[22px]">monitoring</span><span class="font-label-sm text-label-sm">Insights</span></a></div></div></nav>
-</body></html>
+</script></body></html>

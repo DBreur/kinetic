@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="nl"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-error-container": "#ffdad6", "on-primary-fixed-variant": "#005048", "error-container": "#93000a", "surface-container-high": "#262a30", "secondary-container": "#03c6b2", "secondary": "#44e2cd", "surface-container-lowest": "#0a0e13", "inverse-surface": "#e0e2ea", "on-background": "#e0e2ea", "tertiary-fixed-dim": "#4edea3", "on-tertiary": "#003824", "secondary-fixed-dim": "#3cddc7", "surface-container-highest": "#31353b", "on-error": "#690005", "on-tertiary-fixed-variant": "#005236", "tertiary-fixed": "#6ffbbe", "on-surface": "#e0e2ea", "on-secondary-fixed-variant": "#005047", "outline-variant": "#3c4947", "on-secondary": "#003731", "secondary-fixed": "#62fae3", "surface-variant": "#31353b", "background": "#101419", "error": "#ffb4ab", "surface-container-low": "#181c21", "on-surface-variant": "#bbcac6", "on-primary-container": "#00423b", "primary": "#4fdbc8", "outline": "#859490", "primary-fixed-dim": "#4fdbc8", "surface-dim": "#101419", "tertiary-container": "#16bb83", "on-secondary-fixed": "#00201c", "surface-bright": "#36393f", "on-primary": "#003731", "primary-container": "#14b8a6", "tertiary": "#4edea3", "inverse-on-surface": "#2d3136", "surface-container": "#1c2025", "on-secondary-container": "#004d44", "primary-fixed": "#71f8e4", "inverse-primary": "#006b5f", "surface": "#101419", "on-tertiary-container": "#00442c", "on-primary-fixed": "#00201c", "on-tertiary-fixed": "#002113", "surface-tint": "#4fdbc8" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin": "1rem", "space-xs": "0.25rem", "gutter-desktop": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-lg": "1.5rem", "space-md": "1rem", "margin-desktop": "2rem", "space-xl": "2rem", "margin-tablet": "1.5rem" }, fontFamily: { "display-lg-mobile": ["Inter"], "body-md": ["Inter"], "label-sm": ["Inter"], "display-lg": ["Inter"], "headline-sm": ["Inter"], "metric-numeral": ["Inter"], "body-lg": ["Inter"], "label-md": ["Inter"], "label-lg": ["Inter"], "body-sm": ["Inter"], "headline-md": ["Inter"], "headline-lg": ["Inter"] }, fontSize: { "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "600" }], "metric-numeral": ["44px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface text-on-surface font-body-md text-body-md flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.3)]"><div class="h-16 px-gutter flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><button aria-label="Ga Terug" class="w-11 h-11 flex items-center justify-center text-on-surface rounded-lg hover:bg-surface-container active:bg-surface-container-high transition-colors shrink-0" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back_ios_new</span></button><img alt="Kinetic horizontal lockup logo with modern geometric K icon and clean athletic bold wordmark 'KINETIC' with subtle metabolic dot in letter I, teal and dark slate.. Brand logo. - Primary color: #0d9488
+- Font: inter
+- Mode: light
+- Roundness: rounded-md
+" class="h-7 w-auto object-contain shrink-0" src="https://lh3.googleusercontent.com/aida/ALJJyrA7krB5qINAI2WVc6XKE1aJHKooWrtohmct8mTlOl1Zq0UU7_rhVpPeIhRmFp5-4AtR8Jh2dRrBYxkd4Vr15HiYfqLvt8h-53397qC1D6oZPFKUICmxRdWljM5rT0ju8ZseqoE5oyTXD-N1qdMNkdDlGe12-Ve9uuY_87OkLUH4enZBqbtuqtQX54dzstUkDoRZ3WvUWoCohtrUjc7Ct9tbDzd9vRyBia8zHDYsGhwM"/><div class="flex flex-col min-w-0"><h1 class="text-headline-sm font-headline-sm text-on-surface truncate leading-tight">Kinetic   Live Sessie (Interactief Dark Mode)</h1><div class="flex items-center gap-1.5 text-label-sm font-label-sm text-tertiary truncate"><span class="inline-block w-1.5 h-1.5 rounded-full bg-tertiary"></span><span>Dexcom G7 + Polar H10</span></div></div></div><div class="flex items-center gap-space-xs shrink-0"><span class="px-2.5 py-1 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sensors</span>LIVE</span><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full pb-safe">
+<!-- Status & Round Phase -->
+<section class="px-gutter pt-space-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs px-2.5 py-1 rounded-full bg-error-container/40 text-error" id="round-status-badge">
+<span class="w-2 h-2 rounded-full bg-error animate-ping" id="round-status-dot"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider font-semibold" id="round-status-text">Actieve Sparring • Live</span>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">timer</span>
+<span>5 min werk • 1 min rust</span>
+</div>
+</div>
+<!-- Round Segmented Progress -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-md flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-baseline gap-1.5">
+<span class="text-secondary font-headline-md text-headline-md" id="round-title-display">Ronde 3</span>
+<span class="text-on-surface-variant font-label-md text-label-md">/ 5</span>
+</div>
+<div class="flex items-center gap-1 text-label-sm font-label-sm text-tertiary">
+<span class="material-symbols-outlined text-[16px]">sports_martial_arts</span>
+<span id="round-mode-subtitle">SPARRING DRILL</span>
+</div>
+</div>
+<!-- Segmented Pips -->
+<div class="grid grid-cols-5 gap-1.5 w-full" id="round-pips-container">
+<div class="h-2 rounded-full bg-secondary"></div>
+<div class="h-2 rounded-full bg-secondary"></div>
+<div class="h-2 rounded-full bg-primary animate-pulse"></div>
+<div class="h-2 rounded-full bg-surface-container-highest"></div>
+<div class="h-2 rounded-full bg-surface-container-highest"></div>
+</div>
+</div>
+</section>
+<!-- Big Glancable Round Timer -->
+<section class="px-gutter pt-space-sm">
+<div class="bg-surface-container rounded-xl p-space-lg flex flex-col items-center justify-center relative overflow-hidden shadow-lg">
+<div class="absolute -right-12 -top-12 w-36 h-36 bg-primary/5 rounded-full pointer-events-none blur-xl"></div>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm tracking-wider uppercase mb-1">
+<span class="material-symbols-outlined text-[14px]">hourglass_top</span>
+<span id="timer-type-label">Resterend in Ronde</span>
+</div>
+<!-- Big Digital Numbers -->
+<div class="font-display-lg text-display-lg text-primary tracking-tight font-bold my-1 select-none" id="countdown-timer">
+        03:21
+      </div>
+<!-- Progress Line under Timer -->
+<div class="w-full bg-surface-container-lowest h-2 rounded-full overflow-hidden mt-1 mb-space-sm">
+<div class="h-full bg-primary transition-all duration-1000 ease-linear" id="round-progress-fill" style="width: 67%;"></div>
+</div>
+<!-- Quick Audio & Status Indicators -->
+<div class="w-full flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-space-xs">
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface active:bg-surface-bright transition-colors" id="bell-mute-btn" onclick="toggleAudio()">
+<span class="material-symbols-outlined text-[16px]" id="bell-icon">notifications_active</span>
+<span id="bell-status-text">Belsignaal Aan</span>
+</button>
+<span class="flex items-center gap-1 text-tertiary">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span id="tempo-status-indicator">Tempo Normaal</span>
+</span>
+</div>
+</div>
+</section>
+<!-- Real-Time Telemetry Bar (Dexcom G7 + Polar H10) -->
+<section class="px-gutter pt-space-md">
+<div class="grid grid-cols-2 gap-space-sm">
+<!-- Dexcom G7 Card -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wide">DEXCOM G7</span>
+<span class="w-2 h-2 rounded-full bg-tertiary animate-ping"></span>
+</div>
+<div class="flex items-baseline gap-1 my-1">
+<span class="text-headline-lg font-headline-lg text-on-surface" id="live-glucose">6.5</span>
+<span class="text-tertiary font-headline-sm font-headline-sm" id="live-glucose-arrow">➔</span>
+</div>
+<div class="flex flex-col gap-0.5 mt-1">
+<span class="text-label-sm font-label-sm text-tertiary font-medium">Stabiel doelbereik</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">4.2 - 9.0 mmol/L</span>
+</div>
+</div>
+<!-- Polar H10 Card -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wide">POLAR H10</span>
+<span class="material-symbols-outlined text-[16px] text-error animate-pulse">favorite</span>
+</div>
+<div class="flex items-baseline gap-1 my-1">
+<span class="text-headline-lg font-headline-lg text-on-surface" id="live-heartrate">164</span>
+<span class="text-label-md font-label-md text-on-surface-variant font-normal">BPM</span>
+</div>
+<div class="flex flex-col gap-0.5 mt-1">
+<span class="text-label-sm font-label-sm text-error font-medium" id="hr-zone-text">Zone 4 • Drempel</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant" id="hr-pct-text">88% max HR</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Technique Focus Section (Gloved Hand Large Touch Targets) -->
+<section class="px-gutter pt-space-lg flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface">Techniek Focus</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary-container/30 text-secondary text-label-sm font-label-sm">2 Actief</span>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Tik voor telscore</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant -mt-1">Ontworpen voor snelle bediening door coach of via mat-tap.</p>
+<!-- Technique Card 1: Harai Goshi -->
+<div class="bg-surface-container rounded-xl p-space-md flex flex-col gap-space-sm shadow-md">
+<div class="flex items-center justify-between">
+<div class="flex flex-col min-w-0">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Harai Goshi</h3>
+<span class="text-body-sm font-body-sm text-on-surface-variant">Heupworp / Setup vanuit overhook</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-highest text-secondary text-label-sm font-label-sm uppercase font-semibold shrink-0">
+          Grappling
+        </span>
+</div>
+<!-- Quick Tally Buttons (48px+ Touch Bounds) -->
+<div class="grid grid-cols-3 gap-2 pt-space-xs">
+<!-- Geslaagd -->
+<button class="h-16 rounded-xl bg-surface-container-high active:scale-95 active:bg-tertiary/20 flex flex-col items-center justify-center transition-all select-none group focus:outline-none" onclick="incrementTechnique('t1-success')">
+<span class="font-label-sm text-label-sm text-tertiary font-semibold uppercase group-active:scale-95 transition-transform">Geslaagd</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-tertiary">check</span>
+<span class="text-headline-md font-headline-md text-on-surface transition-transform duration-150 inline-block" id="t1-success-val">4</span>
+</div>
+</button>
+<!-- Probeersel -->
+<button class="h-16 rounded-xl bg-surface-container-high active:scale-95 active:bg-surface-bright flex flex-col items-center justify-center transition-all select-none group focus:outline-none" onclick="incrementTechnique('t1-attempt')">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold uppercase group-active:scale-95 transition-transform">Poging</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant">cached</span>
+<span class="text-headline-md font-headline-md text-on-surface transition-transform duration-150 inline-block" id="t1-attempt-val">7</span>
+</div>
+</button>
+<!-- Gecounterd -->
+<button class="h-16 rounded-xl bg-surface-container-high active:scale-95 active:bg-error-container/40 flex flex-col items-center justify-center transition-all select-none group focus:outline-none" onclick="incrementTechnique('t1-countered')">
+<span class="font-label-sm text-label-sm text-error font-semibold uppercase group-active:scale-95 transition-transform">Gecounterd</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-error">close</span>
+<span class="text-headline-md font-headline-md text-on-surface transition-transform duration-150 inline-block" id="t1-countered-val">1</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Technique Card 2: Liver Punch Setup -->
+<div class="bg-surface-container rounded-xl p-space-md flex flex-col gap-space-sm shadow-md">
+<div class="flex items-center justify-between">
+<div class="flex flex-col min-w-0">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Liver Punch Setup</h3>
+<span class="text-body-sm font-body-sm text-on-surface-variant">1-2 Feint naar linker leverstoot</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-highest text-primary text-label-sm font-label-sm uppercase font-semibold shrink-0">
+          Striking
+        </span>
+</div>
+<!-- Quick Tally Buttons -->
+<div class="grid grid-cols-3 gap-2 pt-space-xs">
+<!-- Clean Hit -->
+<button class="h-16 rounded-xl bg-surface-container-high active:scale-95 active:bg-primary-container/40 flex flex-col items-center justify-center transition-all select-none group focus:outline-none" onclick="incrementTechnique('t2-clean')">
+<span class="font-label-sm text-label-sm text-primary font-semibold uppercase group-active:scale-95 transition-transform">Clean Hit</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">bolt</span>
+<span class="text-headline-md font-headline-md text-on-surface transition-transform duration-150 inline-block" id="t2-clean-val">3</span>
+</div>
+</button>
+<!-- Geblokt -->
+<button class="h-16 rounded-xl bg-surface-container-high active:scale-95 active:bg-surface-bright flex flex-col items-center justify-center transition-all select-none group focus:outline-none" onclick="incrementTechnique('t2-blocked')">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold uppercase group-active:scale-95 transition-transform">Geblokt</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant">shield</span>
+<span class="text-headline-md font-headline-md text-on-surface transition-transform duration-150 inline-block" id="t2-blocked-val">5</span>
+</div>
+</button>
+<!-- Retaliatie -->
+<button class="h-16 rounded-xl bg-surface-container-high active:scale-95 active:bg-error-container/40 flex flex-col items-center justify-center transition-all select-none group focus:outline-none" onclick="incrementTechnique('t2-retaliated')">
+<span class="font-label-sm text-label-sm text-error font-semibold uppercase group-active:scale-95 transition-transform">Tegenstoot</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-error">priority_high</span>
+<span class="text-headline-md font-headline-md text-on-surface transition-transform duration-150 inline-block" id="t2-retaliated-val">2</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Quick Swap Pill Banner for Next Rounds -->
+<button class="w-full bg-surface-container-low active:bg-surface-container-high p-3 rounded-xl flex items-center justify-between transition-colors" onclick="cycleTechniqueQueue()">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-secondary text-[20px] shrink-0">swap_calls</span>
+<div class="flex flex-col text-left truncate">
+<span class="text-label-md font-label-md text-on-surface font-semibold truncate">Wissel focus voor R4/R5</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant truncate" id="technique-queue-text">Volgende in wachtrij: Low Calf Kick + Guilt-trip Guillotine</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] shrink-0">chevron_right</span>
+</button>
+</section>
+<!-- Coach Voice Note & Fast Log Quick-action -->
+<section class="px-gutter pt-space-sm pb-space-md">
+<div class="bg-surface-container-low rounded-xl p-space-md flex items-center justify-between shadow-sm" id="voice-memo-card">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary shrink-0 transition-colors" id="voice-icon-circle">
+<span class="material-symbols-outlined text-[20px]" id="voice-main-icon">mic</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Snelle Spraaknotitie Coach</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant truncate" id="voice-memo-status">Tik om observatie in te spreken</span>
+</div>
+</div>
+<button class="px-3.5 py-2 rounded-lg bg-surface-container-highest text-on-surface active:bg-error active:text-on-error font-label-sm text-label-sm flex items-center gap-1.5 font-semibold transition-all shrink-0 cursor-pointer" id="voice-record-btn" onclick="toggleVoiceRecord()">
+<span class="w-2.5 h-2.5 rounded-full bg-error" id="voice-rec-dot"></span>
+<span id="voice-rec-text">REC</span>
+</button>
+</div>
+</section>
+<!-- Persistent Glove-Friendly Master Controls at Bottom -->
+<section class="sticky bottom-0 z-40 bg-surface/95 backdrop-blur-md px-gutter py-space-sm shadow-[0_-4px_16px_rgba(0,0,0,0.4)] flex flex-col gap-space-xs">
+<div class="grid grid-cols-12 gap-space-sm">
+<!-- Big Pause / Resume Primary Button (Span 8) -->
+<button class="col-span-8 h-14 bg-primary text-on-primary active:bg-secondary transition-colors rounded-xl flex items-center justify-center gap-2 select-none font-headline-sm text-headline-sm shadow-md" id="main-pause-btn" onclick="toggleTimer()">
+<span class="material-symbols-outlined text-[28px]" id="play-pause-icon">pause</span>
+<span id="play-pause-text">PAUZE</span>
+</button>
+<!-- Next Round Button (Span 4) -->
+<button class="col-span-4 h-14 bg-surface-container-high active:bg-surface-bright text-on-surface rounded-xl flex flex-col items-center justify-center transition-colors select-none font-label-md text-label-md" id="main-next-btn" onclick="nextRound()">
+<span class="material-symbols-outlined text-[22px] text-secondary">skip_next</span>
+<span class="text-label-sm font-label-sm">VOLGENDE</span>
+</button>
+</div>
+</section>
+</div>
+<!-- Round Rest / Next Round Confirmation Toast Overlay -->
+<div class="fixed inset-x-4 top-20 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-[-12px]" id="round-notification-toast">
+<div class="bg-surface-container-high/95 border border-primary/40 backdrop-blur-xl text-on-surface rounded-xl p-3.5 shadow-2xl flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]" id="toast-icon">sports_martial_arts</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-[15px] font-semibold text-on-surface truncate" id="toast-title">Ronde Gestart</span>
+<span class="text-body-sm text-on-surface-variant truncate" id="toast-msg">Ronde 4 is ingegaan. 5 min werkfase.</span>
+</div>
+</div>
+</div>
+<script>
+  // Timer State (starting at 03:21 = 201 seconds as shown in design)
+  let secondsRemaining = 201;
+  const totalRoundSeconds = 300; // 5 min werkronde
+  let isTimerRunning = true;
+  let timerInterval = null;
+  let isAudioEnabled = true;
+  let currentRoundNumber = 3;
+  let isRestPeriod = false;
+
+  // Technique counters
+  const tallyData = {
+    't1-success': 4,
+    't1-attempt': 7,
+    't1-countered': 1,
+    't2-clean': 3,
+    't2-blocked': 5,
+    't2-retaliated': 2
+  };
+
+  // Queue List
+  const queueList = [
+    "Volgende in wachtrij: Low Calf Kick + Guilt-trip Guillotine",
+    "Volgende in wachtrij: Double Leg Takedown + Overhand Right",
+    "Volgende in wachtrij: Inside Slip + Knee Tap Drill",
+    "Volgende in wachtrij: Clinch Control + Thai Plum"
+  ];
+  let queueIdx = 0;
+
+  // Voice note recording simulation state
+  let isRecording = false;
+  let recSeconds = 0;
+  let recInterval = null;
+
+  function updateTimerDisplay() {
+    const mins = Math.floor(secondsRemaining / 60);
+    const secs = secondsRemaining % 60;
+    const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    const timerElem = document.getElementById('countdown-timer');
+    if (timerElem) timerElem.textContent = formatted;
+
+    const progressFill = document.getElementById('round-progress-fill');
+    if (progressFill) {
+      const percentage = (secondsRemaining / (isRestPeriod ? 60 : totalRoundSeconds)) * 100;
+      progressFill.style.width = `${Math.max(0, percentage)}%`;
+      if (isRestPeriod) {
+        progressFill.classList.remove('bg-primary');
+        progressFill.classList.add('bg-secondary');
+      } else {
+        progressFill.classList.remove('bg-secondary');
+        progressFill.classList.add('bg-primary');
+      }
+    }
+  }
+
+  function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (secondsRemaining > 0) {
+        secondsRemaining--;
+        updateTimerDisplay();
+      } else {
+        // Round completion logic
+        if (!isRestPeriod && currentRoundNumber < 5) {
+          triggerRestBreak();
+        } else if (isRestPeriod) {
+          startNextRoundDirectly();
+        } else {
+          clearInterval(timerInterval);
+          isTimerRunning = false;
+          updateControlsUI();
+          showToast('Sessie Voltooid!', 'Alle 5 rondes afgerond. Rust en hydrateer.', 'emoji_events');
+        }
+      }
+    }, 1000);
+  }
+
+  function toggleTimer() {
+    isTimerRunning = !isTimerRunning;
+    if (isTimerRunning) {
+      startTimer();
+    } else {
+      clearInterval(timerInterval);
+    }
+    updateControlsUI();
+  }
+
+  function updateControlsUI() {
+    const icon = document.getElementById('play-pause-icon');
+    const text = document.getElementById('play-pause-text');
+    const btn = document.getElementById('main-pause-btn');
+    if (isTimerRunning) {
+      if (icon) icon.textContent = 'pause';
+      if (text) text.textContent = 'PAUZE';
+      if (btn) {
+        btn.classList.remove('bg-secondary', 'text-on-secondary');
+        btn.classList.add('bg-primary', 'text-on-primary');
+      }
+    } else {
+      if (icon) icon.textContent = 'play_arrow';
+      if (text) text.textContent = 'HERVAT';
+      if (btn) {
+        btn.classList.remove('bg-primary', 'text-on-primary');
+        btn.classList.add('bg-secondary', 'text-on-secondary');
+      }
+    }
+  }
+
+  function renderPips() {
+    const container = document.getElementById('round-pips-container');
+    if (!container) return;
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      if (i < currentRoundNumber) {
+        html += `<div class="h-2 rounded-full bg-secondary"></div>`;
+      } else if (i === currentRoundNumber) {
+        html += `<div class="h-2 rounded-full ${isRestPeriod ? 'bg-tertiary' : 'bg-primary'} animate-pulse"></div>`;
+      } else {
+        html += `<div class="h-2 rounded-full bg-surface-container-highest"></div>`;
+      }
+    }
+    container.innerHTML = html;
+  }
+
+  function showToast(title, msg, icon = 'sports_martial_arts') {
+    const toast = document.getElementById('round-notification-toast');
+    const tTitle = document.getElementById('toast-title');
+    const tMsg = document.getElementById('toast-msg');
+    const tIcon = document.getElementById('toast-icon');
+    if (!toast) return;
+
+    if (tTitle) tTitle.textContent = title;
+    if (tMsg) tMsg.textContent = msg;
+    if (tIcon) tIcon.textContent = icon;
+
+    toast.classList.remove('opacity-0', 'translate-y-[-12px]');
+    toast.classList.add('opacity-100', 'translate-y-0');
+
+    setTimeout(() => {
+      toast.classList.remove('opacity-100', 'translate-y-0');
+      toast.classList.add('opacity-0', 'translate-y-[-12px]');
+    }, 2800);
+  }
+
+  function triggerRestBreak() {
+    isRestPeriod = true;
+    secondsRemaining = 60; // 1 min rust
+    const statusText = document.getElementById('round-status-text');
+    const timerLabel = document.getElementById('timer-type-label');
+    const statusBadge = document.getElementById('round-status-badge');
+    const roundSub = document.getElementById('round-mode-subtitle');
+
+    if (statusText) statusText.textContent = `Rustpauze • 60s herstel`;
+    if (timerLabel) timerLabel.textContent = `Rusttijd tot Ronde ${currentRoundNumber + 1}`;
+    if (roundSub) roundSub.textContent = `HERSTELFASE`;
+    if (statusBadge) {
+      statusBadge.classList.remove('bg-error-container/40', 'text-error');
+      statusBadge.classList.add('bg-tertiary-container/30', 'text-tertiary');
+    }
+
+    renderPips();
+    updateTimerDisplay();
+    showToast(`Ronde ${currentRoundNumber} Einde`, '1 minuut rust gestart. Hartslag normaliseren.', 'hotel_class');
+  }
+
+  function startNextRoundDirectly() {
+    isRestPeriod = false;
+    currentRoundNumber = Math.min(5, currentRoundNumber + 1);
+    secondsRemaining = totalRoundSeconds;
+
+    const roundTitle = document.getElementById('round-title-display');
+    const statusText = document.getElementById('round-status-text');
+    const timerLabel = document.getElementById('timer-type-label');
+    const statusBadge = document.getElementById('round-status-badge');
+    const roundSub = document.getElementById('round-mode-subtitle');
+
+    if (roundTitle) roundTitle.textContent = `Ronde ${currentRoundNumber}`;
+    if (statusText) statusText.textContent = `Actieve Sparring • Live`;
+    if (timerLabel) timerLabel.textContent = `Resterend in Ronde`;
+    if (roundSub) roundSub.textContent = `SPARRING DRILL`;
+    if (statusBadge) {
+      statusBadge.classList.remove('bg-tertiary-container/30', 'text-tertiary');
+      statusBadge.classList.add('bg-error-container/40', 'text-error');
+    }
+
+    renderPips();
+    updateTimerDisplay();
+    showToast(`Ronde ${currentRoundNumber} Gestart`, `5 min werkfase. Techniek focus actief!`, 'sports_martial_arts');
+  }
+
+  function nextRound() {
+    if (isRestPeriod) {
+      // In rest -> go straight to next round
+      startNextRoundDirectly();
+      if (!isTimerRunning) toggleTimer();
+    } else if (currentRoundNumber < 5) {
+      // Advance to next round directly or rest
+      startNextRoundDirectly();
+      if (!isTimerRunning) toggleTimer();
+    } else {
+      secondsRemaining = 0;
+      updateTimerDisplay();
+      const roundTitle = document.getElementById('round-title-display');
+      if (roundTitle) roundTitle.textContent = 'Voltooid!';
+      clearInterval(timerInterval);
+      showToast('Workout Klaar!', 'Alle 5 rondes zijn succesvol afgewerkt.', 'check_circle');
+    }
+  }
+
+  function incrementTechnique(metricKey) {
+    if (tallyData[metricKey] !== undefined) {
+      tallyData[metricKey]++;
+      const el = document.getElementById(`${metricKey}-val`);
+      if (el) {
+        el.textContent = tallyData[metricKey];
+        // Haptic micro-scale animation
+        el.classList.add('scale-125', 'text-primary');
+        setTimeout(() => {
+          el.classList.remove('scale-125', 'text-primary');
+        }, 180);
+      }
+    }
+  }
+
+  function cycleTechniqueQueue() {
+    queueIdx = (queueIdx + 1) % queueList.length;
+    const txt = document.getElementById('technique-queue-text');
+    if (txt) {
+      txt.textContent = queueList[queueIdx];
+    }
+  }
+
+  function toggleAudio() {
+    isAudioEnabled = !isAudioEnabled;
+    const icon = document.getElementById('bell-icon');
+    const text = document.getElementById('bell-status-text');
+    const btn = document.getElementById('bell-mute-btn');
+    if (isAudioEnabled) {
+      if (icon) icon.textContent = 'notifications_active';
+      if (text) text.textContent = 'Belsignaal Aan';
+      if (btn) {
+        btn.classList.remove('bg-surface-container-highest', 'opacity-70');
+        btn.classList.add('bg-surface-container-high');
+      }
+      showToast('Belsignaal Actief', 'Signalen luiden bij ronde start en 10s einde.', 'notifications_active');
+    } else {
+      if (icon) icon.textContent = 'notifications_off';
+      if (text) text.textContent = 'Stil (Vibratie)';
+      if (btn) {
+        btn.classList.remove('bg-surface-container-high');
+        btn.classList.add('bg-surface-container-highest', 'opacity-70');
+      }
+      showToast('Geluid Gedempt', 'Alleen vibraties en visuele pips actief.', 'notifications_off');
+    }
+  }
+
+  function toggleVoiceRecord() {
+    isRecording = !isRecording;
+    const btn = document.getElementById('voice-record-btn');
+    const dot = document.getElementById('voice-rec-dot');
+    const text = document.getElementById('voice-rec-text');
+    const status = document.getElementById('voice-memo-status');
+    const iconCirc = document.getElementById('voice-icon-circle');
+    const memoCard = document.getElementById('voice-memo-card');
+
+    if (isRecording) {
+      recSeconds = 0;
+      if (btn) {
+        btn.classList.remove('bg-surface-container-highest');
+        btn.classList.add('bg-error', 'text-on-error');
+      }
+      if (dot) dot.classList.add('animate-ping', 'bg-white');
+      if (text) text.textContent = '00:00';
+      if (iconCirc) {
+        iconCirc.classList.remove('bg-surface-container-high', 'text-primary');
+        iconCirc.classList.add('bg-error/20', 'text-error');
+      }
+      if (memoCard) memoCard.classList.add('border', 'border-error/50');
+      if (status) {
+        status.textContent = 'Opnemen... Coach notitie loopt';
+        status.classList.add('text-error');
+      }
+
+      recInterval = setInterval(() => {
+        recSeconds++;
+        const sMins = Math.floor(recSeconds / 60);
+        const sSecs = recSeconds % 60;
+        if (text) text.textContent = `${String(sMins).padStart(2, '0')}:${String(sSecs).padStart(2, '0')}`;
+        if (status) status.textContent = `Luistert... (${recSeconds}s) "Heupindoezeling te laat"`;
+      }, 1000);
+
+    } else {
+      if (recInterval) clearInterval(recInterval);
+      if (btn) {
+        btn.classList.remove('bg-error', 'text-on-error');
+        btn.classList.add('bg-surface-container-highest');
+      }
+      if (dot) dot.classList.remove('animate-ping', 'bg-white');
+      if (text) text.textContent = 'REC';
+      if (iconCirc) {
+        iconCirc.classList.add('bg-surface-container-high', 'text-primary');
+        iconCirc.classList.remove('bg-error/20', 'text-error');
+      }
+      if (memoCard) memoCard.classList.remove('border', 'border-error/50');
+      if (status) {
+        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        status.textContent = `Spraaknotitie (${recSeconds}s) opgeslagen om ${timeNow}`;
+        status.classList.remove('text-error');
+      }
+      showToast('Spraaknotitie Opgeslagen', `Audio clip van ${recSeconds}s gekoppeld aan Ronde ${currentRoundNumber}.`, 'mic');
+    }
+  }
+
+  // Periodic Telemetry jitter for realistic live feel
+  setInterval(() => {
+    const hr = document.getElementById('live-heartrate');
+    if (hr) {
+      const baseHr = 163;
+      const variation = Math.floor(Math.random() * 5) - 2;
+      hr.textContent = baseHr + variation;
+    }
+  }, 3500);
+
+  // Initialize on load
+  updateTimerDisplay();
+  startTimer();
+</script></main></body></html>

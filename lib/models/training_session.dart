@@ -5,6 +5,7 @@
 
 import '../core/glucose_rules.dart';
 import 'glucose.dart';
+import 'live_training.dart';
 import 'technique.dart';
 
 class SessionTechniqueResult {
@@ -24,6 +25,9 @@ class TrainingSession {
   final List<GlucosePoint> glucoseSeries;
   final List<Map<String, dynamic>> blocks;
 
+  /// Voeding tijdens de training (kolom `nutrition`), achteraf aanpasbaar.
+  final List<NutritionLog> nutrition;
+
   const TrainingSession({
     required this.id,
     required this.kind,
@@ -33,6 +37,7 @@ class TrainingSession {
     this.note = '',
     this.glucoseSeries = const [],
     this.blocks = const [],
+    this.nutrition = const [],
   });
 
   factory TrainingSession.fromJson(Map<String, dynamic> j) => TrainingSession(
@@ -50,6 +55,34 @@ class TrainingSession {
       for (final b in (j['blocks'] as List?) ?? const [])
         if (b is Map<String, dynamic>) b,
     ],
+    nutrition: [
+      for (final n in (j['nutrition'] as List?) ?? const [])
+        if (n is Map<String, dynamic> && n['at'] != null) NutritionLog.fromJson(n),
+    ],
+  );
+
+  TrainingSession copyWithId(String newId) => TrainingSession(
+    id: newId,
+    kind: kind,
+    title: title,
+    startedAt: startedAt,
+    durationMinutes: durationMinutes,
+    note: note,
+    glucoseSeries: glucoseSeries,
+    blocks: blocks,
+    nutrition: nutrition,
+  );
+
+  TrainingSession copyWith({List<NutritionLog>? nutrition, List<Map<String, dynamic>>? blocks}) => TrainingSession(
+    id: id,
+    kind: kind,
+    title: title,
+    startedAt: startedAt,
+    durationMinutes: durationMinutes,
+    note: note,
+    glucoseSeries: glucoseSeries,
+    blocks: blocks ?? this.blocks,
+    nutrition: nutrition ?? this.nutrition,
   );
 
   Map<String, dynamic> toInsertJson(String userId) => {
@@ -61,6 +94,7 @@ class TrainingSession {
     'note': note,
     'glucose_series': glucoseSeries.map((g) => g.toJson()).toList(),
     'blocks': blocks,
+    'nutrition': [for (final n in nutrition) n.toJson()],
   };
 
   /// Kleur/discipline voor de sessiekaart.

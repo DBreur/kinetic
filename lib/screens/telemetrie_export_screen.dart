@@ -16,6 +16,7 @@ import '../models/kinetic_profile.dart';
 import '../services/telemetry_export.dart';
 import '../state/kinetic_store.dart';
 import '../theme/kinetic_theme.dart';
+import '../widgets/bolus_settings.dart';
 import '../widgets/kinetic_widgets.dart';
 import '../widgets/sheets.dart';
 
@@ -50,6 +51,9 @@ class TelemetrieExportScreen extends StatelessWidget {
           const _SectionHeader(icon: Icons.tune, title: 'Metabole drempels & protocol'),
           const _ThresholdsCard(),
           const SizedBox(height: 24),
+          const _SectionHeader(icon: Icons.calculate_outlined, title: 'Insuline & bolus-calculator'),
+          const BolusSettingsCard(),
+          const SizedBox(height: 24),
           const _SectionHeader(icon: Icons.contrast, title: 'Weergave'),
           KCard(
             child: Column(
@@ -66,6 +70,47 @@ class TelemetrieExportScreen extends StatelessWidget {
                     if (v != store.darkMode) store.toggleTheme();
                   },
                 ),
+                const SizedBox(height: 12),
+                Divider(height: 1, color: context.k.border),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Dagdoel voeding', style: context.t.bodyStrong),
+                  subtitle: Text('Macro-barometer en "x / 210 g" op Vandaag en Eten.', style: context.t.caption),
+                  value: store.nutritionGoalsEnabled,
+                  onChanged: store.setNutritionGoalsEnabled,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Vocht bijhouden', style: context.t.bodyStrong),
+                  subtitle: Text('Vocht-tegel (+250 ml) op Vandaag.', style: context.t.caption),
+                  value: store.waterEnabled,
+                  onChanged: store.setWaterEnabled,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const _SectionHeader(icon: Icons.sports_mma, title: 'Training & sparren'),
+          KCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Rusttimer tussen sparrondes', style: context.t.bodyStrong),
+                      const SizedBox(height: 2),
+                      Text(
+                        store.restTimerEnabled
+                            ? 'De rust telt af en de volgende ronde start vanzelf.'
+                            : 'Geen timer: de rust duurt tot je zelf de volgende ronde start.',
+                        style: context.t.caption,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Switch(value: store.restTimerEnabled, onChanged: store.setRestTimerEnabled),
               ],
             ),
           ),
@@ -178,19 +223,6 @@ class _ProfileCard extends StatefulWidget {
 }
 
 class _ProfileCardState extends State<_ProfileCard> {
-  bool _syncing = false;
-
-  Future<void> _sync() async {
-    final store = KineticScope.read(context);
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _syncing = true);
-    await store.refreshAll();
-    if (!mounted) return;
-    setState(() => _syncing = false);
-    final err = store.syncError;
-    showToastOn(messenger, err ?? 'Gesynchroniseerd met Supabase', error: err != null);
-  }
-
   @override
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
@@ -251,15 +283,13 @@ class _ProfileCardState extends State<_ProfileCard> {
                     children: [
                       Text('Supabase', style: context.t.bodyStrong),
                       Text(
-                        store.syncError ?? 'Gesynchroniseerd ${_ago(store.lastSyncAt, now)}',
+                        store.syncError == null
+                            ? 'Alles wordt direct opgeslagen • bijgewerkt ${_ago(store.lastSyncAt, now)}'
+                            : '${store.syncError} Trek een pagina omlaag om opnieuw te laden.',
                         style: context.t.caption,
                       ),
                     ],
                   ),
-                ),
-                TextButton(
-                  onPressed: _syncing ? null : _sync,
-                  child: Text(_syncing ? 'Bezig…' : 'Nu synchroniseren'),
                 ),
               ],
             ),
@@ -323,7 +353,7 @@ class _DexcomCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           KWell(
-            padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
                 Icon(Icons.schedule, size: 16, color: k.textSecondary),
@@ -334,13 +364,17 @@ class _DexcomCard extends StatelessWidget {
                     style: context.t.caption,
                   ),
                 ),
-                FilledButton.icon(
-                  onPressed: () => showFingerstickSheet(context),
-                  icon: const Icon(Icons.water_drop_outlined, size: 18),
-                  label: const Text('Kalibreren'),
-                ),
               ],
             ),
+          ),
+          const SizedBox(height: 10),
+          BigButton(
+            label: 'Vingerprik vergelijken',
+            icon: Icons.water_drop_outlined,
+            style: KButtonStyle.secondary,
+            height: 52,
+            fitLabel: true,
+            onPressed: () => showFingerstickSheet(context),
           ),
         ],
       ),
@@ -356,6 +390,7 @@ class _PolarCard extends StatelessWidget {
     final store = KineticScope.of(context);
     final k = context.k;
     final simulated = store.heartRate.isSimulated;
+    final on = store.showHeartRate;
     return KCard(
       child: Row(
         children: [
@@ -368,10 +403,14 @@ class _PolarCard extends StatelessWidget {
                 Text('Polar H10 hartslagband', style: context.t.subtitle),
                 const SizedBox(height: 2),
                 Text(
-                  simulated ? 'Niet gekoppeld: hartslag is een simulatie' : 'Verbonden • ${store.heartRateBpm} BPM',
+                  !on
+                      ? 'Uit: geen hartslag tijdens trainingen'
+                      : simulated
+                      ? 'Aan • nog niet gekoppeld: hartslag is een simulatie'
+                      : 'Verbonden • ${store.heartRateBpm} BPM',
                   style: context.t.caption,
                 ),
-                if (simulated) ...[
+                if (on && simulated) ...[
                   const SizedBox(height: 2),
                   Text('Gesimuleerde waarden worden nooit opgeslagen.', style: context.t.caption.copyWith(color: k.textMuted)),
                 ],
@@ -379,12 +418,7 @@ class _PolarCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          KPill(
-            simulated ? 'Simulatie' : 'Verbonden',
-            tone: simulated ? KTone.warning : KTone.success,
-            dot: true,
-            dense: true,
-          ),
+          Switch(value: on, onChanged: store.setShowHeartRate),
         ],
       ),
     );

@@ -1,8 +1,8 @@
 // glucose_timeline.dart: Dexcom-stijl trendgrafiek. Horizontaal scrollen
 // door de laatste 24 uur, met een tijdvenster (3/6/12/24 uur) dat bepaalt
 // hoeveel er tegelijk in beeld is. Elk meetpunt (per 5 min) is een stip:
-// teal in bereik, amber erboven, rood eronder. Tik of sleep voor een
-// scrubber met tijd, waarde en trend; maaltijden staan als koolhydraatlabel
+// teal in bereik, amber erboven, rood eronder. Houd ingedrukt (en sleep)
+// voor een scrubber met tijd, waarde en trend; loslaten verbergt hem; maaltijden staan als koolhydraatlabel
 // bovenin (de auto-annotatie).
 
 import 'dart:math' as math;
@@ -23,7 +23,7 @@ class GlucoseTimeline extends StatefulWidget {
     required this.now,
     this.meals = const [],
     this.height = 200,
-    this.windowHours = 6,
+    this.windowHours = 3,
     this.totalHours = 24,
   });
 
@@ -84,7 +84,7 @@ class _GlucoseTimelineState extends State<GlucoseTimeline> {
       }
     }
     if (best != _selected) HapticFeedback.selectionClick();
-    setState(() => _selected = bestDist < 40 ? best : null);
+    setState(() => _selected = best);
   }
 
   @override
@@ -114,9 +114,12 @@ class _GlucoseTimelineState extends State<GlucoseTimeline> {
             controller: _scroll,
             scrollDirection: Axis.horizontal,
             child: GestureDetector(
-              onTapDown: (d) => _select(d.localPosition, geo, pts),
+              // Alleen ingedrukt houden toont details; slepen wisselt van
+              // meetpunt, loslaten verbergt ze weer.
               onLongPressStart: (d) => _select(d.localPosition, geo, pts),
               onLongPressMoveUpdate: (d) => _select(d.localPosition, geo, pts),
+              onLongPressEnd: (_) => setState(() => _selected = null),
+              onLongPressCancel: () => setState(() => _selected = null),
               child: SizedBox(
                 width: width,
                 height: widget.height,

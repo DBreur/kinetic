@@ -24,7 +24,10 @@ class GlucoseReading {
   /// Waar zodra deze meting 15 minuten of langer geleden is — een sensor
   /// hoort elke 5 minuten te meten, dus dit betekent dat de data niet meer
   /// actueel is (verbinding kwijt, sensor los, telefoon buiten bereik).
-  bool get isStale => DateTime.now().difference(at).inMinutes >= 15;
+  bool get isStale => isStaleAt(DateTime.now());
+
+  /// Zelfde check tegen een meegegeven klok (de store heeft een injecteerbare klok).
+  bool isStaleAt(DateTime now) => now.difference(at).inMinutes >= 15;
 }
 
 /// Eén meting in een korte geschiedenis (bv. de curve op het Nu-scherm) —

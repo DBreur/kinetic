@@ -7,7 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/competition.dart';
 import '../models/glucose.dart';
 import '../models/kinetic_profile.dart';
+import '../models/combination.dart';
 import '../models/library.dart';
+import '../models/live_training.dart';
 import '../models/planned_training.dart';
 import '../models/technique.dart';
 import '../models/training_session.dart';
@@ -90,6 +92,25 @@ class CompetitionRepository {
         .toList();
   }
 
+  Future<Competition> create(String userId, Competition c) async {
+    final row = await _client.from('competitions').insert({...c.toJson(), 'user_id': userId}).select().single();
+    return Competition.fromJson(row);
+  }
+
+  Future<Competition> update(Competition c) async {
+    final row = await _client
+        .from('competitions')
+        .update({...c.toJson(), 'updated_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', c.id)
+        .select()
+        .single();
+    return Competition.fromJson(row);
+  }
+
+  Future<void> delete(String id) async {
+    await _client.from('competitions').delete().eq('id', id);
+  }
+
   Future<void> setTargetWeight(String id, double? kg) async {
     await _client
         .from('competitions')
@@ -167,6 +188,14 @@ class TechniqueRepository {
     return Technique.fromJson(saved);
   }
 
+  /// Losse kolommen bijwerken (description, video_urls, updates...).
+  Future<void> updateFields(String id, Map<String, dynamic> fields) async {
+    await _client
+        .from('techniques')
+        .update({...fields, 'updated_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
   /// "Focus in Sessie" aan = focus_mode 'next' (eerstvolgende training),
   /// zoals de oude app het ook opsloeg.
   Future<void> setFocus(String id, bool on) async {
@@ -207,6 +236,52 @@ class SessionRepository {
         .select()
         .single();
     return TrainingSession.fromJson(row);
+  }
+
+  /// Alleen de voeding bijwerken (aanpassen/verwijderen na de training).
+  Future<void> updateNutrition(String id, List<NutritionLog> nutrition) async {
+    await _client
+        .from('training_sessions')
+        .update({
+          'nutrition': [for (final n in nutrition) n.toJson()],
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', id);
+  }
+
+  /// Blokken bijwerken (bv. een techniek-notitie achteraf).
+  Future<void> updateBlocks(String id, List<Map<String, dynamic>> blocks) async {
+    await _client
+        .from('training_sessions')
+        .update({'blocks': blocks, 'updated_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+}
+
+/// Combinaties (tabel `combinations`).
+class CombinationRepository {
+  CombinationRepository(this._client);
+  final SupabaseClient _client;
+
+  Future<List<Combination>> listForUser(String userId) async {
+    final rows = await _client.from('combinations').select().eq('user_id', userId).order('name');
+    return [for (final r in rows as List) Combination.fromJson(r as Map<String, dynamic>)];
+  }
+
+  Future<Combination> create(String userId, Combination c) async {
+    final row = await _client.from('combinations').insert({...c.toJson(), 'user_id': userId}).select().single();
+    return Combination.fromJson(row);
+  }
+
+  Future<void> update(Combination c) async {
+    await _client
+        .from('combinations')
+        .update({...c.toJson(), 'updated_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', c.id);
+  }
+
+  Future<void> delete(String id) async {
+    await _client.from('combinations').delete().eq('id', id);
   }
 }
 

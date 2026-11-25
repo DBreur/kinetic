@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-tint": "#4fdbc8", "on-tertiary-fixed-variant": "#005236", "tertiary": "#4edea3", "on-background": "#e0e2ea", "on-surface-variant": "#bbcac6", "on-tertiary": "#003824", "surface-container-lowest": "#0a0e13", "on-primary-fixed-variant": "#005048", "on-secondary": "#003731", "on-tertiary-container": "#00442c", "primary": "#4fdbc8", "surface": "#101419", "surface-dim": "#101419", "primary-container": "#14b8a6", "on-primary-fixed": "#00201c", "on-error-container": "#ffdad6", "inverse-primary": "#006b5f", "secondary-container": "#03c6b2", "surface-bright": "#36393f", "tertiary-fixed": "#6ffbbe", "on-surface": "#e0e2ea", "secondary": "#44e2cd", "background": "#101419", "outline": "#859490", "primary-fixed": "#71f8e4", "tertiary-fixed-dim": "#4edea3", "secondary-fixed-dim": "#3cddc7", "on-primary": "#003731", "outline-variant": "#3c4947", "inverse-on-surface": "#2d3136", "on-secondary-fixed": "#00201c", "tertiary-container": "#16bb83", "on-secondary-fixed-variant": "#005047", "on-secondary-container": "#004d44", "surface-container": "#1c2025", "surface-container-highest": "#31353b", "inverse-surface": "#e0e2ea", "surface-container-high": "#262a30", "error": "#ffb4ab", "on-error": "#690005", "error-container": "#93000a", "surface-variant": "#31353b", "on-tertiary-fixed": "#002113", "on-primary-container": "#00423b", "secondary-fixed": "#62fae3", "primary-fixed-dim": "#4fdbc8", "surface-container-low": "#181c21" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin-tablet": "1.5rem", "space-lg": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-md": "1rem", "margin": "1rem", "gutter-desktop": "1.5rem", "margin-desktop": "2rem", "space-xs": "0.25rem", "space-xl": "2rem" }, "fontFamily": { "metric-numeral": ["Inter"], "body-sm": ["Inter"], "label-lg": ["Inter"], "display-lg": ["Inter"], "body-lg": ["Inter"], "display-lg-mobile": ["Inter"], "headline-lg": ["Inter"], "label-md": ["Inter"], "label-sm": ["Inter"], "headline-md": ["Inter"], "body-md": ["Inter"], "headline-sm": ["Inter"] }, "fontSize": { "metric-numeral": ["44px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "700" }], "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600" }], "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400" }], "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400" }], "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0", "fontWeight": "600" }] } } } }</script><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#101419;color:#e0e2ea;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen flex flex-col selection:bg-primary selection:text-on-primary"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.35)] pt-safe"><div class="h-16 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0 flex-1"><img alt="Kinetic Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/ALJJyrDi8n02xiUJEQ4gVhnnjindIyBda-I_cL9I-wwQCI7sjGXjArFrfJw9poszZTgFYluCVzorSP-tJ5Ss_mjvnyJi2PRDKdXuSD5ssTT8mNfJuozHM54R9hlx3rMdh5f652xtla_3lHFYN8CSyvAD8wbDbNnQGNuJ8cS3bKQnsRMzmoXLFf0KHo0aTTnjBJP9DJHLwo28sX6PLoas3qSozVKdxGzFGvfu7w46CCFy1-9x"/><div class="flex items-center gap-space-xs min-w-0"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight truncate">Training</span><span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span></div></div><div class="flex items-center gap-space-sm flex-shrink-0"><a class="w-11 h-11 flex items-center justify-center rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors active:scale-95" data-path="quick-telemetry" href="#"><span class="material-symbols-outlined text-[20px]">vital_signs</span></a><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(79,219,200,0.35)]"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full px-margin space-y-space-md">
+<!-- Tactical Header Segment with Filter Trigger & Export -->
+<div class="flex items-center justify-between pt-space-xs">
+<div>
+<span class="font-label-sm text-label-sm text-primary uppercase tracking-wider block">Logboek Telemetrie</span>
+<h1 class="font-headline-md text-headline-md text-on-surface">Sessie Historie</h1>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="h-11 px-space-sm bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-lg flex items-center gap-1.5 transition-colors active:scale-95" id="exportBtn" title="Exporteer Log">
+<span class="material-symbols-outlined text-[18px] text-primary">ios_share</span>
+<span class="font-label-sm text-label-sm font-semibold">Export</span>
+</button>
+<button class="h-11 w-11 bg-surface-container-high hover:bg-surface-container-highest text-primary rounded-lg flex items-center justify-center transition-colors active:scale-95 relative" id="filterToggleBtn" title="Filters">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-primary ring-2 ring-surface"></span>
+</button>
+</div>
+</div>
+<!-- Filter Dropdown Drawer (Sports Selectors) -->
+<div class="hidden bg-surface-container p-space-md rounded-xl space-y-space-sm shadow-md transition-all" id="filterDrawer">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Filter op Discipline</span>
+<button class="font-label-sm text-label-sm text-primary hover:underline" id="resetFilters">Herstel</button>
+</div>
+<div class="flex flex-wrap gap-1.5" id="sportFiltersGroup">
+<button class="sport-chip active px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-semibold transition-all" data-sport="all">Alles</button>
+<button class="sport-chip px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm transition-all" data-sport="mma">MMA</button>
+<button class="sport-chip px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm transition-all" data-sport="bjj">BJJ (Gi)</button>
+<button class="sport-chip px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm transition-all" data-sport="boksen">Boksen</button>
+<button class="sport-chip px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm transition-all" data-sport="kickboksen">Kickboksen</button>
+<button class="sport-chip px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm transition-all" data-sport="worstelen">Worstelen</button>
+<button class="sport-chip px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm transition-all" data-sport="conditie">Kracht &amp; Conditie</button>
+</div>
+</div>
+<!-- Segmented Period Switcher -->
+<div class="bg-surface-container-lowest p-1 rounded-xl flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
+<button class="period-tab active flex-1 py-2 px-3 rounded-lg text-center font-label-sm text-label-sm font-semibold bg-surface-container-high text-primary shadow-sm whitespace-nowrap transition-all" data-period="week">
+      Deze Week
+    </button>
+<button class="period-tab flex-1 py-2 px-3 rounded-lg text-center font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-all" data-period="month">
+      Maand
+    </button>
+<button class="period-tab flex-1 py-2 px-3 rounded-lg text-center font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-all" data-period="camp">
+      Fight Camp (8w)
+    </button>
+<button class="period-tab flex-1 py-2 px-3 rounded-lg text-center font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-all" data-period="all">
+      Alle
+    </button>
+</div>
+<!-- Weekly Load & Mat Telemetry Overview -->
+<div class="bg-surface-container p-space-md rounded-xl space-y-space-md shadow-md relative overflow-hidden">
+<!-- Top Telemetry Row -->
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Mat Belasting Volume</span>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-metric-numeral text-metric-numeral text-primary">8u 45m</span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold flex items-center">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> +12% vs vorig
+          </span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Glucose Safe-Zone</span>
+<span class="font-headline-sm text-headline-sm text-tertiary">94%</span>
+</div>
+</div>
+<!-- Quick Stat Pill Grid -->
+<div class="grid grid-cols-2 gap-space-xs">
+<div class="bg-surface-container-high p-2.5 rounded-lg flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">sports_mma</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Sparring</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">4 Sessies</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-2.5 rounded-lg flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]">sprint</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Conditie</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">2 Runs / Bag</span>
+</div>
+</div>
+</div>
+<!-- Interactive Load Bar Chart (Maandag - Zondag) -->
+<div class="space-y-1.5 pt-1">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm">Dagen &amp; Intensiteit (minuten)</span>
+<span class="font-label-sm text-label-sm text-primary">Doel: 540 min</span>
+</div>
+<div class="grid grid-cols-7 gap-1.5 h-28 items-end pt-2 bg-surface-container-lowest p-2 rounded-lg">
+<!-- Ma -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer" onclick="highlightDay('Maandag', 90, 'MMA Striking &amp; Takedowns')">
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">90m</span>
+<div class="w-full bg-primary rounded-t transition-all group-hover:bg-primary-fixed" style="height: 65px;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Ma</span>
+</div>
+<!-- Di -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer" onclick="highlightDay('Dinsdag', 45, 'Metabolic Conditioning')">
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">45m</span>
+<div class="w-full bg-secondary-container rounded-t transition-all group-hover:bg-primary" style="height: 34px;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Di</span>
+</div>
+<!-- Wo -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer" onclick="highlightDay('Woensdag', 75, 'BJJ Gi Drills &amp; Rolls')">
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">75m</span>
+<div class="w-full bg-primary rounded-t transition-all group-hover:bg-primary-fixed" style="height: 55px;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Wo</span>
+</div>
+<!-- Do -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer" onclick="highlightDay('Donderdag', 0, 'Actief Herstel &amp; Mobiliteit')">
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">Rest</span>
+<div class="w-full bg-surface-container-high rounded-t" style="height: 6px;"></div>
+<span class="font-label-sm text-label-sm text-outline">Do</span>
+</div>
+<!-- Vr -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer" onclick="highlightDay('Vrijdag', 90, 'MMA Hard Sparring')">
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">90m</span>
+<div class="w-full bg-primary-container rounded-t transition-all group-hover:bg-primary" style="height: 68px;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Vr</span>
+</div>
+<!-- Za -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer" onclick="highlightDay('Zaterdag', 120, 'Open Mat &amp; Live Rounds')">
+<span class="font-label-sm text-label-sm text-primary opacity-80 group-hover:opacity-100 transition-opacity font-semibold">120</span>
+<div class="w-full bg-primary rounded-t shadow-[0_0_8px_rgba(79,219,200,0.5)] transition-all" style="height: 88px;"></div>
+<span class="font-label-sm text-label-sm text-primary font-bold">Za</span>
+</div>
+<!-- Zo -->
+<div class="flex flex-col items-center gap-1 group cursor-pointer" onclick="highlightDay('Zondag', 45, 'Aerobe Herstelrun')">
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">45m</span>
+<div class="w-full bg-secondary-container rounded-t transition-all" style="height: 32px;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Zo</span>
+</div>
+</div>
+<!-- Day feedback toast -->
+<div class="text-center font-label-sm text-label-sm text-on-surface-variant py-1 bg-surface-container-high rounded hidden" id="dayDetailBar">
+        Tik op een dag voor specifieke sessie uitsplitsing
+      </div>
+</div>
+</div>
+<!-- Session Cards List Section -->
+<div class="space-y-space-sm pt-space-xs" id="sessionList">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface">Voltooide Trainingssessies</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant" id="sessionCounter">3 Sessies Getoond</span>
+</div>
+<!-- Card 1: MMA Sparring (Gisteren) - Rich Expandable -->
+<div class="session-card mma bg-surface-container rounded-xl overflow-hidden shadow-sm transition-all duration-200">
+<button class="w-full p-space-md text-left flex flex-col space-y-space-sm focus:outline-none" onclick="toggleSession('session-1')">
+<div class="flex items-start justify-between w-full">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-primary/15 text-primary font-label-sm text-label-sm font-semibold">MMA</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Gisteren • 18:30</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="font-label-sm text-label-sm text-tertiary flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-0.5">verified</span>Voltooid
+            </span>
+<span class="material-symbols-outlined text-[20px] transition-transform duration-200" id="chevron-session-1">expand_more</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">MMA Sparring &amp; Cage Control</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">5 rondes á 5 min + 15 min muurwerk &amp; fence transitions</p>
+</div>
+<!-- Telemetry Pill Snapshot -->
+<div class="grid grid-cols-4 gap-1.5 pt-1">
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Duur</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold">90 min</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Verbrand</span>
+<span class="font-label-lg text-label-lg text-primary font-semibold">920 kcal</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Gem. HR</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold">158 bpm</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Piek HR</span>
+<span class="font-label-lg text-label-lg text-error font-semibold">184 bpm</span>
+</div>
+</div>
+</button>
+<!-- Expandable Drawer Card 1 -->
+<div class="hidden px-space-md pb-space-md space-y-space-md bg-surface-container-low pt-2" id="session-1">
+<!-- Interactive Heart Rate & Glucose Telemetry Sparkline SVG -->
+<div class="bg-surface-container p-space-sm rounded-lg space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">show_chart</span>
+              Hartslag &amp; Glucose Respons Telemetrie
+            </span>
+<span class="font-label-sm text-label-sm text-tertiary">118 mg/dL stabiel</span>
+</div>
+<!-- Inline Telemetry SVG Graph -->
+<div class="w-full h-24 relative">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 320 80">
+<!-- Safe glycemic baseline corridor -->
+<rect fill="#14b8a6" fill-opacity="0.08" height="32" rx="2" width="320" x="0" y="24"></rect>
+<!-- Safe corridor line markers -->
+<line opacity="0.3" stroke="#4fdbc8" stroke-dasharray="3 3" stroke-width="0.7" x1="0" x2="320" y1="24" y2="24"></line>
+<line opacity="0.3" stroke="#4fdbc8" stroke-dasharray="3 3" stroke-width="0.7" x1="0" x2="320" y1="56" y2="56"></line>
+<!-- HR Trend Line (Red/Amber peaks) -->
+<path d="M 0 55 Q 30 45, 60 25 T 120 18 T 180 32 T 240 12 T 300 22 L 320 40" fill="none" stroke="#ef4444" stroke-linecap="round" stroke-width="2"></path>
+<!-- Blood Glucose Trend Line (Teal/Green steady) -->
+<path d="M 0 40 Q 40 38, 80 35 T 160 38 T 240 42 T 320 36" fill="none" stroke="#4fdbc8" stroke-linecap="round" stroke-width="2"></path>
+<!-- Max HR Point Indicator -->
+<circle cx="240" cy="12" fill="#ef4444" r="3.5"></circle>
+</svg>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-error inline-block"></span> Hartslag (Max 184)</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary inline-block"></span> Glucose (Safe corridor)</span>
+</div>
+</div>
+<!-- Combat Techniques Breakdown -->
+<div class="space-y-1.5">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider block">Technieken &amp; Positie Controle</span>
+<div class="bg-surface-container p-2.5 rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">sports_martial_arts</span>
+<div>
+<span class="font-label-md text-label-md text-on-surface block">Single Leg Takedown</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Cage drive &amp; shelf finish</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-md text-label-md text-primary font-bold">8 / 12</span>
+<span class="font-label-sm text-label-sm text-tertiary block">67% Succes</span>
+</div>
+</div>
+<div class="bg-surface-container p-2.5 rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">security</span>
+<div>
+<span class="font-label-md text-label-md text-on-surface block">Guillotine Defense</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Chin tuck &amp; von flue counter</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-md text-label-md text-on-surface font-bold">4 / 4</span>
+<span class="font-label-sm text-label-sm text-tertiary block">100% Gered</span>
+</div>
+</div>
+<div class="bg-surface-container p-2.5 rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-[20px]">crop_free</span>
+<div>
+<span class="font-label-md text-label-md text-on-surface block">Cage Wall Pins</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Underhook &amp; head control</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-md text-label-md text-on-surface font-bold">6m 40s</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Totale controle</span>
+</div>
+</div>
+</div>
+<!-- Coach Note / RPE -->
+<div class="p-2.5 rounded-lg bg-surface-container-high flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">rate_review</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">RPE 8.5 • Glucose bleef stabiel ondanks zware scrambles.</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label-sm text-label-sm font-semibold">IOB: 0.2u</span>
+</div>
+</div>
+</div>
+<!-- Card 2: BJJ Gi Open Mat (2 dagen geleden) -->
+<div class="session-card bjj bg-surface-container rounded-xl overflow-hidden shadow-sm transition-all duration-200">
+<button class="w-full p-space-md text-left flex flex-col space-y-space-sm focus:outline-none" onclick="toggleSession('session-2')">
+<div class="flex items-start justify-between w-full">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-secondary-container/20 text-secondary font-label-sm text-label-sm font-semibold">BJJ Gi</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2 dagen geleden • 19:00</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="font-label-sm text-label-sm text-tertiary flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-0.5">verified</span>Voltooid
+            </span>
+<span class="material-symbols-outlined text-[20px] transition-transform duration-200" id="chevron-session-2">expand_more</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">BJJ Gi - Open Mat &amp; Drills</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">6 live rondes á 6 min met focus op berimbolo passing</p>
+</div>
+<div class="grid grid-cols-4 gap-1.5 pt-1">
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Duur</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold">75 min</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Verbrand</span>
+<span class="font-label-lg text-label-lg text-secondary font-semibold">680 kcal</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Rondes</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold">6 x 6m</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Subs</span>
+<span class="font-label-lg text-label-lg text-tertiary font-semibold">3 Tap / 1 Con</span>
+</div>
+</div>
+</button>
+<!-- Expandable Drawer Card 2 -->
+<div class="hidden px-space-md pb-space-md space-y-space-md bg-surface-container-low pt-2" id="session-2">
+<div class="space-y-1.5">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider block">Submit &amp; Positioneel Resultaat</span>
+<div class="grid grid-cols-2 gap-2">
+<div class="p-2.5 rounded-lg bg-surface-container">
+<span class="font-label-sm text-label-sm text-tertiary block font-semibold">Submissions For</span>
+<ul class="font-body-sm text-body-sm text-on-surface mt-1 space-y-0.5">
+<li>• Bow &amp; Arrow Choke (1x)</li>
+<li>• Triangle Choke (2x)</li>
+</ul>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container">
+<span class="font-label-sm text-label-sm text-error block font-semibold">Incasso / Taps</span>
+<ul class="font-body-sm text-body-sm text-on-surface mt-1 space-y-0.5">
+<li>• Straight Ankle Lock (1x)</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-high flex items-center justify-between">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Sessie glucose start: 132 mg/dL → Einde: 110 mg/dL</span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold">Hydratatie 100%</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Conditioning & Bagwork (3 dagen geleden) -->
+<div class="session-card conditie bg-surface-container rounded-xl overflow-hidden shadow-sm transition-all duration-200">
+<button class="w-full p-space-md text-left flex flex-col space-y-space-sm focus:outline-none" onclick="toggleSession('session-3')">
+<div class="flex items-start justify-between w-full">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-tertiary/20 text-tertiary font-label-sm text-label-sm font-semibold">Conditie</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">3 dagen geleden • 07:15</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="font-label-sm text-label-sm text-tertiary flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-0.5">verified</span>Voltooid
+            </span>
+<span class="material-symbols-outlined text-[20px] transition-transform duration-200" id="chevron-session-3">expand_more</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Metabolic Sprints &amp; Heavy Bag</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Tabata protocollen (20s sprint / 10s rust) + 5 zware zak rondes</p>
+</div>
+<div class="grid grid-cols-4 gap-1.5 pt-1">
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Duur</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold">45 min</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Verbrand</span>
+<span class="font-label-lg text-label-lg text-tertiary font-semibold">510 kcal</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Gem. HR</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold">164 bpm</span>
+</div>
+<div class="bg-surface-container-high p-2 rounded-lg text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Piek Watt</span>
+<span class="font-label-lg text-label-lg text-primary font-semibold">740 W</span>
+</div>
+</div>
+</button>
+<!-- Expandable Drawer Card 3 -->
+<div class="hidden px-space-md pb-space-md space-y-space-md bg-surface-container-low pt-2" id="session-3">
+<div class="space-y-1.5">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider block">Interval Output Matrix</span>
+<div class="space-y-1 bg-surface-container p-2.5 rounded-lg">
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface">Sprint Tabata 1 (Echo Bike):</span>
+<span class="text-primary font-semibold">Gem. 620 W</span>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface">Sprint Tabata 2 (SkiErg):</span>
+<span class="text-primary font-semibold">Gem. 510 W</span>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface">Heavy Bag Power Strikes:</span>
+<span class="text-secondary font-semibold">412 Stoten geregistreerd</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tactical Floating CTA to initiate training session -->
+<div class="pt-space-sm pb-space-xs">
+<button class="w-full h-12 bg-primary text-on-primary font-label-lg text-label-lg rounded-xl flex items-center justify-center gap-2 font-bold shadow-[0_0_20px_rgba(79,219,200,0.35)] hover:bg-primary-fixed active:scale-98 transition-all">
+<span class="material-symbols-outlined text-[22px]">play_circle</span>
+      Start Nieuwe Trainingssessie
+    </button>
+</div>
+<!-- Export Toast Feedback Modal (Hidden by default) -->
+<div class="hidden fixed inset-x-4 bottom-24 p-space-md bg-surface-container-highest text-on-surface rounded-xl shadow-2xl z-50 flex items-center justify-between" id="exportModal">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[24px]">check_circle</span>
+<div>
+<span class="font-label-md text-label-md font-bold block">Logbestand Gereed</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">CSV &amp; PDF geëxporteerd met telemetrie data.</span>
+</div>
+</div>
+<button class="px-3 py-1 bg-primary text-on-primary rounded font-label-sm text-label-sm font-semibold" onclick="closeExportModal()">Sluiten</button>
+</div>
+</div>
+<script>
+  // Accordion drawer handler
+  function toggleSession(id) {
+    const el = document.getElementById(id);
+    const chevron = document.getElementById('chevron-' + id);
+    if (!el) return;
+
+    if (el.classList.contains('hidden')) {
+      el.classList.remove('hidden');
+      if (chevron) chevron.style.transform = 'rotate(180deg)';
+    } else {
+      el.classList.add('hidden');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  // Interactive Bar Chart tap inspector
+  function highlightDay(day, minutes, title) {
+    const feedback = document.getElementById('dayDetailBar');
+    if (!feedback) return;
+    feedback.classList.remove('hidden');
+    if (minutes === 0) {
+      feedback.innerHTML = `<span class="text-outline font-semibold">${day}:</span> Geen sessie geregistreerd (Rustdag).`;
+    } else {
+      feedback.innerHTML = `<span class="text-primary font-semibold">${day}:</span> ${minutes} min mat-tijd — <span class="text-on-surface">${title}</span>`;
+    }
+  }
+
+  // Sport Filter drawer toggle
+  const filterBtn = document.getElementById('filterToggleBtn');
+  const filterDrawer = document.getElementById('filterDrawer');
+  if (filterBtn && filterDrawer) {
+    filterBtn.addEventListener('click', () => {
+      filterDrawer.classList.toggle('hidden');
+    });
+  }
+
+  // Filter chips functionality
+  const chips = document.querySelectorAll('.sport-chip');
+  const sessionCards = document.querySelectorAll('.session-card');
+  const sessionCounter = document.getElementById('sessionCounter');
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => {
+        c.classList.remove('active', 'bg-primary', 'text-on-primary');
+        c.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+      });
+      chip.classList.add('active', 'bg-primary', 'text-on-primary');
+      chip.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+
+      const selected = chip.getAttribute('data-sport');
+      let visibleCount = 0;
+
+      sessionCards.forEach(card => {
+        if (selected === 'all' || card.classList.contains(selected)) {
+          card.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      if (sessionCounter) {
+        sessionCounter.innerText = `${visibleCount} Sessie${visibleCount === 1 ? '' : 's'} Getoond`;
+      }
+    });
+  });
+
+  // Reset filters
+  const resetBtn = document.getElementById('resetFilters');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      const allChip = document.querySelector('.sport-chip[data-sport="all"]');
+      if (allChip) allChip.click();
+    });
+  }
+
+  // Period Tabs Toggle
+  const periodTabs = document.querySelectorAll('.period-tab');
+  periodTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      periodTabs.forEach(t => {
+        t.classList.remove('active', 'bg-surface-container-high', 'text-primary');
+        t.classList.add('text-on-surface-variant');
+      });
+      tab.classList.add('active', 'bg-surface-container-high', 'text-primary');
+      tab.classList.remove('text-on-surface-variant');
+    });
+  });
+
+  // Export action
+  const exportBtn = document.getElementById('exportBtn');
+  const exportModal = document.getElementById('exportModal');
+  if (exportBtn && exportModal) {
+    exportBtn.addEventListener('click', () => {
+      exportModal.classList.remove('hidden');
+      setTimeout(() => {
+        exportModal.classList.add('hidden');
+      }, 4000);
+    });
+  }
+
+  function closeExportModal() {
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) exportModal.classList.add('hidden');
+  }
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.45)]" data-active-classes="text-primary font-label-md"><div class="flex items-center justify-around h-16 px-space-xs max-w-lg mx-auto relative"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="vandaag" href="#"><span class="material-symbols-outlined text-[22px]">local_fire_department</span><span class="font-label-sm text-label-sm mt-0.5">Vandaag</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 transition-colors active:scale-95 text-primary font-label-md" data-path="training" href="#"><span class="material-symbols-outlined text-[22px]">fitness_center</span><span class="font-label-sm text-label-sm mt-0.5">Training</span></a><div class="flex items-center justify-center -mt-5"><a class="w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_16px_rgba(20,184,166,0.45)] hover:bg-primary transition-all active:scale-90" data-path="sessie-starten" href="#"><span class="material-symbols-outlined text-[28px]">add</span></a></div><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="technieken" href="#"><span class="material-symbols-outlined text-[22px]">shield</span><span class="font-label-sm text-label-sm mt-0.5">Technieken</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95" data-path="eten" href="#"><span class="material-symbols-outlined text-[22px]">nutrition</span><span class="font-label-sm text-label-sm mt-0.5">Eten</span></a></div></nav></body></html>

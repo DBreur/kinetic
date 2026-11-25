@@ -57,6 +57,61 @@ enum TechniqueGroup {
   };
 }
 
+/// Eén beoordeling/notitie van een techniek (kolom `updates`, zelfde formaat
+/// als de oude app: {at, rating, note, positions:[{reps, went_well, to_improve}]}).
+class TechniqueUpdate {
+  const TechniqueUpdate({
+    required this.at,
+    this.rating = 0,
+    this.note = '',
+    this.wentWell = '',
+    this.toImprove = '',
+    this.reps = 0,
+  });
+
+  final DateTime at;
+
+  /// 1-5, 0 = geen beoordeling.
+  final int rating;
+  final String note;
+  final String wentWell;
+  final String toImprove;
+  final int reps;
+
+  bool get isReview => rating > 0 || note.trim().isNotEmpty || wentWell.trim().isNotEmpty || toImprove.trim().isNotEmpty;
+
+  factory TechniqueUpdate.fromJson(Map<dynamic, dynamic> j) {
+    var wentWell = '';
+    var toImprove = '';
+    var reps = 0;
+    for (final p in (j['positions'] as List?) ?? const []) {
+      if (p is! Map) continue;
+      reps += (p['reps'] as num?)?.toInt() ?? 0;
+      final w = (p['went_well'] as String?)?.trim() ?? '';
+      final t = (p['to_improve'] as String?)?.trim() ?? '';
+      if (w.isNotEmpty) wentWell = wentWell.isEmpty ? w : '$wentWell\n$w';
+      if (t.isNotEmpty) toImprove = toImprove.isEmpty ? t : '$toImprove\n$t';
+    }
+    return TechniqueUpdate(
+      at: DateTime.tryParse((j['at'] as String?) ?? '')?.toLocal() ?? DateTime(2000),
+      rating: (j['rating'] as num?)?.toInt() ?? 0,
+      note: (j['note'] as String?) ?? '',
+      wentWell: wentWell,
+      toImprove: toImprove,
+      reps: reps,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'at': at.toUtc().toIso8601String(),
+    'rating': rating,
+    'note': note,
+    'positions': [
+      {'position': '', 'rating': rating, 'reps': reps, 'went_well': wentWell, 'to_improve': toImprove},
+    ],
+  };
+}
+
 class Technique {
   final String id;
   final String name;
@@ -79,6 +134,16 @@ class Technique {
   /// Bibliotheektechniek waar deze eigen techniek een kopie van is.
   final String? libraryId;
 
+  /// Video's: links (YouTube, Instagram, TikTok...) of eigen uploads
+  /// (`storage://technique-videos/...`).
+  final List<String> videoUrls;
+
+  /// Volledige historie (beoordelingen, notities, reps), oudste eerst.
+  final List<TechniqueUpdate> updates;
+
+  /// Alleen de echte beoordelingen/notities, nieuwste eerst.
+  List<TechniqueUpdate> get reviews => updates.where((u) => u.isReview).toList().reversed.toList();
+
   const Technique({
     required this.id,
     required this.name,
@@ -92,6 +157,8 @@ class Technique {
     this.ratings = const [],
     this.loggedReps = 0,
     this.libraryId,
+    this.videoUrls = const [],
+    this.updates = const [],
   });
 
   factory Technique.fromJson(Map<String, dynamic> j) {
@@ -122,6 +189,16 @@ class Technique {
       ratings: ratings,
       loggedReps: reps,
       libraryId: j['library_id'] as String?,
+      videoUrls: [
+        for (final v in (j['video_urls'] as List?) ?? const [])
+          if (v is String && v.trim().isNotEmpty) v,
+        if (((j['video_url'] as String?) ?? '').trim().isNotEmpty && !((j['video_urls'] as List?) ?? const []).contains(j['video_url']))
+          j['video_url'] as String,
+      ],
+      updates: [
+        for (final u in updates)
+          if (u is Map) TechniqueUpdate.fromJson(u),
+      ],
     );
   }
 
@@ -147,19 +224,28 @@ class Technique {
     return category;
   }
 
-  Technique copyWith({String? focusMode, bool? favorite, int? loggedReps}) => Technique(
+  Technique copyWith({
+    String? focusMode,
+    bool? favorite,
+    int? loggedReps,
+    String? description,
+    List<String>? videoUrls,
+    List<TechniqueUpdate>? updates,
+  }) => Technique(
     id: id,
     name: name,
     category: category,
-    description: description,
+    description: description ?? this.description,
     learningGoal: learningGoal,
     transition: transition,
     favorite: favorite ?? this.favorite,
     sortOrder: sortOrder,
     focusMode: focusMode ?? this.focusMode,
-    ratings: ratings,
+    ratings: updates == null ? ratings : [for (final u in updates) if (u.rating > 0) u.rating],
     loggedReps: loggedReps ?? this.loggedReps,
     libraryId: libraryId,
+    videoUrls: videoUrls ?? this.videoUrls,
+    updates: updates ?? this.updates,
   );
 }
 

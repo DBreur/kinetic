@@ -10,6 +10,8 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,16 +19,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../core/app_config.dart';
+import '../core/bolus_calculator.dart';
 import '../core/formatters.dart';
 import '../core/glucose_rules.dart';
 import '../core/iob.dart';
 import '../core/meal_impact.dart';
+import '../core/preset_text.dart';
 import '../core/sparring_timer.dart';
+import '../core/training_blocks.dart';
+import '../models/bolus_period.dart';
+import '../models/combination.dart';
 import '../models/competition.dart';
 import '../models/food_log_entry.dart';
+import '../models/food_preset.dart';
 import '../models/glucose.dart';
 import '../models/kinetic_profile.dart';
 import '../models/library.dart';
+import '../models/live_training.dart';
 import '../models/planned_training.dart';
 import '../models/technique.dart';
 import '../models/technique_system.dart';
@@ -159,7 +168,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
       profile = await ProfileRepository(_client!).getOrCreate(u.id);
       state = BootState.ready;
       notifyListeners();
-      await _restoreSparring();
+      await _restoreTraining();
       await refreshAll();
       _startPolling();
     } catch (e) {
@@ -193,7 +202,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> signOut() async {
-    if (sparring != null) await finishSparring(save: false);
+    if (training != null) await finishTraining(save: false);
     await _client?.auth.signOut();
   }
 
@@ -268,6 +277,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
         CompetitionRepository(c).all(uid),
         PlannedTrainingRepository(c).upcoming(uid, start),
         SystemRepository(c).listForUser(uid),
+        CombinationRepository(c).listForUser(uid).catchError((_) => const <Combination>[]),
       ]);
       foodEntries = results[0] as List<FoodLogEntry>;
       weighIns = results[1] as List<WeighIn>;
@@ -277,6 +287,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
       allCompetitions = results[5] as List<Competition>;
       plannedTrainings = results[6] as List<PlannedTraining>;
       systems = results[7] as List<TechniqueSystem>;
+      combinations = results[8] as List<Combination>;
       if (library.isEmpty) {
         try {
           library = await LibraryRepository(c).techniques();
@@ -307,7 +318,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
   /// Rood alarm in de app: actuele meting onder de hypogrens.
   bool get hypoAlert {
     final r = reading;
-    return r != null && !r.isStale && r.mmol < hypoBelow;
+    return r != null && !r.isStaleAt(now()) && r.mmol < hypoBelow;
   }
 
   bool get glucoseConfigured =>
@@ -396,7 +407,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
       await GlucoseEntryRepository(c).add(uid, mmol, now());
     }
     if (profile?.glucoseSource == GlucoseSource.finger) await refreshGlucose();
-    if (cgm == null || cgm.isStale) return null;
+    if (cgm == null || cgm.isStaleAt(now())) return null;
     return mmol - cgm.mmol;
   }
 
@@ -426,11 +437,15 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     double? fat,
     MealContext? context,
     double? insulinUnits,
+    double? insulinFoodUnits,
+    double? insulinCorrectionUnits,
+    double? mmolOverride,
+    Map<String, int> presetCounts = const {},
   }) async {
     final uid = _uid;
     final c = _client;
     final r = reading;
-    final mmol = (r != null && !r.isStale) ? double.parse(r.mmol.toStringAsFixed(1)) : null;
+    final mmol = mmolOverride ?? ((r != null && !r.isStaleAt(now())) ? double.parse(r.mmol.toStringAsFixed(1)) : null);
     FoodLogEntry entry;
     if (uid == null || c == null) {
       entry = FoodLogEntry(
@@ -443,6 +458,9 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
         context: context,
         mmol: mmol,
         insulinUnits: insulinUnits,
+        insulinFoodUnits: insulinFoodUnits,
+        insulinCorrectionUnits: insulinCorrectionUnits,
+        presetCounts: presetCounts,
       );
     } else {
       try {
@@ -456,6 +474,9 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
           context: context,
           mmol: mmol,
           insulinUnits: insulinUnits,
+          insulinFoodUnits: insulinFoodUnits,
+          insulinCorrectionUnits: insulinCorrectionUnits,
+          presetCounts: presetCounts,
         );
         lastSyncAt = now();
       } catch (_) {
@@ -467,6 +488,23 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     foodEntries = [entry, ...foodEntries];
     notifyListeners();
     return entry;
+  }
+
+  /// Een gelogde maaltijd aanpassen (Eten → kaart aantikken).
+  Future<bool> updateFood(FoodLogEntry entry) async {
+    final c = _client;
+    try {
+      var saved = entry;
+      if (c != null && !entry.id.startsWith('local-')) {
+        saved = await FoodLogRepository(c).update(entry);
+        lastSyncAt = now();
+      }
+      foodEntries = [for (final e in foodEntries) e.id == entry.id ? saved : e];
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> deleteFood(FoodLogEntry entry) async {
@@ -555,6 +593,55 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     return true;
   }
 
+  /// Wedstrijd in beide lijsten (komend + alles) vervangen of toevoegen.
+  void _replaceCompetition(Competition c) {
+    List<Competition> put(List<Competition> list) {
+      final has = list.any((x) => x.id == c.id);
+      return has ? [for (final x in list) x.id == c.id ? c : x] : [...list, c];
+    }
+
+    final today = dayStart(now());
+    final upcoming = !c.startsAt.isBefore(today);
+    competitions = (upcoming ? put(competitions) : competitions.where((x) => x.id != c.id).toList())
+      ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+    allCompetitions = put(allCompetitions)..sort((a, b) => b.startsAt.compareTo(a.startsAt));
+  }
+
+  /// Nieuwe wedstrijd (id leeg) of bestaande aanpassen.
+  Future<Competition?> saveCompetition(Competition c) async {
+    final uid = _uid;
+    final client = _client;
+    try {
+      final Competition saved;
+      if (c.id.isEmpty) {
+        saved = (uid == null || client == null)
+            ? c.copyWith(id: 'local-${now().microsecondsSinceEpoch}')
+            : await CompetitionRepository(client).create(uid, c);
+      } else {
+        saved = (client == null || c.id.startsWith('local')) ? c : await CompetitionRepository(client).update(c);
+      }
+      _replaceCompetition(saved);
+      loadChecklist();
+      notifyListeners();
+      return saved;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> deleteCompetition(Competition c) async {
+    try {
+      final client = _client;
+      if (client != null && !c.id.startsWith('local')) await CompetitionRepository(client).delete(c.id);
+    } catch (_) {
+      return false;
+    }
+    competitions = competitions.where((x) => x.id != c.id).toList();
+    allCompetitions = allCompetitions.where((x) => x.id != c.id).toList();
+    notifyListeners();
+    return true;
+  }
+
   Future<bool> setTargetWeight(double? kg) async {
     final comp = nextCompetition;
     final c = _client;
@@ -564,26 +651,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     } catch (_) {
       return false;
     }
-    competitions = [
-      for (final x in competitions)
-        x.id == comp.id
-            ? Competition(
-                id: x.id,
-                name: x.name,
-                startsAt: x.startsAt,
-                discipline: x.discipline,
-                location: x.location,
-                weightClass: x.weightClass,
-                weightLimitType: x.weightLimitType,
-                weightLimitKg: x.weightLimitKg,
-                targetWeightKg: kg,
-                resultPlace: x.resultPlace,
-                resultWins: x.resultWins,
-                resultLosses: x.resultLosses,
-                resultNote: x.resultNote,
-              )
-            : x,
-    ];
+    _replaceCompetition(comp.copyWith(targetWeightKg: kg, clearTarget: kg == null));
     notifyListeners();
     return true;
   }
@@ -603,6 +671,175 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
   List<Technique> techniques = const [];
 
   List<Technique> get focusTechniques => techniques.where((t) => t.isInFocus).toList();
+
+  // ------------------------------------------------ video's, notities, beoordeling
+
+  Map<String, String> get videoLabels => profile?.videoLabels ?? const {};
+
+  /// Titel van een video: eigen titel, anders "Video 1", "Video 2"...
+  String videoTitle(String url, int index) {
+    final l = videoLabels[url]?.trim() ?? '';
+    return l.isEmpty ? 'Video ${index + 1}' : l;
+  }
+
+  /// Techniek lokaal én in Supabase bijwerken.
+  Future<bool> _patchTechnique(String id, Map<String, dynamic> fields, Technique Function(Technique t) local) async {
+    try {
+      final c = _client;
+      if (c != null && !id.startsWith('local')) await TechniqueRepository(c).updateFields(id, fields);
+    } catch (_) {
+      return false;
+    }
+    techniques = [for (final x in techniques) x.id == id ? local(x) : x];
+    notifyListeners();
+    return true;
+  }
+
+  Technique? _technique(String id) => techniques.where((t) => t.id == id).firstOrNull;
+
+  Future<bool> setVideoLabel(String url, String label) async {
+    final p = profile;
+    if (p == null) return false;
+    final next = {...p.videoLabels};
+    if (label.trim().isEmpty) {
+      next.remove(url);
+    } else {
+      next[url] = label.trim();
+    }
+    try {
+      final c = _client;
+      if (c != null) await ProfileRepository(c).updateFields(p.id, {'video_labels': next});
+    } catch (_) {
+      return false;
+    }
+    profile = p.copyWith(videoLabels: next);
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> addTechniqueVideo(String techniqueId, String url, {String label = ''}) async {
+    final t = _technique(techniqueId);
+    if (t == null || t.videoUrls.contains(url)) return t != null;
+    final urls = [...t.videoUrls, url];
+    final ok = await _patchTechnique(techniqueId, {'video_urls': urls}, (x) => x.copyWith(videoUrls: urls));
+    if (ok && label.trim().isNotEmpty) await setVideoLabel(url, label);
+    return ok;
+  }
+
+  Future<bool> removeTechniqueVideo(String techniqueId, String url) async {
+    final t = _technique(techniqueId);
+    if (t == null) return false;
+    final urls = t.videoUrls.where((u) => u != url).toList();
+    final ok = await _patchTechnique(techniqueId, {'video_urls': urls, 'video_url': ''}, (x) => x.copyWith(videoUrls: urls));
+    if (ok && url.startsWith(storageVideoPrefix)) await deleteOwnVideo(url);
+    return ok;
+  }
+
+  /// Algemene notities bij een techniek (kolom `description`).
+  Future<bool> setTechniqueNotes(String techniqueId, String notes) =>
+      _patchTechnique(techniqueId, {'description': notes.trim()}, (x) => x.copyWith(description: notes.trim()));
+
+  /// Beoordeling (sterren, wat ging goed/minder, notitie) toevoegen.
+  Future<bool> addTechniqueReview(String techniqueId, TechniqueUpdate review) async {
+    final t = _technique(techniqueId);
+    if (t == null) return false;
+    final updates = [...t.updates, review];
+    return _patchTechnique(
+      techniqueId,
+      {'updates': [for (final u in updates) u.toJson()]},
+      (x) => x.copyWith(updates: updates),
+    );
+  }
+
+  Future<bool> deleteTechniqueReview(String techniqueId, TechniqueUpdate review) async {
+    final t = _technique(techniqueId);
+    if (t == null) return false;
+    final updates = t.updates.where((u) => !identical(u, review)).toList();
+    return _patchTechnique(
+      techniqueId,
+      {'updates': [for (final u in updates) u.toJson()]},
+      (x) => x.copyWith(updates: updates),
+    );
+  }
+
+  // ------------------------------------------------------------ combinaties
+  List<Combination> combinations = const [];
+
+  Future<Combination?> saveCombination(Combination combo) async {
+    final uid = _uid;
+    final c = _client;
+    try {
+      Combination saved;
+      if (combo.id.isEmpty) {
+        saved = (uid == null || c == null)
+            ? combo.copyWith(id: 'local-${now().microsecondsSinceEpoch}')
+            : await CombinationRepository(c).create(uid, combo);
+        combinations = [...combinations, saved];
+      } else {
+        if (c != null && !combo.id.startsWith('local')) await CombinationRepository(c).update(combo);
+        saved = combo;
+        combinations = [for (final x in combinations) x.id == combo.id ? combo : x];
+      }
+      combinations.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      notifyListeners();
+      return saved;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> deleteCombination(Combination combo) async {
+    try {
+      final c = _client;
+      if (c != null && !combo.id.startsWith('local')) await CombinationRepository(c).delete(combo.id);
+    } catch (_) {
+      return false;
+    }
+    combinations = combinations.where((x) => x.id != combo.id).toList();
+    notifyListeners();
+    return true;
+  }
+
+  // ------------------------------------------------------------ eigen video's
+  static const storageVideoPrefix = 'storage://technique-videos/';
+
+  /// Uploadt een videobestand naar de privé-bucket `technique-videos` en
+  /// geeft de interne link terug (`storage://technique-videos/<uid>/...`).
+  Future<String?> uploadOwnVideo(List<int> bytes, String extension) async {
+    final uid = _uid;
+    final c = _client;
+    if (uid == null || c == null) return null;
+    final path = '$uid/${now().millisecondsSinceEpoch}.${extension.toLowerCase()}';
+    try {
+      await c.storage.from('technique-videos').uploadBinary(
+        path,
+        Uint8List.fromList(bytes),
+        fileOptions: FileOptions(contentType: 'video/${extension.toLowerCase() == 'mov' ? 'quicktime' : 'mp4'}'),
+      );
+      return '$storageVideoPrefix$path';
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Tijdelijke (1 uur) afspeellink voor een eigen video.
+  Future<String?> signedVideoUrl(String url) async {
+    final c = _client;
+    if (c == null || !url.startsWith(storageVideoPrefix)) return null;
+    try {
+      return await c.storage.from('technique-videos').createSignedUrl(url.substring(storageVideoPrefix.length), 3600);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> deleteOwnVideo(String url) async {
+    final c = _client;
+    if (c == null || !url.startsWith(storageVideoPrefix)) return;
+    try {
+      await c.storage.from('technique-videos').remove([url.substring(storageVideoPrefix.length)]);
+    } catch (_) {}
+  }
 
   Future<bool> toggleFocus(Technique t) async {
     final on = !t.isInFocus;
@@ -815,7 +1052,7 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     final saved = sessions
         .where((s) => !s.startedAt.isBefore(start))
         .fold(0, (sum, s) => sum + s.durationMinutes);
-    final live = sparring == null ? 0 : now().difference(sparring!.startedAt).inMinutes;
+    final live = training == null ? 0 : (training!.elapsedSeconds(now()) ~/ 60);
     return saved + live;
   }
 
@@ -824,31 +1061,44 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     weightKg: currentWeightKg ?? 75,
   );
 
-  // ----------------------------------------------------------------- sparring
+  // ----------------------------------------------------------------- training
+  /// Standaard voor een nieuw sparblok (rondes × werk / rust).
   SparringConfig sparringConfig = const SparringConfig();
+
+  /// De lopende training (null = geen training).
+  LiveTraining? training;
+
+  /// Rondeklok van het sparblok dat nu loopt (null = niet aan het sparren).
   SparringTimer? sparring;
 
-  /// Naam van de lopende training ("Combat Sambo", "BJJ"...).
-  String sessionTitle = 'Live sparring';
-  List<String> sessionTechniqueIds = const [];
-  Map<String, TechniqueCounts> sessionCounts = {};
-  List<GlucosePoint> sessionGlucose = [];
-  Map<int, String> coachFocus = {};
-  List<String> voiceMemos = [];
+  /// Rust tussen sparrondes als aflopende timer (instelling). Uit = de rust
+  /// duurt tot je zelf de volgende ronde start.
+  bool restTimerEnabled = true;
+
   int? _hrAtRestStart;
   DateTime? _restStartedAt;
   Timer? _ticker;
+  int _idSeq = 0;
 
   /// Laatste fase-overgang, voor schermnavigatie (live ↔ rust).
   final ValueNotifier<SparringEvent?> sparringEvents = ValueNotifier(null);
 
+  bool get isTrainingActive => training != null;
   bool get isSparringActive => sparring != null && !sparring!.isDone;
   int get roundSecondsRemaining => sparring?.remaining(now()) ?? 0;
 
+  String get sessionTitle => training?.displayTitle ?? 'Training';
+  List<String> get sessionTechniqueIds => training?.techniqueIds ?? const [];
+  List<GlucosePoint> get sessionGlucose => training?.glucose ?? const [];
+
   List<Technique> get sessionTechniques => [
-    for (final id in sessionTechniqueIds)
-      ...techniques.where((t) => t.id == id),
+    for (final id in sessionTechniqueIds) ...techniques.where((t) => t.id == id),
   ];
+
+  /// Tellers van het lopende sparblok (Geslaagd/Poging/Gecounterd).
+  Map<String, TechniqueCounts> get sessionCounts => training?.activeSparring?.counts ?? const {};
+
+  String _newId(String prefix) => '$prefix-${now().microsecondsSinceEpoch}-${_idSeq++}';
 
   /// Herstelsnelheid in de rust: BPM-verschil sinds het begin van de rust.
   (int delta, int seconds)? get heartRateRecovery {
@@ -875,27 +1125,76 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  /// Start een live sessie. Zonder argumenten: de standaard sparringsessie
-  /// met de focus-technieken uit de vault.
-  void startSparring({String? title, SparringConfig? config, List<String>? techniqueIds}) {
-    if (isSparringActive) return;
-    final t = now();
-    sessionTitle = (title == null || title.trim().isEmpty) ? 'Live sparring' : title.trim();
-    sparring = SparringTimer(config: config ?? sparringConfig, now: t);
-    sessionTechniqueIds = techniqueIds ?? focusTechniques.map((x) => x.id).toList();
-    sessionCounts = {for (final id in sessionTechniqueIds) id: const TechniqueCounts()};
-    sessionGlucose = [];
-    coachFocus = {};
-    voiceMemos = [];
+  /// Hartslag (Polar H10) tonen tijdens trainingen. Standaard uit: er is
+  /// nog geen echte koppeling, alleen een simulatie.
+  bool showHeartRate = false;
+
+  Future<void> setShowHeartRate(bool on) async {
+    showHeartRate = on;
+    await _prefs?.setBool('show_heart_rate', on);
+    notifyListeners();
+  }
+
+  /// Dagdoel voeding (macro-barometer, "x / 210 g") tonen.
+  bool nutritionGoalsEnabled = true;
+
+  /// Vocht bijhouden (tegel op Vandaag).
+  bool waterEnabled = true;
+
+  Future<void> setNutritionGoalsEnabled(bool on) async {
+    nutritionGoalsEnabled = on;
+    await _prefs?.setBool('nutrition_goals_enabled', on);
+    notifyListeners();
+  }
+
+  Future<void> setWaterEnabled(bool on) async {
+    waterEnabled = on;
+    await _prefs?.setBool('water_enabled', on);
+    notifyListeners();
+  }
+
+  Future<void> setRestTimerEnabled(bool on) async {
+    restTimerEnabled = on;
+    await _prefs?.setBool('rest_timer_enabled', on);
+    notifyListeners();
+  }
+
+  /// Start een training. De klok loopt pas vanaf [startsAt].
+  void startTraining({
+    required String discipline,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    String title = '',
+    List<String>? techniqueIds,
+  }) {
+    if (isTrainingActive) return;
+    training = LiveTraining(
+      discipline: discipline,
+      title: title,
+      startsAt: startsAt,
+      endsAt: endsAt.isAfter(startsAt) ? endsAt : startsAt.add(const Duration(minutes: 90)),
+      techniqueIds: techniqueIds ?? focusTechniques.map((x) => x.id).toList(),
+    );
     _hrAtRestStart = null;
     _restStartedAt = null;
     _sampleSessionGlucose();
     _startTicker();
     if (enableWakelock) unawaited(WakelockPlus.enable().catchError((_) {}));
     unawaited(refreshGlucose());
-    _persistSparring();
+    _persistTraining();
     notifyListeners();
   }
+
+  void _update(LiveTraining Function(LiveTraining t) change) {
+    final t = training;
+    if (t == null) return;
+    training = change(t);
+    _persistTraining();
+    notifyListeners();
+  }
+
+  void setTrainingTimes({DateTime? startsAt, DateTime? endsAt}) =>
+      _update((t) => t.copyWith(startsAt: startsAt, endsAt: endsAt));
 
   void _startTicker() {
     _ticker?.cancel();
@@ -904,10 +1203,16 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
 
   void _onTick() {
     final t = sparring;
-    heartRate.update(t == null || t.isPaused ? null : t.phase, now());
-    if (t == null) return;
-    final event = t.tick(now(), holdRest: clearanceForNextRound().blocksNextRound);
-    if (event != null) _onSparringEvent(event);
+    final tr = training;
+    final phase = t == null || t.isPaused
+        ? (tr != null && tr.hasStarted(now()) ? SparringPhase.rest : null)
+        : t.phase;
+    heartRate.update(phase, now());
+    if (t != null) {
+      final hold = !restTimerEnabled || clearanceForNextRound().blocksNextRound;
+      final event = t.tick(now(), holdRest: hold);
+      if (event != null) _onSparringEvent(event);
+    }
     notifyListeners();
   }
 
@@ -916,8 +1221,12 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
       _hrAtRestStart = heartRate.bpm;
       _restStartedAt = now();
     }
-    if (e == SparringEvent.finished) _stopTicker();
-    _persistSparring();
+    if (e == SparringEvent.finished) {
+      final t = sparring;
+      if (t != null) _closeSparringBlock(t.config.rounds);
+      sparring = null;
+    }
+    _persistTraining();
     sparringEvents.value = e;
   }
 
@@ -926,9 +1235,110 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     _ticker = null;
   }
 
+  // ------------------------------------------------------------ sparblokken
+  /// Een sparblok toevoegen en meteen starten.
+  void startSparringBlock({required List<SparRound> rounds, String goal = ''}) {
+    final tr = training;
+    if (tr == null || rounds.isEmpty || isSparringActive) return;
+    final block = SparringBlock(
+      id: _newId('spar'),
+      rounds: rounds,
+      goal: goal.trim(),
+      startedAt: now(),
+      counts: {for (final id in tr.techniqueIds) id: const TechniqueCounts()},
+    );
+    sparring = SparringTimer(config: _configFor(rounds), now: now());
+    _hrAtRestStart = null;
+    _restStartedAt = null;
+    _update((t) => t.copyWith(sparrings: [...t.sparrings, block]));
+  }
+
+  static SparringConfig _configFor(List<SparRound> rounds) => SparringConfig(
+    rounds: rounds.length,
+    workSeconds: rounds.first.workSeconds,
+    restSeconds: rounds.first.restSeconds,
+    roundWork: [for (final r in rounds) r.workSeconds],
+    roundRest: [for (final r in rounds) r.restSeconds],
+  );
+
+  /// Sparblok aanpassen, ook als het al loopt (rondes, duur, doelen) of al
+  /// is afgerond (dan ook het aantal gedane rondes).
+  void updateSparringBlock(String id, {required List<SparRound> rounds, required String goal, int? roundsDone}) {
+    if (rounds.isEmpty) return;
+    final active = training?.activeSparring?.id == id;
+    _replaceBlock(id, (b) => b.copyWith(
+      rounds: rounds,
+      goal: goal.trim(),
+      roundsDone: roundsDone?.clamp(0, rounds.length) ?? b.roundsDone.clamp(0, rounds.length),
+    ));
+    final t = sparring;
+    if (active && t != null) {
+      t.reconfigure(_configFor(rounds), now());
+      _persistTraining();
+      notifyListeners();
+    }
+  }
+
+  void _replaceBlock(String id, SparringBlock Function(SparringBlock b) change) => _update(
+    (t) => t.copyWith(sparrings: [for (final b in t.sparrings) b.id == id ? change(b) : b]),
+  );
+
+  /// Zet het lopende blok op afgerond met [roundsDone] gedane rondes.
+  void _closeSparringBlock(int roundsDone) {
+    final b = training?.activeSparring;
+    if (b == null) return;
+    final rounds = roundsDone.clamp(0, b.rounds.length);
+    _replaceBlock(b.id, (x) => x.copyWith(endedAt: now(), roundsDone: rounds));
+  }
+
+  /// Sparblok vroegtijdig (of na de laatste ronde) afronden.
+  void finishSparringBlock() {
+    final t = sparring;
+    if (t == null) return;
+    // Een lopende (of net afgeronde) ronde telt mee als gedaan.
+    final done = t.isDone ? t.config.rounds : t.round;
+    if (!t.isDone) t.finish(now());
+    _closeSparringBlock(done);
+    sparring = null;
+    sparringEvents.value = null;
+    _persistTraining();
+    notifyListeners();
+  }
+
+  /// Een gelogd sparblok opnieuw starten als nieuw blok: zelfde rondes,
+  /// tijden en doelen, met lege vinkjes. Het oude blok blijft staan.
+  void repeatSparringBlock(String blockId) {
+    final b = training?.sparrings.where((x) => x.id == blockId).firstOrNull;
+    if (b == null || isSparringActive) return;
+    startSparringBlock(rounds: [for (final r in b.rounds) r.copyWith(goalDone: false)], goal: b.goal);
+  }
+
+  void toggleRoundGoal(String blockId, int roundIndex) => _replaceBlock(blockId, (b) {
+    final rounds = [...b.rounds];
+    if (roundIndex < 0 || roundIndex >= rounds.length) return b;
+    rounds[roundIndex] = rounds[roundIndex].copyWith(goalDone: !rounds[roundIndex].goalDone);
+    return b.copyWith(rounds: rounds);
+  });
+
+  void toggleSparringGoal(String blockId) => _replaceBlock(blockId, (b) => b.copyWith(goalDone: !b.goalDone));
+
+  void setSparringGoal(String blockId, String goal) => _replaceBlock(blockId, (b) => b.copyWith(goal: goal.trim()));
+
+  void setRoundGoal(String blockId, int roundIndex, String goal) => _replaceBlock(blockId, (b) {
+    final rounds = [...b.rounds];
+    if (roundIndex < 0 || roundIndex >= rounds.length) return b;
+    rounds[roundIndex] = rounds[roundIndex].copyWith(goal: goal.trim());
+    return b.copyWith(rounds: rounds);
+  });
+
+  void removeSparringBlock(String blockId) {
+    if (training?.activeSparring?.id == blockId) finishSparringBlock();
+    _update((t) => t.copyWith(sparrings: t.sparrings.where((b) => b.id != blockId).toList()));
+  }
+
   void toggleSparringTimer() {
     sparring?.togglePause(now());
-    _persistSparring();
+    _persistTraining();
     notifyListeners();
   }
 
@@ -938,12 +1348,16 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     if (t == null || t.phase != SparringPhase.work) return;
     t.toRest(now());
     _onSparringEvent(t.isDone ? SparringEvent.finished : SparringEvent.restStarted);
+    if (t.isDone) {
+      sparring = null;
+      _persistTraining();
+    }
     notifyListeners();
   }
 
   void addRestSeconds(int seconds) {
     sparring?.addRest(seconds, now());
-    _persistSparring();
+    _persistTraining();
     notifyListeners();
   }
 
@@ -953,178 +1367,243 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     t.startNextRound(now());
     _hrAtRestStart = null;
     _restStartedAt = null;
+    final b = training?.activeSparring;
+    if (b != null) _replaceBlock(b.id, (x) => x.copyWith(roundsDone: math.max(x.roundsDone, t.round - 1)));
     _onSparringEvent(SparringEvent.roundStarted);
     notifyListeners();
   }
 
+  /// Geslaagd/Poging/Gecounterd tijdens het sparren.
   void incrementTechniqueStat(String id, TechniqueStat stat, {int delta = 1}) {
-    final current = sessionCounts[id] ?? const TechniqueCounts();
-    sessionCounts = {...sessionCounts, id: current.add(stat, delta)};
-    _persistSparring();
-    notifyListeners();
+    final b = training?.activeSparring;
+    if (b == null) return;
+    final current = b.counts[id] ?? const TechniqueCounts();
+    _replaceBlock(b.id, (x) => x.copyWith(counts: {...x.counts, id: current.add(stat, delta)}));
   }
 
-  /// Techniek tijdens de sessie toevoegen aan of weghalen uit de mat-tellers.
-  void toggleSessionTechnique(String id) {
-    if (sessionTechniqueIds.contains(id)) {
-      sessionTechniqueIds = sessionTechniqueIds.where((x) => x != id).toList();
-    } else {
-      sessionTechniqueIds = [...sessionTechniqueIds, id];
-      sessionCounts = {...sessionCounts, id: sessionCounts[id] ?? const TechniqueCounts()};
+  // ------------------------------------------------------------ warming-up
+  void addWarmup({int minutes = 15}) =>
+      _update((t) => t.copyWith(warmups: [...t.warmups, WarmupLog(id: _newId('wu'), at: now(), minutes: minutes)]));
+
+  void updateWarmup(String id, int minutes) => _update(
+    (t) => t.copyWith(warmups: [for (final w in t.warmups) w.id == id ? w.copyWith(minutes: minutes.clamp(1, 120)) : w]),
+  );
+
+  void removeWarmup(String id) => _update((t) => t.copyWith(warmups: t.warmups.where((w) => w.id != id).toList()));
+
+  // ------------------------------------------------------------ technieken
+  /// Techniek tijdens de sessie toevoegen of weghalen.
+  void toggleSessionTechnique(String id) => _update((t) {
+    if (t.techniqueIds.contains(id)) {
+      return t.copyWith(techniqueIds: t.techniqueIds.where((x) => x != id).toList());
     }
-    _persistSparring();
-    notifyListeners();
+    final active = t.activeSparring;
+    return t.copyWith(
+      techniqueIds: [...t.techniqueIds, id],
+      sparrings: active == null
+          ? null
+          : [
+              for (final b in t.sparrings)
+                b.id == active.id ? b.copyWith(counts: {...b.counts, id: b.counts[id] ?? const TechniqueCounts()}) : b,
+            ],
+    );
+  });
+
+  /// Techniek (en zijn log) uit de training halen. Geeft de log terug voor "Ongedaan".
+  TechniqueLog? removeSessionTechnique(String id) {
+    final log = training?.techniqueLogs[id];
+    _update((t) => t.copyWith(
+      techniqueIds: t.techniqueIds.where((x) => x != id).toList(),
+      techniqueLogs: {...t.techniqueLogs}..remove(id),
+    ));
+    return log;
   }
 
-  void setCoachFocus(int round, String text) {
-    coachFocus = {...coachFocus, round: text};
-    _persistSparring();
-    notifyListeners();
+  void restoreSessionTechnique(String id, TechniqueLog? log) => _update((t) => t.copyWith(
+    techniqueIds: t.techniqueIds.contains(id) ? null : [...t.techniqueIds, id],
+    techniqueLogs: log == null ? null : {...t.techniqueLogs, id: log},
+  ));
+
+  TechniqueLog techniqueLog(String id) => training?.techniqueLogs[id] ?? const TechniqueLog();
+
+  void setTechniqueLog(String id, TechniqueLog log) =>
+      _update((t) => t.copyWith(techniqueLogs: {...t.techniqueLogs, id: log}));
+
+  // ------------------------------------------------------------ combinaties
+  void logCombo(List<String> steps, {String? combinationId}) {
+    if (steps.isEmpty || (steps.length < 2 && combinationId == null)) return;
+    _update((t) {
+      final label = steps.join(' → ');
+      final existing = t.combos.where((c) => c.label == label).firstOrNull;
+      if (existing != null) {
+        return t.copyWith(combos: [for (final c in t.combos) c.id == existing.id ? c.copyWith(count: c.count + 1) : c]);
+      }
+      return t.copyWith(
+        combos: [...t.combos, ComboLog(id: _newId('combo'), steps: steps, at: now(), combinationId: combinationId)],
+      );
+    });
   }
 
-  /// Standaardinstructie: combineer de focus-technieken.
-  String coachFocusFor(int round) {
-    final custom = coachFocus[round];
-    if (custom != null && custom.trim().isNotEmpty) return custom;
-    final names = sessionTechniques.map((t) => t.name).toList();
-    if (names.isEmpty) return 'Tik om een instructie voor ronde $round te noteren';
-    return names.take(2).join(' → ');
+  void changeComboCount(String id, int delta) => _update((t) => t.copyWith(
+    combos: [
+      for (final c in t.combos)
+        if (c.id != id) c else if (c.count + delta > 0) c.copyWith(count: c.count + delta),
+    ],
+  ));
+
+  // ------------------------------------------------------------ voeding
+  /// Logt de gekozen presets (enkelvoud → aantal) met het huidige tijdstip.
+  void logNutrition(Map<String, int> counts, {String freeLabel = '', double freeCarbs = 0}) {
+    final at = now();
+    final r = reading;
+    final mmol = (r != null && !r.isStaleAt(at)) ? double.parse(r.mmol.toStringAsFixed(1)) : null;
+    final byName = {for (final p in trainingPresets) p.singular: p};
+    final logs = <NutritionLog>[
+      for (final e in counts.entries)
+        if (e.value > 0 && byName[e.key] != null)
+          NutritionLog(
+            id: _newId('nut'),
+            at: at,
+            label: byName[e.key]!.label(e.value),
+            count: e.value,
+            carbs: byName[e.key]!.carbs * e.value,
+            preset: e.key,
+            mmol: mmol,
+          ),
+      if (freeLabel.trim().isNotEmpty || freeCarbs > 0)
+        NutritionLog(
+          id: _newId('nut'),
+          at: at,
+          label: freeLabel.trim().isEmpty ? '${grams(freeCarbs)} g koolhydraten' : freeLabel.trim(),
+          carbs: freeCarbs,
+          mmol: mmol,
+        ),
+    ];
+    if (logs.isEmpty) return;
+    _update((t) => t.copyWith(nutrition: [...t.nutrition, ...logs]));
   }
 
-  void addVoiceMemo(String path) {
-    voiceMemos = [...voiceMemos, path];
-    _persistSparring();
-    notifyListeners();
+  /// Aantal/tijd aanpassen; label en koolhydraten schalen mee met de preset.
+  NutritionLog _rescale(NutritionLog n, {int? count, DateTime? at}) {
+    final c = (count ?? n.count).clamp(1, 99);
+    final preset = trainingPresets.where((p) => p.singular == n.preset).firstOrNull;
+    if (preset == null) {
+      final perItem = n.count > 0 ? n.carbs / n.count : n.carbs;
+      return n.copyWith(count: c, at: at, carbs: perItem * c);
+    }
+    return n.copyWith(count: c, at: at, label: preset.label(c), carbs: preset.carbs * c);
+  }
+
+  void updateNutrition(String id, {int? count, DateTime? at}) => _update(
+    (t) => t.copyWith(nutrition: [for (final n in t.nutrition) n.id == id ? _rescale(n, count: count, at: at) : n]),
+  );
+
+  void deleteNutrition(String id) => _update((t) => t.copyWith(nutrition: t.nutrition.where((n) => n.id != id).toList()));
+
+  /// Voeding van een al opgeslagen sessie aanpassen of verwijderen.
+  Future<bool> updateSessionNutrition(String sessionId, {String? id, int? count, DateTime? at, bool delete = false}) async {
+    final s = sessions.where((x) => x.id == sessionId).firstOrNull;
+    if (s == null) return false;
+    final next = [
+      for (final n in s.nutrition)
+        if (n.id != id) n else if (!delete) _rescale(n, count: count, at: at),
+    ];
+    try {
+      final c = _client;
+      if (c != null && !sessionId.startsWith('local')) await SessionRepository(c).updateNutrition(sessionId, next);
+      sessions = [for (final x in sessions) x.id == sessionId ? x.copyWith(nutrition: next) : x];
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _sampleSessionGlucose() {
     final r = reading;
-    if (sparring == null || r == null || r.isStale) return;
-    if (sessionGlucose.isNotEmpty && !r.at.isAfter(sessionGlucose.last.at)) return;
-    sessionGlucose = [...sessionGlucose, GlucosePoint(r.at, r.mmol)];
-    _persistSparring();
+    final tr = training;
+    if (tr == null || r == null || r.isStaleAt(now())) return;
+    if (tr.glucose.isNotEmpty && !r.at.isAfter(tr.glucose.last.at)) return;
+    training = tr.copyWith(glucose: [...tr.glucose, GlucosePoint(r.at, r.mmol)]);
+    _persistTraining();
   }
 
-  /// Rondt de sessie af. Met [save] gaat hij als training naar Supabase.
-  Future<TrainingSession?> finishSparring({bool save = true}) async {
-    final t = sparring;
-    if (t == null) return null;
+  /// Rondt de training af. Met [save] gaat hij als sessie naar Supabase.
+  Future<TrainingSession?> finishTraining({bool save = true}) async {
+    if (sparring != null) finishSparringBlock();
+    final tr = training;
+    if (tr == null) return null;
     final end = now();
-    if (!t.isDone) t.finish(end);
     _stopTicker();
     if (enableWakelock) unawaited(WakelockPlus.disable().catchError((_) {}));
     TrainingSession? saved;
     if (save) {
-      final minutes = end.difference(t.startedAt).inMinutes.clamp(1, 24 * 60);
-      final roundsDone = t.round;
-      final blocks = <Map<String, dynamic>>[
-        {
-          'kind': 'sparring',
-          'name': 'Live sparring',
-          'meta': t.config.summary,
-          'note': '',
-          'rounds': roundsDone,
-          'minutes': (roundsDone * t.config.workSeconds / 60).round(),
-          'round_minutes': List.filled(roundsDone, (t.config.workSeconds / 60).round()),
-          'rest_seconds': List.filled(roundsDone > 1 ? roundsDone - 1 : 0, t.config.restSeconds),
-          'covered': true,
-          'logged_at': end.toUtc().toIso8601String(),
-        },
-        for (final tech in sessionTechniques)
-          {
-            'kind': 'technique',
-            'name': tech.name,
-            'meta': tech.category,
-            'note': _countsNote(tech, sessionCounts[tech.id] ?? const TechniqueCounts()),
-            'covered': true,
-            'reps': (sessionCounts[tech.id] ?? const TechniqueCounts()).total,
-            'counts': (sessionCounts[tech.id] ?? const TechniqueCounts()).toJson(),
-            'striking': tech.group.isStriking,
-            'logged_at': end.toUtc().toIso8601String(),
-          },
-      ];
-      final notes = <String>[
-        for (final e in coachFocus.entries) 'R${e.key}: ${e.value}',
-        if (voiceMemos.isNotEmpty) '${voiceMemos.length} spraakmemo(s) lokaal op dit toestel',
-      ];
+      final started = tr.hasStarted(end) ? tr.startsAt : end;
+      final minutes = end.difference(started).inMinutes.clamp(1, 24 * 60);
       final session = TrainingSession(
         id: '',
-        kind: sessionTitle.toLowerCase().contains('kracht') ? 'kracht' : 'sambo',
-        title: sessionTitle,
-        startedAt: t.startedAt,
+        kind: tr.discipline.toLowerCase().contains('kracht') ? 'kracht' : 'sambo',
+        title: tr.displayTitle,
+        startedAt: started,
         durationMinutes: minutes,
-        note: notes.join('\n'),
-        glucoseSeries: sessionGlucose,
-        blocks: blocks,
+        glucoseSeries: tr.glucose,
+        blocks: trainingBlocks(tr, techniques, end),
+        nutrition: tr.nutrition,
       );
       final uid = _uid;
       final c = _client;
       try {
         saved = (uid == null || c == null)
-            ? session
+            ? session.copyWithId('local-${end.microsecondsSinceEpoch}')
             : await SessionRepository(c).create(session, uid);
         sessions = [saved, ...sessions];
         lastSyncAt = now();
       } catch (_) {
-        syncError = 'Sessie kon niet worden opgeslagen.';
-        saved = null;
+        syncError = 'Training kon niet worden opgeslagen.';
+        notifyListeners();
+        return null;
       }
     }
+    training = null;
     sparring = null;
     sparringEvents.value = null;
-    await _prefs?.remove('sparring_state');
+    await _prefs?.remove('training_state');
     notifyListeners();
     return saved;
   }
 
-  static String _countsNote(Technique t, TechniqueCounts c) {
-    final s = t.group.isStriking;
-    return [
-      for (final stat in TechniqueStat.values) '${statLabel(stat, striking: s)} ${c[stat]}',
-    ].join(' · ');
-  }
-
-  void _persistSparring() {
-    final t = sparring;
+  void _persistTraining() {
+    final tr = training;
     final prefs = _prefs;
-    if (t == null || prefs == null) return;
-    unawaited(prefs.setString('sparring_state', jsonEncode({
-      'timer': t.toJson(),
-      'title': sessionTitle,
-      'techniques': sessionTechniqueIds,
-      'counts': sessionCounts.map((k, v) => MapEntry(k, v.toJson())),
-      'glucose': sessionGlucose.map((g) => g.toJson()).toList(),
-      'coach': coachFocus.map((k, v) => MapEntry('$k', v)),
-      'memos': voiceMemos,
+    if (tr == null || prefs == null) return;
+    unawaited(prefs.setString('training_state', jsonEncode({
+      'training': tr.toJson(),
+      'timer': ?sparring?.toJson(),
     })));
   }
 
-  /// Herstelt een sessie die nog liep toen de app werd afgesloten.
-  Future<void> _restoreSparring() async {
-    final raw = _prefs?.getString('sparring_state');
+  /// Herstelt een training die nog liep toen de app werd afgesloten.
+  Future<void> _restoreTraining() async {
+    await _prefs?.remove('sparring_state'); // formaat van vóór trainingen
+    final raw = _prefs?.getString('training_state');
     if (raw == null) return;
     try {
       final j = jsonDecode(raw) as Map<String, dynamic>;
-      final t = SparringTimer.fromJson(j['timer'] as Map<String, dynamic>);
-      if (t.isDone || now().difference(t.startedAt) > const Duration(hours: 4)) {
-        await _prefs?.remove('sparring_state');
+      final tr = LiveTraining.fromJson(j['training'] as Map<String, dynamic>);
+      if (now().difference(tr.endsAt) > const Duration(hours: 6)) {
+        await _prefs?.remove('training_state');
         return;
       }
-      sparring = t;
-      sessionTitle = (j['title'] as String?) ?? 'Live sparring';
-      sessionTechniqueIds = ((j['techniques'] as List?) ?? []).cast<String>();
-      sessionCounts = ((j['counts'] as Map?) ?? {}).map(
-        (k, v) => MapEntry(k as String, TechniqueCounts.fromJson(v as Map<String, dynamic>)),
-      );
-      sessionGlucose = [
-        for (final g in (j['glucose'] as List?) ?? []) GlucosePoint.fromJson(g as Map<String, dynamic>),
-      ];
-      coachFocus = ((j['coach'] as Map?) ?? {}).map((k, v) => MapEntry(int.parse(k as String), v as String));
-      voiceMemos = ((j['memos'] as List?) ?? []).cast<String>();
+      training = tr;
+      final timer = j['timer'];
+      if (timer is Map<String, dynamic>) {
+        final t = SparringTimer.fromJson(timer);
+        if (!t.isDone) sparring = t;
+      }
       _startTicker();
       if (enableWakelock) unawaited(WakelockPlus.enable().catchError((_) {}));
     } catch (_) {
-      await _prefs?.remove('sparring_state');
+      await _prefs?.remove('training_state');
     }
   }
 
@@ -1194,6 +1673,133 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  // ------------------------------------------------------- bolus-calculator
+
+  /// Staat de calculator aan en is er minstens één tijdvak?
+  bool get bolusCalculatorActive {
+    final p = profile;
+    return p != null && p.bolusCalculatorEnabled && p.bolusPeriods.isNotEmpty;
+  }
+
+  /// Voorstel voor voedings- en correctie-insuline op dit moment.
+  BolusSuggestion bolusSuggestion({double? carbs, double? mmol, DateTime? at}) {
+    final p = profile ?? const KineticProfile(id: '');
+    return calculateBolus(
+      periods: p.bolusPeriods,
+      carbs: carbs,
+      currentMmol: mmol,
+      correctionFactor: p.correctionFactor,
+      correctionTargetDay: p.correctionTargetDay,
+      correctionTargetNight: p.correctionTargetNight,
+      nightStart: p.correctionNightStart,
+      nightEnd: p.correctionNightEnd,
+      at: at ?? now(),
+    );
+  }
+
+  /// Instellingen van de bolus-calculator (kolommen in `profiles`).
+  Future<bool> updateBolusSettings({
+    bool? enabled,
+    List<BolusPeriod>? periods,
+    double? correctionFactor,
+    double? targetDay,
+    double? targetNight,
+    String? nightStart,
+    String? nightEnd,
+  }) async {
+    final p = profile;
+    if (p == null) return false;
+    final sorted = periods == null ? null : ([...periods]..sort((a, b) => a.startMinutes.compareTo(b.startMinutes)));
+    try {
+      final c = _client;
+      if (c != null) {
+        await ProfileRepository(c).updateFields(p.id, {
+          'bolus_calculator_enabled': ?enabled,
+          if (sorted != null) 'bolus_periods': [for (final x in sorted) x.toJson()],
+          'correction_factor': ?correctionFactor,
+          'correction_target_day': ?targetDay,
+          'correction_target_night': ?targetNight,
+          'correction_night_start': ?nightStart,
+          'correction_night_end': ?nightEnd,
+        });
+      }
+      profile = p.copyWith(
+        bolusCalculatorEnabled: enabled,
+        bolusPeriods: sorted,
+        correctionFactor: correctionFactor,
+        correctionTargetDay: targetDay,
+        correctionTargetNight: targetNight,
+        correctionNightStart: nightStart,
+        correctionNightEnd: nightEnd,
+      );
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ------------------------------------------------------- voedingspresets
+
+  /// Maaltijdpresets, alfabetisch.
+  List<FoodPreset> get foodPresets => sortedPresets(profile?.foodPresets ?? const []);
+
+  /// Trainingspresets (voeding tijdens een training), alfabetisch.
+  List<FoodPreset> get trainingPresets => sortedPresets(profile?.trainingPresets ?? const []);
+
+  List<FoodPreset> presetsFor({required bool training}) => training ? trainingPresets : foodPresets;
+
+  /// Presets die je vaak gebruikt, als snelknop buiten de lijst.
+  List<FoodPreset> frequentPresetsFor({required bool training}) {
+    if (!training) return frequentPresets(foodPresets, presetUsage(foodEntries.map((e) => e.presetCounts)));
+    final logs = _trainingNutritionHistory();
+    return frequentPresets(trainingPresets, presetUsage([for (final n in logs) if (n.preset != null) {n.preset!: n.count}]));
+  }
+
+  /// Voeding uit eerdere trainingen + de lopende, voor de veelgebruikt-lijst.
+  List<NutritionLog> _trainingNutritionHistory() => [
+    for (final s in sessions) ...s.nutrition,
+    ...?training?.nutrition,
+  ];
+
+  /// Slaat een hele presetlijst op (maaltijd: `food_checklist`, training: `carb_presets`).
+  Future<bool> savePresets(List<FoodPreset> presets, {required bool training}) async {
+    final p = profile;
+    if (p == null) return false;
+    try {
+      final c = _client;
+      if (c != null) {
+        await ProfileRepository(c).updateFields(p.id, {
+          training ? 'carb_presets' : 'food_checklist': [for (final x in presets) x.toJson()],
+        });
+      }
+      profile = training ? p.copyWith(trainingPresets: presets) : p.copyWith(foodPresets: presets);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  List<FoodPreset> _rawPresets(bool training) =>
+      (training ? profile?.trainingPresets : profile?.foodPresets) ?? const <FoodPreset>[];
+
+  /// Voegt toe of vervangt (op enkelvoud; [replacing] is de oude naam bij hernoemen).
+  Future<bool> upsertPreset(FoodPreset preset, {required bool training, String? replacing}) {
+    final key = (replacing ?? preset.singular).toLowerCase();
+    final list = [
+      for (final x in _rawPresets(training))
+        if (x.singular.toLowerCase() != key && x.singular.toLowerCase() != preset.singular.toLowerCase()) x,
+      preset,
+    ];
+    return savePresets(list, training: training);
+  }
+
+  Future<bool> deletePreset(FoodPreset preset, {required bool training}) => savePresets([
+    for (final x in _rawPresets(training))
+      if (x.singular != preset.singular) x,
+  ], training: training);
+
   /// Grootte van de snelle-koolhydraten-noodknop (10/15/20 g).
   int fastCarbGrams = 15;
 
@@ -1258,6 +1864,10 @@ class KineticStore extends ChangeNotifier with WidgetsBindingObserver {
         proteinTarget = (j['protein'] as num).toDouble();
         fatTarget = (j['fat'] as num).toDouble();
       }
+      restTimerEnabled = prefs.getBool('rest_timer_enabled') ?? true;
+      showHeartRate = prefs.getBool('show_heart_rate') ?? false;
+      nutritionGoalsEnabled = prefs.getBool('nutrition_goals_enabled') ?? true;
+      waterEnabled = prefs.getBool('water_enabled') ?? true;
       final s = prefs.getString('sparring_config');
       if (s != null) sparringConfig = SparringConfig.fromJson(jsonDecode(s) as Map<String, dynamic>);
     } catch (_) {}

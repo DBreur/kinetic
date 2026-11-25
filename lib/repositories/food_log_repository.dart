@@ -32,6 +32,9 @@ class FoodLogRepository {
     MealContext? context,
     double? mmol,
     double? insulinUnits,
+    double? insulinFoodUnits,
+    double? insulinCorrectionUnits,
+    Map<String, int> presetCounts = const {},
   }) async {
     final row = await _client
         .from('food_log_entries')
@@ -45,7 +48,33 @@ class FoodLogRepository {
           'context': context?.dbName,
           'mmol': mmol,
           'insulin_units': insulinUnits,
+          'insulin_food_units': insulinFoodUnits,
+          'insulin_correction_units': insulinCorrectionUnits,
+          'preset_counts': presetCounts,
         })
+        .select()
+        .single();
+    return FoodLogEntry.fromJson(row);
+  }
+
+  /// Werkt een bestaande regel bij (alle velden die het maaltijdscherm kent).
+  Future<FoodLogEntry> update(FoodLogEntry e) async {
+    final row = await _client
+        .from('food_log_entries')
+        .update({
+          'at': e.at.toUtc().toIso8601String(),
+          'description': e.description,
+          'carbs': e.carbs,
+          'protein': e.protein,
+          'fat': e.fat,
+          'context': e.context?.dbName,
+          'mmol': e.mmol,
+          'insulin_units': e.insulinUnits,
+          'insulin_food_units': e.insulinFoodUnits,
+          'insulin_correction_units': e.insulinCorrectionUnits,
+          'preset_counts': e.presetCounts,
+        })
+        .eq('id', e.id)
         .select()
         .single();
     return FoodLogEntry.fromJson(row);

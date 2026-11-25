@@ -10,6 +10,7 @@ import '../core/glucose_rules.dart';
 import '../models/glucose.dart';
 import '../state/kinetic_store.dart';
 import '../theme/kinetic_theme.dart';
+import 'telemetry_sheet.dart';
 
 /// Maakt de store beschikbaar voor alle schermen; `KineticScope.of` laat een
 /// widget opnieuw bouwen zodra de store verandert.
@@ -298,6 +299,7 @@ class BigButton extends StatelessWidget {
     this.foreground,
     this.outlined = false,
     this.vertical = false,
+    this.fitLabel = false,
   });
 
   final String label;
@@ -314,6 +316,9 @@ class BigButton extends StatelessWidget {
 
   /// Icoon boven het label (zoals de bedieningsknoppen op de mat).
   final bool vertical;
+
+  /// Label altijd op één regel; krimpt mee in smalle knoppen.
+  final bool fitLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -365,14 +370,28 @@ class BigButton extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[Icon(icon, color: fg, size: 26), const SizedBox(height: 6)],
-                      text,
+                      // Eén regel, krimpt mee in smalle knoppen (icoon + 2 regels past niet in 72px).
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            style: text.style,
+                          ),
+                        ),
+                      ),
                     ],
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[Icon(icon, color: fg, size: 22), const SizedBox(width: 10)],
-                      Flexible(child: text),
+                      Flexible(
+                        child: fitLabel
+                            ? FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1, style: text.style))
+                            : text,
+                      ),
                     ],
                   ),
           ),
@@ -395,7 +414,9 @@ class KChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = context.k;
     final active = color ?? k.primary;
-    final fg = selected ? (color == null ? k.onPrimary : Colors.white) : k.textSecondary;
+    // Eigen kleur: tekst contrasteert met de achtergrond (bv. k.text is wit in dark mode).
+    final onColor = ThemeData.estimateBrightnessForColor(active) == Brightness.dark ? Colors.white : const Color(0xFF101419);
+    final fg = selected ? (color == null ? k.onPrimary : onColor) : k.textSecondary;
     return Material(
       color: selected ? active : k.well,
       shape: RoundedRectangleBorder(
@@ -412,12 +433,21 @@ class KChip extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 40),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: 6)],
-                Text(label, style: context.t.caption.copyWith(color: fg, fontWeight: FontWeight.w600, fontSize: 13)),
-              ],
+            // Eén Text (icoon als WidgetSpan): breekt netjes af in een smalle
+            // Wrap en houdt z'n natuurlijke breedte in een horizontale lijst.
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  if (icon != null) ...[
+                    WidgetSpan(alignment: PlaceholderAlignment.middle, child: Icon(icon, size: 16, color: fg)),
+                    const WidgetSpan(child: SizedBox(width: 6)),
+                  ],
+                  TextSpan(text: label),
+                ],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: context.t.caption.copyWith(color: fg, fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
         ),
@@ -426,7 +456,7 @@ class KChip extends StatelessWidget {
   }
 }
 
-/// Segmented control: één well-track, actieve duim = surface + haarlijn.
+/// Segmented control: één well-track; actieve duim teal getint (licht: surface + haarlijn).
 class KSegmented<T> extends StatelessWidget {
   const KSegmented({super.key, required this.options, required this.value, required this.onChanged});
   final List<(T, String)> options;
@@ -454,9 +484,9 @@ class KSegmented<T> extends StatelessWidget {
                   height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: v == value ? k.surface : const Color(0x00000000),
+                    color: v == value ? (k.isDark ? k.primaryTint : k.surface) : const Color(0x00000000),
                     borderRadius: BorderRadius.circular(KRadius.sm),
-                    border: Border.all(color: v == value ? k.border : const Color(0x00000000)),
+                    border: Border.all(color: v == value && !k.isDark ? k.border : const Color(0x00000000)),
                   ),
                   child: Text(
                     label,
@@ -464,7 +494,7 @@ class KSegmented<T> extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: context.t.bodyStrong.copyWith(
                       fontSize: 13,
-                      color: v == value ? k.text : k.textSecondary,
+                      color: v == value ? (k.isDark ? k.accent : k.text) : k.textSecondary,
                     ),
                   ),
                 ),
@@ -524,11 +554,103 @@ class MetricTile extends StatelessWidget {
         ),
         if (sub != null) ...[
           const SizedBox(height: 4),
-          Text(sub!, style: context.t.caption.copyWith(color: subColor ?? k.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(sub!, style: context.t.caption.copyWith(color: subColor ?? k.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
         ],
       ],
     );
     return inWell ? KWell(padding: const EdgeInsets.all(12), child: content) : KCard(padding: const EdgeInsets.all(16), child: content);
+  }
+}
+
+/// Donkere pill ("Nog 18 dagen") zoals in de mocks.
+class DarkPill extends StatelessWidget {
+  const DarkPill(this.text, {super.key, this.color});
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: k.isDark ? KineticColors.sunken : k.well,
+        borderRadius: BorderRadius.circular(KRadius.full),
+      ),
+      child: Text(text, style: context.t.labelSm.copyWith(color: color ?? k.text), maxLines: 1, overflow: TextOverflow.ellipsis),
+    );
+  }
+}
+
+/// Losse output-tegel (Vandaag, Training): label linksboven, icoon
+/// rechtsboven, grote waarde met eenheid en een teal subregel.
+class OutputTile extends StatelessWidget {
+  const OutputTile({
+    super.key,
+    required this.label,
+    required this.value,
+    this.unit,
+    this.sub,
+    this.icon,
+    this.valueColor,
+    this.muted = false,
+    this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final String? unit;
+  final String? sub;
+  final IconData? icon;
+  final Color? valueColor;
+
+  /// Geen data: subregel grijs in plaats van teal.
+  final bool muted;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return KCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label, style: context.t.caption.copyWith(color: k.textSecondary, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+              if (icon != null) Icon(icon, size: 20, color: k.accent),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: value, style: context.t.metricMd.copyWith(color: valueColor ?? k.text)),
+                  if (unit != null) TextSpan(text: ' $unit', style: context.t.unit),
+                ],
+              ),
+            ),
+          ),
+          if (sub != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              sub!,
+              style: context.t.caption.copyWith(color: muted ? k.textMuted : k.accent, fontWeight: FontWeight.w500),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -618,7 +740,7 @@ class KineticLogo extends StatelessWidget {
   }
 }
 
-/// Ronde avatar met initialen.
+/// Ronde teal avatar met initialen (naar Instellingen).
 class KAvatar extends StatelessWidget {
   const KAvatar({super.key, required this.initials, this.size = 36, this.onTap});
   final String initials;
@@ -638,19 +760,53 @@ class KAvatar extends StatelessWidget {
           width: size,
           height: size,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: k.primaryTint, shape: BoxShape.circle, border: Border.all(color: k.border)),
-          child: Text(initials, style: context.t.bodyStrong.copyWith(color: k.accent, fontSize: size * 0.38)),
+          decoration: BoxDecoration(color: k.accent, shape: BoxShape.circle),
+          child: Text(initials, style: context.t.bodyStrong.copyWith(color: k.onPrimary, fontSize: size * 0.4)),
         ),
       ),
     );
   }
 }
 
-/// Top app bar uit de mockups: logo + "Kinetic" + schermnaam, rechts de
-/// thema-schakelaar (zon/maan) en de avatar (naar Instellingen).
+/// Vierkante icoonknop uit de top bar (44px, well-achtergrond, teal icoon).
+class KSquareIconButton extends StatelessWidget {
+  const KSquareIconButton({super.key, required this.icon, required this.onPressed, required this.tooltip, this.size = 44});
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String tooltip;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: k.well,
+        borderRadius: BorderRadius.circular(KRadius.sm),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onPressed();
+          },
+          child: SizedBox(width: size, height: size, child: Icon(icon, size: 22, color: k.accent)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Top app bar uit de mocks: logo + paginatitel met teal stip, rechts de
+/// live-telemetrieknop en de avatar (naar Instellingen). Op gepushte
+/// schermen een terugknop in plaats van het logo.
 class KineticTopBar extends StatelessWidget {
   const KineticTopBar({super.key, required this.subtitle, this.showBack = false, this.title = 'Kinetic', this.actions = const []});
+
+  /// Niet meer getoond (de schermnaam is de titel); blijft voor compatibiliteit.
   final String title;
+
+  /// De paginatitel ("Vandaag", "Training", ...).
   final String subtitle;
   final bool showBack;
   final List<Widget> actions;
@@ -660,15 +816,12 @@ class KineticTopBar extends StatelessWidget {
     final k = context.k;
     final store = KineticScope.of(context);
     return Container(
-      decoration: BoxDecoration(
-        color: k.canvas,
-        border: Border(bottom: BorderSide(color: k.border)),
-      ),
+      color: k.canvas,
       padding: EdgeInsets.only(top: MediaQuery.viewPaddingOf(context).top),
       child: SizedBox(
         height: 64,
         child: Padding(
-          padding: EdgeInsets.only(left: showBack ? 4 : 16, right: 8),
+          padding: EdgeInsets.only(left: showBack ? 4 : 16, right: 16),
           child: Row(
             children: [
               if (showBack)
@@ -676,31 +829,40 @@ class KineticTopBar extends StatelessWidget {
                   tooltip: 'Terug',
                   onPressed: () => Navigator.of(context).maybePop(),
                   icon: Icon(Icons.arrow_back, color: k.text),
-                ),
-              const KineticLogo(size: 32),
-              const SizedBox(width: 10),
+                )
+              else ...[
+                const KineticLogo(size: 32),
+                const SizedBox(width: 10),
+              ],
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(title, style: context.t.subtitle.copyWith(height: 1.15), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text(subtitle, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Flexible(
+                      child: Text(
+                        subtitle,
+                        style: context.t.title.copyWith(letterSpacing: -0.2),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    LiveDot(color: k.accent, size: 8),
                   ],
                 ),
               ),
               ...actions,
-              IconButton(
-                tooltip: store.darkMode ? 'Licht thema' : 'Donker thema',
-                onPressed: store.toggleTheme,
-                icon: Icon(store.darkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined, color: k.textSecondary),
+              const SizedBox(width: 8),
+              KSquareIconButton(
+                icon: Icons.monitor_heart_outlined,
+                tooltip: 'Live telemetrie',
+                onPressed: () => showTelemetrySheet(context),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 10),
               KAvatar(
                 initials: store.initials,
+                size: 34,
                 onTap: () => Navigator.of(context).pushNamed('/telemetrie-export'),
               ),
-              const SizedBox(width: 6),
             ],
           ),
         ),
@@ -796,7 +958,10 @@ void showToastOn(ScaffoldMessengerState messenger, String message, {String? acti
           Expanded(child: Text(message)),
         ],
       ),
-      duration: const Duration(seconds: 3),
+      // Met "Ongedaan" iets langer zichtbaar, maar altijd vanzelf weg
+      // (een SnackBar met actie blijft anders staan tot je hem wegtikt).
+      duration: Duration(seconds: actionLabel == null ? 3 : 4),
+      persist: false,
       action: actionLabel == null ? null : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),
     ),
   );

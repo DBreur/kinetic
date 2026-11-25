@@ -1,7 +1,7 @@
-// eten_screen.dart: Eet Logboek (kinetic_eet_logboek_dark/_light): het
-// dagoverzicht brandstof met de koolhydraten per maaltijd en de piek na het
-// eten, de macrobarometer, snelle carb-presets, de maaltijd-bottom-sheet en
-// per maaltijd de glycemische respons uit de CGM-tijdlijn.
+// eten_screen.dart: Eet Logboek (kinetic_eet_logboek_interactief_dark_mode):
+// het dagoverzicht brandstof (koolhydraten per maaltijd t.o.v. het dagdoel,
+// eiwit, vetten en de piek na het eten), de maaltijd-bottom-sheet, de
+// maaltijdpresets en per maaltijd de glycemische respons uit de CGM-tijdlijn.
 
 import 'dart:math' as math;
 
@@ -16,6 +16,7 @@ import '../state/kinetic_store.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/charts.dart';
 import '../widgets/kinetic_widgets.dart';
+import '../widgets/food_preset_widgets.dart';
 import '../widgets/sheets.dart';
 
 class EtenScreen extends StatelessWidget {
@@ -36,37 +37,34 @@ class EtenScreen extends StatelessWidget {
     final hyper = store.profile?.hyperLimit ?? 10.0;
     // Nieuwste bovenaan in de lijst, chronologisch in de balk.
     final entries = [...store.todayEntries]..sort((a, b) => b.at.compareTo(a.at));
-    final responses = {
-      for (final e in entries) e.id: mealResponse(e, store.glucoseHistory, now),
-    };
+    final responses = {for (final e in entries) e.id: mealResponse(e, store.glucoseHistory, now)};
     final insight = _insight(store, entries, responses, now);
     return RefreshIndicator(
       color: k.primary,
       backgroundColor: k.surface,
       onRefresh: store.refreshAll,
       child: ListView(
-        padding: pagePadding(context, top: 16),
+        padding: pagePadding(context, top: 8),
         children: [
           _FuelOverview(entries: entries.reversed.toList(), responses: responses, hyper: hyper),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           BigButton(
-            label: '+ Maaltijd of Snelle Carbs Toevoegen',
-            icon: Icons.restaurant_menu,
+            label: '+ Maaltijd of correctie toevoegen',
+            icon: Icons.restaurant,
+            height: 56,
+            fitLabel: true,
+            color: k.accent,
+            foreground: k.onPrimary,
             onPressed: () => showMealSheet(context),
           ),
           const SizedBox(height: 12),
-          const _CarbPresets(),
-          const SizedBox(height: 12),
-          const _MacroBarometer(),
+          const PresetManagerCard(training: false),
           const SizedBox(height: 24),
           Row(
             children: [
-              const Expanded(child: Eyebrow('Maaltijden & glycemische respons')),
+              Expanded(child: Text('Maaltijden & Glycemie', style: context.t.title)),
               const SizedBox(width: 8),
-              Text(
-                '${entries.length} ${entries.length == 1 ? 'maaltijd' : 'maaltijden'}',
-                style: context.t.caption,
-              ),
+              Text('${entries.length} ${entries.length == 1 ? 'inzending' : 'inzendingen'}', style: context.t.caption),
             ],
           ),
           const SizedBox(height: 12),
@@ -78,7 +76,7 @@ class EtenScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Nog niets gelogd vandaag. Tik op een preset of voeg een maaltijd toe; de glucoserespons verschijnt hier.',
+                      'Nog niets gelogd vandaag. Voeg een maaltijd toe; de glucoserespons verschijnt hier.',
                       style: context.t.caption,
                     ),
                   ),
@@ -89,10 +87,7 @@ class EtenScreen extends StatelessWidget {
             _EntryCard(entry: e, response: responses[e.id], hyper: hyper),
             const SizedBox(height: 12),
           ],
-          if (insight != null) ...[
-            const SizedBox(height: 4),
-            _InsightCard(text: insight),
-          ],
+          if (insight != null) ...[const SizedBox(height: 4), _InsightCard(text: insight)],
         ],
       ),
     );
@@ -171,6 +166,13 @@ MealResponse? mealResponse(FoodLogEntry e, List<GlucosePoint> history, DateTime 
 
 // ------------------------------------------------------------- naamgeving
 
+/// Alleen insuline, geen eten: een correctie.
+bool isCorrectionOnly(FoodLogEntry e) =>
+    (e.carbs ?? 0) <= 0 &&
+    (e.protein ?? 0) <= 0 &&
+    (e.fat ?? 0) <= 0 &&
+    ((e.insulinUnits ?? 0) > 0 || (e.insulinCorrectionUnits ?? 0) > 0);
+
 bool _isQuickCarbs(FoodLogEntry e) =>
     (e.protein ?? 0) + (e.fat ?? 0) == 0 && (e.carbs ?? 0) > 0 && (e.carbs ?? 0) <= 20;
 
@@ -178,6 +180,7 @@ bool _isSnack(FoodLogEntry e) => (e.carbs ?? 0) <= 35 && (e.protein ?? 0) + (e.f
 
 /// "Ontbijt", "Lunch", "Pre-workout brandstof"...: de titel van een kaart.
 String mealTitle(FoodLogEntry e) {
+  if (isCorrectionOnly(e)) return 'Correctie';
   switch (e.context) {
     case MealContext.preTraining:
       return 'Pre-workout brandstof';
@@ -205,15 +208,8 @@ String _legendName(FoodLogEntry e) => switch (e.context) {
   _ => mealTitle(e),
 };
 
-String _contextLabel(MealContext? c) => switch (c) {
-  MealContext.preTraining => 'Vóór training / sparring',
-  MealContext.postTraining => 'Direct na training',
-  MealContext.acute => 'Acute mat-interventie',
-  MealContext.recovery => 'Regulier herstel',
-  null => 'Zonder context',
-};
-
 IconData _mealIcon(FoodLogEntry e) {
+  if (isCorrectionOnly(e)) return Icons.vaccines_outlined;
   switch (e.context) {
     case MealContext.preTraining:
       return Icons.sports_martial_arts;
@@ -235,6 +231,9 @@ IconData _mealIcon(FoodLogEntry e) {
 
 // ---------------------------------------------------------- dagoverzicht
 
+/// Dagoverzicht brandstof: koolhydraten t.o.v. het dagdoel (gesegmenteerd
+/// per maaltijd), resterend, eiwit en vetten, en de status van de piek na
+/// het eten. Zonder dagdoel alleen de totalen.
 class _FuelOverview extends StatelessWidget {
   const _FuelOverview({required this.entries, required this.responses, required this.hyper});
 
@@ -247,8 +246,10 @@ class _FuelOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
     final k = context.k;
+    final goals = store.nutritionGoalsEnabled;
     final total = store.carbsToday;
-    final target = store.carbsTarget;
+    // Zonder dagdoel schaalt de balk op het totaal.
+    final target = goals ? store.carbsTarget : (total > 0 ? total : 1.0);
 
     // Hoogste glucose binnen 2 uur na een maaltijd van vandaag.
     FoodLogEntry? peakEntry;
@@ -273,28 +274,48 @@ class _FuelOverview extends StatelessWidget {
         ? (KTone.warning, 'Piek boven ${dec1(hyper)}')
         : peak.peak > targetHigh
         ? (KTone.warning, 'Boven doelbereik')
-        : (KTone.success, 'Stabiel bereik');
+        : (KTone.success, 'In target');
 
     final withCarbs = entries.where((e) => (e.carbs ?? 0) > 0).toList();
-    final colors = [k.primary, k.primary.withValues(alpha: 0.62), k.primary.withValues(alpha: 0.36)];
+    final colors = [k.accent.withValues(alpha: 0.7), k.accent, k.primary, k.successInk];
     Color segColor(int i) => colors[i % colors.length];
     final scale = math.max(target, total);
     final rest = scale - total;
+    final remaining = store.carbsTarget - total;
 
     return KCard(
+      padding: const EdgeInsets.all(18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: k.primary, shape: BoxShape.circle)),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: k.accent, shape: BoxShape.circle),
+              ),
               const SizedBox(width: 8),
-              const Expanded(child: Eyebrow('Dagoverzicht brandstof')),
+              Expanded(
+                child: Text(
+                  'DAGOVERZICHT',
+                  style: context.t.labelSm.copyWith(color: k.text, letterSpacing: 0.6),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               const SizedBox(width: 8),
-              KPill(status, tone: tone, dense: true, icon: tone == KTone.success ? Icons.check : (tone == KTone.neutral ? null : Icons.warning_amber_rounded)),
+              KPill(status, tone: tone, dense: true),
+              if (goals)
+                IconButton(
+                  tooltip: 'Dagdoelen aanpassen',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(Icons.edit_outlined, size: 18, color: k.textSecondary),
+                  onPressed: () => _editTargets(context),
+                ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -302,52 +323,43 @@ class _FuelOverview extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(grams(total), style: context.t.metric.copyWith(fontSize: 40)),
-                        const SizedBox(width: 4),
-                        Text('g', style: context.t.subtitle.copyWith(color: k.accent)),
-                      ],
+                    Text('KOOLHYDRATEN TOTAAL', style: context.t.labelSm),
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: grams(total),
+                              style: context.t.metric.copyWith(fontSize: 40, color: k.accent),
+                            ),
+                            TextSpan(
+                              text: goals ? ' / ${grams(store.carbsTarget)}g' : ' g',
+                              style: context.t.title.copyWith(color: k.textSecondary, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text('Koolhydraten totaal gelogd', style: context.t.caption),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        peak == null ? Icons.trending_flat : Icons.trending_up,
-                        size: 18,
-                        color: peak == null ? k.textMuted : _toneInk(k, tone),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        peak == null ? '--' : '${dec1(peak.peak)} mmol/L',
-                        style: context.t.subtitle.copyWith(
-                          color: peak == null ? k.textMuted : _toneInk(k, tone),
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    peakEntry == null ? 'Piek na maaltijd' : 'Piek na ${mealTitle(peakEntry).toLowerCase()}',
-                    style: context.t.caption,
-                  ),
-                ],
-              ),
+              if (goals)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(remaining < 0 ? 'Boven doel' : 'Resterend', style: context.t.caption),
+                    Text(
+                      '${grams(remaining.abs())}g',
+                      style: context.t.metricSm.copyWith(color: remaining < 0 ? k.dangerInk : k.successInk),
+                    ),
+                  ],
+                ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           // Koolhydraten per maaltijd t.o.v. het dagdoel.
           SizedBox(
             height: 10,
@@ -374,29 +386,122 @@ class _FuelOverview extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 14,
-            runSpacing: 6,
-            children: [
-              for (final (i, e) in withCarbs.indexed)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(color: segColor(i), borderRadius: BorderRadius.circular(2)),
+          if (withCarbs.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                for (final (i, e) in withCarbs.indexed)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: segColor(i), borderRadius: BorderRadius.circular(2)),
+                      ),
+                      const SizedBox(width: 5),
+                      Text('${_legendName(e)} ${grams(e.carbs!)}g', style: context.t.caption),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+          if (goals) ...[
+            const SizedBox(height: 14),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _MiniMacro(label: 'Eiwit', value: store.proteinToday, target: store.proteinTarget),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _MiniMacro(
+                      label: 'Vetten',
+                      value: store.fatToday,
+                      target: store.fatTarget,
+                      color: k.textSecondary,
                     ),
-                    const SizedBox(width: 6),
-                    Text('${_legendName(e)} ${grams(e.carbs!)}g', style: context.t.caption),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                peak == null ? Icons.trending_flat : Icons.trending_up,
+                size: 16,
+                color: peak == null ? k.textMuted : _toneInk(k, tone),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  peak == null
+                      ? 'Piek na het eten verschijnt zodra er CGM-data is'
+                      : 'Piek ${dec1(peak.peak)} mmol/L na ${mealTitle(peakEntry!).toLowerCase()}',
+                  style: context.t.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+              if (!goals)
+                TextButton(
+                  onPressed: () => store.setNutritionGoalsEnabled(true),
+                  child: const Text('Dagdoel aanzetten'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Eiwit / vetten in een well: label, "145 / 170g" en een dunne balk.
+class _MiniMacro extends StatelessWidget {
+  const _MiniMacro({required this.label, required this.value, required this.target, this.color});
+  final String label;
+  final double value;
+  final double target;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final over = value > target;
+    return KWell(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w600),
+                ),
+              ),
               Text(
-                total > target ? '${grams(total - target)}g boven dagdoel' : 'Dagdoel ${grams(target)}g',
-                style: context.t.caption.copyWith(color: total > target ? k.dangerInk : k.textMuted),
+                '${grams(value)} / ${grams(target)}g',
+                style: context.t.caption.copyWith(
+                  color: over ? k.dangerInk : k.text,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          KProgressBar(
+            value: target <= 0 ? 0 : value / target,
+            color: over ? k.danger : (color ?? k.accent),
+            height: 5,
           ),
         ],
       ),
@@ -406,203 +511,53 @@ class _FuelOverview extends StatelessWidget {
 
 Color _toneInk(KineticColors k, KTone tone) => toneColors(k, tone).$2;
 
-// ------------------------------------------------------------ presets
-
-class _CarbPresets extends StatelessWidget {
-  const _CarbPresets();
-
-  static const _presets = [
-    (15.0, '+15g Dextrose', 'Dextrose', Icons.bolt),
-    (30.0, '+30g Snack/Fruit', 'Snack/fruit', Icons.cookie_outlined),
-    (50.0, '+50g Maaltijd', 'Maaltijd', Icons.lunch_dining),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final store = KineticScope.of(context);
-    final k = context.k;
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+Future<void> _editTargets(BuildContext context) async {
+  final store = KineticScope.read(context);
+  final c = TextEditingController(text: grams(store.carbsTarget));
+  final p = TextEditingController(text: grams(store.proteinTarget));
+  final f = TextEditingController(text: grams(store.fatTarget));
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Dagdoelen (gram)'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final (i, p) in _presets.indexed) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: KCard(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                onTap: () async {
-                  final messenger = ScaffoldMessenger.of(context);
-                  final before = store.carbsToday;
-                  final e = await store.logFood(description: p.$3, carbs: p.$1);
-                  if (e == null) {
-                    showToastOn(messenger, 'Opslaan mislukt', error: true);
-                    return;
-                  }
-                  showToastOn(
-                    messenger,
-                    'Koolhydraten ${grams(before)} → ${grams(store.carbsToday)}g',
-                    actionLabel: 'Ongedaan',
-                    onAction: () => store.deleteFood(e),
-                  );
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconTile(icon: p.$4, size: 36, color: k.accent),
-                    const SizedBox(height: 8),
-                    Text(
-                      p.$2,
-                      textAlign: TextAlign.center,
-                      style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
+          for (final (ctrl, label) in [(c, 'Koolhydraten'), (p, 'Eiwit'), (f, 'Vetten')]) ...[
+            TextField(
+              controller: ctrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: ctx.t.body,
+              decoration: InputDecoration(labelText: label, suffixText: 'g'),
             ),
+            const SizedBox(height: 10),
           ],
         ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------- barometer
-
-class _MacroBarometer extends StatelessWidget {
-  const _MacroBarometer();
-
-  @override
-  Widget build(BuildContext context) {
-    final store = KineticScope.of(context);
-    final k = context.k;
-    return KCard(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Eyebrow('Actieve macro-barometer', icon: Icons.speed, color: k.accent)),
-              IconButton(
-                tooltip: 'Doelen aanpassen',
-                icon: Icon(Icons.edit_outlined, size: 20, color: k.textSecondary),
-                onPressed: () => _editTargets(context),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Column(
-              children: [
-                _MacroRow(label: 'Koolhydraten', value: store.carbsToday, target: store.carbsTarget, color: k.primary),
-                _MacroRow(label: 'Eiwit', value: store.proteinToday, target: store.proteinTarget, color: k.blue),
-                _MacroRow(label: 'Vetten', value: store.fatToday, target: store.fatTarget, color: k.purple),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _editTargets(BuildContext context) async {
-    final store = KineticScope.read(context);
-    final c = TextEditingController(text: grams(store.carbsTarget));
-    final p = TextEditingController(text: grams(store.proteinTarget));
-    final f = TextEditingController(text: grams(store.fatTarget));
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Dagdoelen (gram)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final (ctrl, label) in [(c, 'Koolhydraten'), (p, 'Eiwit'), (f, 'Vetten')]) ...[
-              TextField(
-                controller: ctrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: ctx.t.body,
-                decoration: InputDecoration(labelText: label, suffixText: 'g'),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ],
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(ctx, false);
+            store.setNutritionGoalsEnabled(false);
+          },
+          child: const Text('Dagdoel uitzetten'),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuleren')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Opslaan')),
-        ],
-      ),
-    );
-    if (ok == true) {
-      double? v(TextEditingController x) {
-        final n = parseNum(x.text);
-        return n == null || n <= 0 || n > 2000 ? null : n;
-      }
-
-      await store.setMacroTargets(carbs: v(c), protein: v(p), fat: v(f));
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuleren')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Opslaan')),
+      ],
+    ),
+  );
+  if (ok == true) {
+    double? v(TextEditingController x) {
+      final n = parseNum(x.text);
+      return n == null || n <= 0 || n > 2000 ? null : n;
     }
-    c.dispose();
-    p.dispose();
-    f.dispose();
-  }
-}
 
-class _MacroRow extends StatelessWidget {
-  const _MacroRow({required this.label, required this.value, required this.target, required this.color});
-  final String label;
-  final double value;
-  final double target;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    final rest = target - value;
-    final over = rest < 0;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(label, style: context.t.bodyStrong),
-              const Spacer(),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: grams(value),
-                      style: context.t.subtitle.copyWith(
-                        color: over ? k.dangerInk : k.text,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    TextSpan(text: ' / ${grams(target)}g', style: context.t.caption),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          KProgressBar(value: target <= 0 ? 0 : value / target, color: over ? k.danger : color, height: 8),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              if (over) ...[Icon(Icons.warning_amber_rounded, size: 14, color: k.dangerInk), const SizedBox(width: 4)],
-              Text(
-                over ? '${grams(-rest)}g boven doel' : '${grams(rest)}g resterend',
-                style: context.t.caption.copyWith(color: over ? k.dangerInk : k.textSecondary),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+    await store.setMacroTargets(carbs: v(c), protein: v(p), fat: v(f));
   }
+  c.dispose();
+  p.dispose();
+  f.dispose();
 }
 
 // ------------------------------------------------------------ maaltijden
@@ -618,10 +573,6 @@ class _EntryCard extends StatelessWidget {
     final store = KineticScope.read(context);
     final k = context.k;
     final e = entry;
-    final macros = [
-      if (e.protein != null) 'Eiwit ${grams(e.protein!)}g',
-      if (e.fat != null) 'Vet ${grams(e.fat!)}g',
-    ];
     final iconColor = switch (e.context) {
       MealContext.preTraining => k.accent,
       MealContext.postTraining => k.blue,
@@ -648,7 +599,9 @@ class _EntryCard extends StatelessWidget {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Verwijderen?'),
-          content: Text('"${e.description.isEmpty ? 'Maaltijd' : e.description}" wordt uit je logboek en Supabase verwijderd.'),
+          content: Text(
+            '"${e.description.isEmpty ? 'Maaltijd' : e.description}" wordt uit je logboek en Supabase verwijderd.',
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuleren')),
             FilledButton(
@@ -665,13 +618,20 @@ class _EntryCard extends StatelessWidget {
         if (!ok) showToastOn(messenger, 'Verwijderen mislukt', error: true);
       },
       child: KCard(
+        padding: const EdgeInsets.all(16),
+        onTap: () => showMealSheet(context, existing: e),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconTile(icon: _mealIcon(e), size: 40, color: iconColor),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(color: k.well, borderRadius: BorderRadius.circular(KRadius.sm)),
+                  child: Icon(_mealIcon(e), size: 22, color: iconColor),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -679,54 +639,162 @@ class _EntryCard extends StatelessWidget {
                     children: [
                       Text(mealTitle(e), style: context.t.title),
                       const SizedBox(height: 2),
-                      Text('${hhmm(e.at)} • ${_contextLabel(e.context)}', style: context.t.caption),
+                      Text(
+                        e.mmol == null ? hhmm(e.at) : '${hhmm(e.at)} • ${e.mmol!.toStringAsFixed(1)} mmol/L',
+                        style: context.t.caption,
+                      ),
                     ],
                   ),
                 ),
-                if ((e.insulinUnits ?? 0) > 0) ...[
-                  const SizedBox(width: 8),
-                  KPill('${e.insulinUnits!.toStringAsFixed(1)} E bolus', tone: KTone.info, dense: true),
-                ],
+                const SizedBox(width: 8),
+                _ContextPill(context: e.context),
               ],
             ),
-            const SizedBox(height: 12),
-            KWell(
-              child: Row(
+            if (!isCorrectionOnly(e) || (e.description.isNotEmpty && e.description != 'Correctie')) ...[
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          e.description.isEmpty ? 'Maaltijd' : e.description,
-                          style: context.t.bodyStrong,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (macros.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(macros.join(' • '), style: context.t.caption),
-                        ],
-                      ],
+                    child: Text(
+                      e.description.isEmpty ? 'Maaltijd' : e.description,
+                      style: context.t.body.copyWith(color: k.text),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        e.carbs == null ? '--' : '${grams(e.carbs!)}g',
-                        style: context.t.metricSm.copyWith(color: e.carbs == null ? k.textMuted : k.accent),
-                      ),
-                      Text('carbs', style: context.t.labelSm.copyWith(color: k.textMuted)),
-                    ],
+                  Text(
+                    [
+                      e.carbs == null ? '-- carbs' : '${grams(e.carbs!)}g carbs',
+                      if ((e.protein ?? 0) > 0) '${grams(e.protein!)}g eiwit',
+                    ].join(' • '),
+                    style: context.t.bodyStrong.copyWith(color: e.carbs == null ? k.textMuted : k.text),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
+            ],
+            if (e.insulinUnits != null || e.insulinFoodUnits != null || e.insulinCorrectionUnits != null) ...[
+              const SizedBox(height: 10),
+              _InsulinRow(entry: e),
+            ],
+            const SizedBox(height: 12),
             _ResponseRow(entry: e, response: response, hyper: hyper),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.edit_outlined, size: 14, color: k.textMuted),
+                const SizedBox(width: 4),
+                Text('Tik om aan te passen', style: context.t.caption.copyWith(color: k.textMuted)),
+              ],
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Insuline op de kaart: voeding, correctie en totaal (zoals in de
+/// calculator), of alleen het totaal als er geen opsplitsing is.
+class _InsulinRow extends StatelessWidget {
+  const _InsulinRow({required this.entry});
+  final FoodLogEntry entry;
+
+  static String _u(double v) => v % 1 == 0 ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final e = entry;
+    final food = e.insulinFoodUnits ?? 0;
+    final corr = e.insulinCorrectionUnits ?? 0;
+    final split = (e.insulinFoodUnits != null || e.insulinCorrectionUnits != null) && food > 0 && corr > 0;
+    final total = e.insulinUnits ?? (food + corr);
+    final totalLabel = isCorrectionOnly(e)
+        ? 'Correctie totaal'
+        : (e.insulinFoodUnits != null && corr > 0 && food == 0 ? 'Correctie totaal' : 'Totaal gespoten');
+
+    Widget part(String label, double v) => Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        decoration: BoxDecoration(color: k.well, borderRadius: BorderRadius.circular(KRadius.sm)),
+        child: Column(
+          children: [
+            Text(label, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            Text(
+              '${_u(v)} E',
+              style: context.t.bodyStrong.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+            ),
+          ],
+        ),
+      ),
+    );
+    Widget op(String sign) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Text(sign, style: context.t.title.copyWith(color: k.textSecondary)),
+    );
+
+    return Semantics(
+      label: split
+          ? 'Insuline: ${_u(food)} voeding plus ${_u(corr)} correctie is ${_u(total)} eenheden totaal'
+          : '$totalLabel ${_u(total)} eenheden',
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (split) ...[
+            Row(children: [part('Voeding', food), op('+'), part('Correctie', corr), op('=')]),
+            const SizedBox(height: 6),
+          ],
+          // Het totaal altijd als eigen, opvallende regel.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: k.primaryTint, borderRadius: BorderRadius.circular(KRadius.sm)),
+            child: Row(
+              children: [
+                Icon(Icons.vaccines_outlined, size: 18, color: k.accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(totalLabel, style: context.t.bodyStrong.copyWith(color: k.accent)),
+                ),
+                Text('${_u(total)} E', style: context.t.metricSm.copyWith(color: k.accent)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Contextlabel rechtsboven op een maaltijdkaart ("Pre-training", "Herstel").
+class _ContextPill extends StatelessWidget {
+  const _ContextPill({required this.context});
+  final MealContext? context;
+
+  @override
+  Widget build(BuildContext ctx) {
+    final k = ctx.k;
+    final (label, teal) = switch (context) {
+      MealContext.preTraining => ('Pre-training', true),
+      MealContext.postTraining => ('Na training', true),
+      MealContext.acute => ('Interventie', false),
+      MealContext.recovery => ('Herstel', false),
+      null => ('Regulier', false),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: teal ? k.primaryTint : k.well,
+        borderRadius: BorderRadius.circular(KRadius.full),
+      ),
+      child: Text(
+        label,
+        style: ctx.t.labelSm.copyWith(
+          color: teal ? k.accent : (context == MealContext.acute ? k.warningInk : k.textSecondary),
         ),
       ),
     );
@@ -777,7 +845,10 @@ class _ResponseRow extends StatelessWidget {
                   Text.rich(
                     TextSpan(
                       children: [
-                        TextSpan(text: buffer ? 'Glucosebuffer: ' : 'Respons: ', style: context.t.caption.copyWith(color: k.text)),
+                        TextSpan(
+                          text: buffer ? 'Glucosebuffer: ' : 'Respons: ',
+                          style: context.t.caption.copyWith(color: k.text),
+                        ),
                         TextSpan(
                           text: '${dec1(r.start)} → ${dec1(r.peak)} mmol/L',
                           style: context.t.bodyStrong.copyWith(
@@ -848,25 +919,34 @@ class _InsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
-    return KCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IconTile(icon: Icons.lightbulb_outline, size: 40, color: k.accent),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    // Inzicht-kaart uit de mock: teal accentstreep links.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(KRadius.lg),
+      child: Container(
+        decoration: BoxDecoration(
+          color: k.surface,
+          border: Border(left: BorderSide(color: k.accent, width: 4)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text('Metabool inzicht', style: context.t.title),
-                const SizedBox(height: 6),
-                Text(text, style: context.t.body.copyWith(color: k.textSecondary)),
-                const SizedBox(height: 8),
-                Text('Vuistregel op basis van je eigen data, geen medisch advies.', style: context.t.caption.copyWith(color: k.textMuted)),
+                Icon(Icons.lightbulb_outline, color: k.accent, size: 22),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Metabool Trainingsinzicht', style: context.t.title)),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(text, style: context.t.body.copyWith(color: k.textSecondary)),
+            const SizedBox(height: 8),
+            Text(
+              'Vuistregel op basis van je eigen data, geen medisch advies.',
+              style: context.t.caption.copyWith(color: k.textMuted),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,5 +1,5 @@
 // shell_screen.dart: de app-shell uit kinetic-design: top app bar (logo,
-// "Kinetic" + schermnaam, thema-schakelaar, avatar) en de 5-tabs navigatie
+// schermnaam met teal stip, live-telemetrieknop, avatar) en de 5-tabs navigatie
 // (Vandaag, Training, '+', Technieken, Eten) met de centrale quick action.
 // Loopt er een sessie, dan staat er een "terug naar de mat"-balk boven.
 
@@ -52,7 +52,7 @@ class ShellScreen extends StatelessWidget {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (store.isSparringActive) const _LiveSessionBar(),
+          if (store.isTrainingActive) const _LiveSessionBar(),
           const KineticNavBar(),
         ],
       ),
@@ -105,8 +105,8 @@ class KineticNavBar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: k.surface,
-        border: Border(top: BorderSide(color: k.border)),
+        color: k.isDark ? const Color(0xFF181C21) : k.surface,
+        border: k.isDark ? null : Border(top: BorderSide(color: k.border)),
       ),
       // Ruimte voor de Android-navigatieknoppen / gesturebalk.
       padding: EdgeInsets.only(bottom: context.bottomInset),
@@ -114,8 +114,8 @@ class KineticNavBar extends StatelessWidget {
         height: 68,
         child: Row(
           children: [
-            item(KTab.vandaag, Icons.calendar_today_outlined, Icons.calendar_today, 'Vandaag'),
-            item(KTab.training, Icons.sports_martial_arts_outlined, Icons.sports_martial_arts, 'Training'),
+            item(KTab.vandaag, Icons.local_fire_department_outlined, Icons.local_fire_department, 'Vandaag'),
+            item(KTab.training, Icons.fitness_center_outlined, Icons.fitness_center, 'Training'),
             Expanded(
               child: Center(
                 child: Transform.translate(
@@ -125,7 +125,9 @@ class KineticNavBar extends StatelessWidget {
                     label: 'Snelle actie',
                     child: Material(
                       color: k.primary,
-                      shape: CircleBorder(side: BorderSide(color: k.canvas, width: 4)),
+                      shape: const CircleBorder(),
+                      elevation: 6,
+                      shadowColor: k.primary.withValues(alpha: 0.5),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: () {
@@ -143,7 +145,7 @@ class KineticNavBar extends StatelessWidget {
                 ),
               ),
             ),
-            item(KTab.technieken, Icons.menu_book_outlined, Icons.menu_book, 'Technieken'),
+            item(KTab.technieken, Icons.shield_outlined, Icons.shield, 'Technieken'),
             item(KTab.eten, Icons.restaurant_outlined, Icons.restaurant, 'Eten'),
           ],
         ),
@@ -159,9 +161,23 @@ class _LiveSessionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = KineticScope.of(context);
     final k = context.k;
-    final t = store.sparring!;
-    final rest = t.phase == SparringPhase.rest;
-    final color = rest ? k.primary : k.danger;
+    final tr = store.training!;
+    final t = store.sparring;
+    final now = store.now();
+    final rest = t?.phase == SparringPhase.rest;
+    final color = t == null ? k.primary : (rest ? k.primary : k.danger);
+    final String label;
+    final int seconds;
+    if (t != null) {
+      label = '${rest ? 'RUST' : 'SPARREN'} • Ronde ${t.round}/${t.config.rounds}${t.isPaused ? ' • gepauzeerd' : ''}';
+      seconds = store.roundSecondsRemaining;
+    } else if (!tr.hasStarted(now)) {
+      label = '${tr.displayTitle.toUpperCase()} • start ${hhmm(tr.startsAt)}';
+      seconds = tr.secondsUntilStart(now);
+    } else {
+      label = '${tr.displayTitle.toUpperCase()} • tot ${hhmm(tr.endsAt)}';
+      seconds = tr.elapsedSeconds(now);
+    }
     return Material(
       color: color.withValues(alpha: k.isDark ? 0.16 : 0.10),
       child: InkWell(
@@ -171,17 +187,17 @@ class _LiveSessionBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
-              LiveDot(color: color, active: !t.isPaused),
+              LiveDot(color: color, active: !(t?.isPaused ?? false)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${rest ? 'RUST' : store.sessionTitle.toUpperCase()} • Ronde ${t.round}/${t.config.rounds}${t.isPaused ? ' • gepauzeerd' : ''}',
+                  label,
                   style: context.t.labelSm.copyWith(color: k.text),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(mmss(store.roundSecondsRemaining), style: context.t.subtitle.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+              Text(seconds >= 3600 ? '${seconds ~/ 3600}:${two((seconds % 3600) ~/ 60)}:${two(seconds % 60)}' : mmss(seconds), style: context.t.subtitle.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
               const SizedBox(width: 8),
               Icon(Icons.open_in_full, size: 18, color: k.textSecondary),
             ],

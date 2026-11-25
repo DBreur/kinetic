@@ -26,7 +26,7 @@ supabase db dump --data-only -f db_export/backup.sql
 ```env
 # Supabase API Koppeling (App client)
 NEXT_PUBLIC_SUPABASE_URL=https://wpexdeglubtzkdejehkj.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_zzzXBVJMVGY5BL5HiY95BA_S70qx7ZC
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_zzZXBVJMVGY5BL5HiY95BA_S7Oqx7ZC
 SUPABASE_PROJECT_REF=wpexdeglubtzkdejehkj
 
 # Directe PostgreSQL Verbinding (DBeaver, psql, migrations, backend scripts)
@@ -386,7 +386,7 @@ Plak de volgende prompt in je Claude Code terminal:
 
 ```bash
 claude "Lees dit specificatiedocument en koppel direct de Supabase backend van Kinetic. Zorg voor het volgende:
-1. Koppel het Supabase project met project ref: wpexdeglubtzkdejehkj (URL: https://wpexdeglubtzkdejehkj.supabase.co, publishable key: sb_publishable_zzzXBVJMVGY5BL5HiY95BA_S70qx7ZC).
+1. Koppel het Supabase project met project ref: wpexdeglubtzkdejehkj (URL: https://wpexdeglubtzkdejehkj.supabase.co, publishable key: sb_publishable_zzZXBVJMVGY5BL5HiY95BA_S7Oqx7ZC).
 2. Behoud alle bestaande PostgreSQL tabellen, data en RLS policies (Directe host: db.wpexdeglubtzkdejehkj.supabase.co / port 5432).
 3. Implementeer alle schermen exact volgens het Kinetic Dark Theme (#101419 obsidian met #14B8A6 teal).
 4. Bouw de 5-tabs navigatiebalk (/vandaag, /training, /technieken, /eten) met de centrale '+' quick action button.

@@ -5,6 +5,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../models/library.dart';
+import '../../models/technique.dart';
 import '../../theme/kinetic_theme.dart';
 import '../../widgets/kinetic_widgets.dart';
 import 'technique_ui.dart';
@@ -35,6 +36,9 @@ class _DiscoverViewState extends State<DiscoverView> {
   /// 0 = alle niveaus, anders 1..3.
   int _difficulty = 0;
 
+  /// Accordeon: maximaal één groep open (bij zoeken staat alles open).
+  TechniqueGroup? _open;
+
   @override
   void dispose() {
     _search.dispose();
@@ -63,6 +67,11 @@ class _DiscoverViewState extends State<DiscoverView> {
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final pad = pagePadding(context);
     final filtering = _query.trim().isNotEmpty || _discipline != 0 || _difficulty != 0;
+    final searching = _query.trim().isNotEmpty;
+    final grouped = <TechniqueGroup, List<LibraryTechnique>>{};
+    for (final t in results) {
+      grouped.putIfAbsent(t.group, () => []).add(t);
+    }
 
     return RefreshIndicator(
       color: k.primary,
@@ -168,17 +177,30 @@ class _DiscoverViewState extends State<DiscoverView> {
             ),
           SliverPadding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, pad.bottom),
-            sliver: SliverList.builder(
-              itemCount: results.length,
-              itemBuilder: (context, i) {
-                final lib = results[i];
-                final entry = byLib[lib.id] ?? VaultEntry(library: lib);
-                return Padding(
-                  key: ValueKey(lib.id),
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _LibraryCard(entry: entry),
-                );
-              },
+            sliver: SliverList.list(
+              children: [
+                for (final g in TechniqueGroup.values)
+                  if (grouped[g] case final list? when list.isNotEmpty) ...[
+                    Padding(
+                      key: ValueKey('h-${g.name}'),
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: GroupHeader(
+                        group: g,
+                        count: list.length,
+                        focusCount: 0,
+                        expanded: searching || _open == g,
+                        onTap: () => setState(() => _open = _open == g ? null : g),
+                      ),
+                    ),
+                    if (searching || _open == g)
+                      for (final lib in list)
+                        Padding(
+                          key: ValueKey(lib.id),
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _LibraryCard(entry: byLib[lib.id] ?? VaultEntry(library: lib)),
+                        ),
+                  ],
+              ],
             ),
           ),
         ],
@@ -244,6 +266,7 @@ class _LibraryCard extends StatelessWidget {
                         icon: Icons.check,
                         style: KButtonStyle.secondary,
                         height: 48,
+                        fitLabel: true,
                         onPressed: null,
                       )
                     : BigButton(
@@ -251,6 +274,7 @@ class _LibraryCard extends StatelessWidget {
                         icon: Icons.add,
                         style: KButtonStyle.ghost,
                         height: 48,
+                        fitLabel: true,
                         onPressed: () => addToVault(context, e),
                       ),
               ),
@@ -264,6 +288,7 @@ class _LibraryCard extends StatelessWidget {
                         foreground: k.accent,
                         outlined: true,
                         height: 48,
+                        fitLabel: true,
                         onPressed: () => toggleFocus(context, e),
                       )
                     : BigButton(
@@ -271,6 +296,7 @@ class _LibraryCard extends StatelessWidget {
                         icon: Icons.center_focus_weak,
                         style: KButtonStyle.secondary,
                         height: 48,
+                        fitLabel: true,
                         onPressed: () => toggleFocus(context, e),
                       ),
               ),

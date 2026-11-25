@@ -1,7 +1,7 @@
-// training_screen.dart: Training Historie (kinetic_training_dark/light):
-// training starten of loggen, filters per discipline en periode, het
-// weekoverzicht (mat-tijd, sessies, gemiddelde glucose) met
-// intensiteitsgrafiek en de recente sessies met hun glucoseverloop.
+// training_screen.dart: Sessie Historie (kinetic_training_historie_
+// interactief_dark_mode): training starten of loggen, periode- en
+// disciplinefilters, de volumekaart (mat-tijd, glucose safe-zone, sessies,
+// rondes) met intensiteitsgrafiek, trainingspresets en de voltooide sessies.
 
 import 'package:material_ui/material_ui.dart';
 
@@ -11,8 +11,11 @@ import '../models/training_session.dart';
 import '../theme/kinetic_theme.dart';
 import '../widgets/charts.dart';
 import '../widgets/kinetic_widgets.dart';
+import '../widgets/food_preset_widgets.dart';
 import '../widgets/sheets.dart';
 import '../widgets/start_training_sheet.dart';
+import '../widgets/training_sheets.dart';
+import '../widgets/video_widgets.dart';
 import 'log_training_screen.dart';
 
 enum TrainingPeriod {
@@ -193,13 +196,15 @@ class _TrainingScreenState extends State<TrainingScreen> {
           : '${d > 0 ? '+' : '−'}${d.abs() >= 60 ? durationLabel(d.abs()) : '${d.abs()}m'} t.o.v. vorige';
     }
 
+    final sparSessions = sessions.where((s) => s.sparringRounds > 0).length;
+
     return RefreshIndicator(
       color: k.primary,
       backgroundColor: k.surface,
       onRefresh: store.refreshAll,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: pagePadding(context, top: 16),
+        padding: pagePadding(context, top: 8),
         children: [
           Row(
             children: [
@@ -207,146 +212,202 @@ class _TrainingScreenState extends State<TrainingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Training Historie', style: context.t.headline, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text('LOGBOEK TELEMETRIE', style: context.t.labelSm.copyWith(color: k.accent, letterSpacing: 0.8)),
                     const SizedBox(height: 2),
-                    Text('Belasting & glycemie', style: context.t.caption),
+                    Text('Sessie Historie', style: context.t.headline, maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  backgroundColor: k.surface,
+                  backgroundColor: k.well,
                   foregroundColor: k.text,
-                  side: BorderSide(color: k.border),
+                  side: BorderSide.none,
                   textStyle: context.t.bodyStrong,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KRadius.sm)),
                 ),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const LogTrainingScreen()),
                 ),
                 icon: Icon(Icons.edit_note, size: 20, color: k.accent),
-                label: const Text('Training loggen'),
+                label: const Text('Loggen'),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          if (store.isSparringActive)
+          if (store.isTrainingActive)
             BigButton(
-              label: 'Terug naar de mat',
+              label: 'Terug naar de training',
               icon: Icons.sports_mma,
               height: 56,
               onPressed: () => openLiveSession(context),
             )
           else
             BigButton(
-              label: 'Training starten',
-              icon: Icons.play_arrow_rounded,
+              label: 'Start Nieuwe Trainingssessie',
+              icon: Icons.play_circle_outline,
               height: 56,
+              fitLabel: true,
+              color: k.accent,
+              foreground: k.onPrimary,
               onPressed: () => showStartTrainingSheet(context),
             ),
           const SizedBox(height: 16),
-          _ChipRow(
-            children: [
-              KChip(
-                label: 'Alle sporten',
-                selected: discipline == null,
-                onTap: () => setState(() => _discipline = null),
-              ),
-              for (final e in disciplines.entries)
-                KChip(
-                  label: e.value,
-                  selected: discipline == e.key,
-                  onTap: () => setState(() => _discipline = e.key),
-                ),
-            ],
+          KSegmented<TrainingPeriod>(
+            options: [for (final p in TrainingPeriod.values) (p, p == TrainingPeriod.camp ? 'Camp (8w)' : p.label)],
+            value: _period,
+            onChanged: (p) => setState(() => _period = p),
           ),
-          const SizedBox(height: 8),
-          _ChipRow(
-            children: [
-              for (final p in TrainingPeriod.values)
+          if (disciplines.length > 1) ...[
+            const SizedBox(height: 10),
+            _ChipRow(
+              children: [
                 KChip(
-                  label: p.label,
-                  icon: p == _period ? Icons.calendar_today_outlined : null,
-                  selected: _period == p,
-                  color: _period == p ? k.text : null,
-                  onTap: () => setState(() => _period = p),
+                  label: 'Alle sporten',
+                  selected: discipline == null,
+                  onTap: () => setState(() => _discipline = null),
                 ),
-            ],
-          ),
+                for (final e in disciplines.entries)
+                  KChip(
+                    label: e.value,
+                    selected: discipline == e.key,
+                    onTap: () => setState(() => _discipline = e.key),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           KCard(
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.insert_chart_outlined, size: 20, color: k.accent),
-                    const SizedBox(width: 8),
-                    Expanded(child: Eyebrow(overviewTitle)),
-                    if (tir != null)
-                      KPill(
-                        tir >= 0.7 ? 'In veilige zone' : 'Let op glucose',
-                        tone: tir >= 0.7 ? KTone.success : KTone.warning,
-                        dot: true,
-                        dense: true,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(width: 8, height: 8, decoration: BoxDecoration(color: k.accent, shape: BoxShape.circle)),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  overviewTitle.toUpperCase(),
+                                  style: context.t.labelSm.copyWith(color: k.textSecondary, letterSpacing: 0.6),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              durationLabel(minutes),
+                              style: context.t.metric.copyWith(color: k.accent, fontSize: 48),
+                            ),
+                          ),
+                          if (deltaLabel != null)
+                            Row(
+                              children: [
+                                Icon(
+                                  prevMinutes != null && minutes < prevMinutes ? Icons.trending_down : Icons.trending_up,
+                                  size: 16,
+                                  color: prevMinutes != null && minutes < prevMinutes ? k.warningInk : k.successInk,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    deltaLabel,
+                                    style: context.t.caption.copyWith(
+                                      color: prevMinutes != null && minutes < prevMinutes ? k.warningInk : k.successInk,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('Glucose safe-zone', style: context.t.caption),
+                        const SizedBox(height: 2),
+                        Text(
+                          tir == null ? '—' : '${(tir * 100).round()}%',
+                          style: context.t.metricSm.copyWith(
+                            color: tir == null ? k.textMuted : (tir >= 0.7 ? k.successInk : k.warningInk),
+                          ),
+                        ),
+                        if (avg != null) ...[
+                          const SizedBox(height: 2),
+                          Text('gem. ${dec1(avg)} mmol/L', style: context.t.caption),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
-                        child: MetricTile(
-                          inWell: true,
-                          label: 'Mat tijd',
-                          value: durationLabel(minutes),
-                          sub: deltaLabel ?? '${sessions.length} sessies',
-                          subColor: prevMinutes == null || minutes == prevMinutes
-                              ? null
-                              : (minutes > prevMinutes ? k.successInk : k.warningInk),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: MetricTile(
-                          inWell: true,
+                        child: _VolumeTile(
+                          icon: Icons.sports_mma,
                           label: 'Sessies',
-                          value: '${sessions.length}',
-                          sub: rounds > 0 ? '$rounds rondes' : _period.label,
+                          value: '${sessions.length} ${sessions.length == 1 ? 'sessie' : 'sessies'}',
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: MetricTile(
-                          inWell: true,
-                          label: 'Gem. glucose',
-                          value: avg == null ? '—' : dec1(avg),
-                          valueColor: avg == null ? k.textMuted : zoneInk(k, avg),
-                          sub: tir == null ? 'Geen CGM-data' : '${(tir * 100).round()}% in bereik',
-                          subColor: tir == null ? k.textMuted : (tir >= 0.7 ? k.successInk : k.warningInk),
+                        child: _VolumeTile(
+                          icon: Icons.sports_kabaddi,
+                          label: 'Sparring',
+                          value: rounds > 0 ? '$rounds rondes' : '$sparSessions sessies',
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 18),
-                IntensityBars(values: bars, labels: labels),
+                Row(
+                  children: [
+                    Expanded(child: Text('Dagen & intensiteit (minuten)', style: context.t.caption.copyWith(fontWeight: FontWeight.w600))),
+                    Text(
+                      'Doel ${dec1(targetLow)}–${dec1(targetHigh)}',
+                      style: context.t.caption.copyWith(color: k.accent, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
-                Text(
-                  'Minuten op de mat • doelbereik ${dec1(targetLow)}–${dec1(targetHigh)} mmol/L',
-                  style: context.t.caption,
+                Container(
+                  padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+                  decoration: BoxDecoration(
+                    color: k.isDark ? KineticColors.sunken : k.well,
+                    borderRadius: BorderRadius.circular(KRadius.md),
+                  ),
+                  child: IntensityBars(values: bars, labels: labels),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          const PresetManagerCard(training: true),
           const SizedBox(height: 24),
           SectionTitle(
-            'Recente sessies',
+            'Voltooide Trainingssessies',
             trailing: Text(
-              '${_period == TrainingPeriod.all ? 'Alle' : _period.label} • ${sessions.length}',
+              '${sessions.length} getoond',
               style: context.t.caption,
             ),
           ),
@@ -374,6 +435,45 @@ class _TrainingScreenState extends State<TrainingScreen> {
   }
 }
 
+/// Well-tegel in de volumekaart ("Sparring • 4 sessies").
+class _VolumeTile extends StatelessWidget {
+  const _VolumeTile({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return KWell(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: k.isDark ? KineticColors.sunken : k.surface,
+              borderRadius: BorderRadius.circular(KRadius.sm),
+            ),
+            child: Icon(icon, size: 20, color: k.accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: context.t.caption),
+                Text(value, style: context.t.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ChipRow extends StatelessWidget {
   const _ChipRow({required this.children});
   final List<Widget> children;
@@ -395,8 +495,60 @@ class _ChipRow extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------ sessiekaart
+/// Rechthoekige tag ("MMA", "BJJ Gi") linksboven op een sessiekaart.
+class _TagPill extends StatelessWidget {
+  const _TagPill(this.text, {required this.tone});
+  final String text;
+  final KTone tone;
 
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = toneColors(context.k, tone);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Text(
+        text,
+        style: context.t.caption.copyWith(color: fg, fontWeight: FontWeight.w700),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+/// Statistiekcel in een sessiekaart: label boven, waarde eronder.
+class _StatCell extends StatelessWidget {
+  const _StatCell({required this.label, required this.value, this.color});
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+      decoration: BoxDecoration(color: k.well, borderRadius: BorderRadius.circular(KRadius.sm)),
+      child: Column(
+        children: [
+          Text(label, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: context.t.bodyStrong.copyWith(color: color ?? k.text, fontFeatures: const [FontFeature.tabularFigures()]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------ sessiekaart
 class _SessionCard extends StatelessWidget {
   const _SessionCard({required this.session, required this.now, required this.weightKg});
   final TrainingSession session;
@@ -413,83 +565,99 @@ class _SessionCard extends StatelessWidget {
     final ratio = s.successRatio;
     final techniques = s.coveredTechniques;
     final traj = GlucoseTrajectory.of(s.glucoseSeries);
+    final subtitle = [
+      if (s.sparringRounds > 0) '${s.sparringRounds} rondes',
+      if (rpe != null) 'RPE $rpe/5',
+      if (techniques.isNotEmpty) techniques.take(3).join(', ') + (techniques.length > 3 ? ' +${techniques.length - 3}' : ''),
+    ].join(' • ');
+    Color? glucoseInk(double v) => zoneInk(k, v);
     return KCard(
       onTap: () => _showDetails(context, s, now),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Flexible(child: KPill(s.title, tone: _disciplineTone(s))),
-              if (focus.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    '• $focus',
-                    style: context.t.subtitle.copyWith(color: k.textSecondary, fontWeight: FontWeight.w500),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 140),
+                child: _TagPill(s.title, tone: _disciplineTone(s)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _sessionDate(s.startedAt, now),
+                  style: context.t.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-              const Spacer(),
-              Text('Details', style: context.t.caption),
-              Icon(Icons.chevron_right, size: 18, color: k.textSecondary),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.check_circle_outline, size: 16, color: k.successInk, semanticLabel: 'Voltooid'),
+              const SizedBox(width: 2),
+              Icon(Icons.chevron_right, size: 20, color: k.textSecondary),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          Text(
+            focus.isEmpty ? s.title : '${s.title} • $focus',
+            style: context.t.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(subtitle, style: context.t.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
+          ],
+          const SizedBox(height: 14),
           Row(
             children: [
-              Icon(Icons.timer_outlined, size: 20, color: k.text),
-              const SizedBox(width: 6),
-              Text('${s.durationMinutes} min', style: context.t.subtitle.copyWith(fontWeight: FontWeight.w700)),
-              if (rpe != null) ...[
-                const SizedBox(width: 10),
-                KPill('RPE $rpe/5', dense: true),
-              ],
-              if (s.sparringRounds > 0) ...[
-                const SizedBox(width: 6),
-                KPill('${s.sparringRounds} rondes', dense: true),
-              ],
-              const Spacer(),
-              Text(_sessionDate(s.startedAt, now), style: context.t.caption),
+              Expanded(child: _StatCell(label: 'Duur', value: '${s.durationMinutes} min')),
+              const SizedBox(width: 8),
+              Expanded(child: _StatCell(label: 'Verbrand', value: '$kcal kcal', color: k.accent)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StatCell(
+                  label: 'Glucose',
+                  value: traj == null ? '—' : '${dec1(traj.start)}→${dec1(traj.end)}',
+                  color: traj == null ? k.textMuted : glucoseInk(traj.end),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ratio != null
+                    ? _StatCell(
+                        label: 'Geslaagd',
+                        value: '${(ratio * 100).round()}%',
+                        color: ratio >= 0.5 ? k.successInk : k.warningInk,
+                      )
+                    : _StatCell(
+                        label: traj == null ? 'Rondes' : traj.middleLabel,
+                        value: traj == null ? '${s.sparringRounds}' : dec1(traj.middle),
+                        color: traj == null ? null : glucoseInk(traj.middle),
+                      ),
+              ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text('~$kcal kcal (schatting)', style: context.t.caption.copyWith(color: k.textMuted)),
-          const SizedBox(height: 12),
-          _GlucoseWell(trajectory: traj),
-          if (techniques.isNotEmpty || ratio != null) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text('Geregistreerd:', style: context.t.caption),
-                for (final t in techniques.take(5)) KPill(t, dense: true),
-                if (techniques.length > 5) KPill('+${techniques.length - 5}', dense: true),
-                if (ratio != null)
-                  KPill(
-                    '${(ratio * 100).round()}% geslaagd',
-                    tone: ratio >= 0.5 ? KTone.success : KTone.warning,
-                    icon: Icons.track_changes,
-                    dense: true,
-                  ),
-              ],
-            ),
-          ],
         ],
       ),
     );
   }
-
   static Future<void> _showDetails(BuildContext context, TrainingSession s, DateTime now) {
     return showKineticSheet<void>(
       context,
       builder: (ctx) {
         final k = ctx.k;
+        // Live uit de store, zodat aanpassingen aan de voeding meteen zichtbaar zijn.
+        final store = KineticScope.of(ctx);
+        final cur = store.sessions.where((x) => x.id == s.id).firstOrNull ?? s;
         final notes = _sessionNotes(s);
+        final warmups = s.blocks.where((b) => b['kind'] == 'warmup').toList();
+        final spars = s.blocks.where((b) => b['kind'] == 'sparring' && (b['goal'] != null || b['round_goals'] != null)).toList();
+        final techLogs = s.blocks
+            .where((b) => b['kind'] == 'technique' && (((b['reps'] as num?) ?? 0) > 0 || ((b['seconds'] as num?) ?? 0) > 0 || b['measure'] != null))
+            .toList();
+        final combos = s.blocks.where((b) => b['kind'] == 'combination').toList();
         final results = s.techniqueResults;
         final rpe = _sessionRpe(s);
         return Column(
@@ -536,6 +704,91 @@ class _SessionCard extends StatelessWidget {
                 children: [for (final t in s.coveredTechniques) KPill(t)],
               ),
             ],
+            if (warmups.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Warming-up'),
+              for (final w in warmups)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: KWell(child: Text('${w['minutes'] ?? '?'} min', style: ctx.t.bodyStrong)),
+                ),
+            ],
+            if (spars.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Sparren & doelen'),
+              for (final b in spars)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: KWell(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${b['rounds'] ?? 0} rondes', style: ctx.t.bodyStrong),
+                        if ((b['goal'] as String? ?? '').isNotEmpty)
+                          _GoalLine(text: 'Doel: ${b['goal']}', done: b['goal_done'] == true),
+                        for (final g in (b['round_goals'] as List? ?? const []))
+                          if (g is Map) _GoalLine(text: '${g['goal']}', done: g['done'] == true),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+            if (techLogs.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Technieken gelogd'),
+              for (final b in techLogs)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: KWell(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Text('${b['name']}', style: ctx.t.bodyStrong)),
+                            Text(
+                              b['measure'] == 'time'
+                                  ? durationLabel((((b['seconds'] as num?) ?? 0) ~/ 60).toInt())
+                                  : '${b['reps'] ?? 0} reps',
+                              style: ctx.t.caption,
+                            ),
+                          ],
+                        ),
+                        if ((b['note'] as String? ?? '').trim().isNotEmpty)
+                          Text('${b['note']}', style: ctx.t.caption.copyWith(color: k.text)),
+                        if (store.techniques.where((t) => t.id == b['technique_id']).firstOrNull case final tech?
+                            when tech.videoUrls.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          VideoList(urls: tech.videoUrls, dense: true),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+            if (combos.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const FormLabel('Combinaties'),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [for (final c in combos) KPill('${c['name']} • ${c['reps'] ?? 1}×')],
+              ),
+            ],
+            if (cur.nutrition.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              FormLabel(
+                'Voeding tijdens de training',
+                trailing: '${grams(cur.nutrition.fold<double>(0, (a, n) => a + n.carbs))} g koolh.',
+                trailingColor: k.accent,
+              ),
+              NutritionLogList(
+                items: cur.nutrition,
+                onCount: (n, c) => store.updateSessionNutrition(s.id, id: n.id, count: c),
+                onTime: (n, at) => store.updateSessionNutrition(s.id, id: n.id, at: at),
+                onDelete: (n) => store.updateSessionNutrition(s.id, id: n.id, delete: true),
+              ),
+            ],
             if (notes.isNotEmpty) ...[
               const SizedBox(height: 20),
               const FormLabel('Notities'),
@@ -544,6 +797,27 @@ class _SessionCard extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _GoalLine extends StatelessWidget {
+  const _GoalLine({required this.text, required this.done});
+  final String text;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 16, color: done ? k.success : k.textMuted),
+          const SizedBox(width: 6),
+          Expanded(child: Text(text, style: context.t.caption.copyWith(color: k.text))),
+        ],
+      ),
     );
   }
 }

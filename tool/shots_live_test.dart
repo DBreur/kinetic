@@ -7,6 +7,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinetic/models/glucose.dart';
+import 'package:kinetic/models/live_training.dart';
 import 'package:kinetic/models/technique.dart';
 
 import '../test/support/seed_data.dart';
@@ -21,7 +22,8 @@ void main() {
     final store = s.store;
     final end = s.clock;
     s.clock = end.subtract(const Duration(minutes: 12));
-    store.startSparring(title: 'Combat Sambo');
+    store.startTraining(discipline: 'Combat Sambo', startsAt: store.now(), endsAt: store.now().add(const Duration(minutes: 90)));
+    store.startSparringBlock(rounds: List.filled(5, const SparRound()), goal: 'Zet minimaal 5 worpen in');
     store.advanceToRestPhase();
     store.startNextRound();
     store.advanceToRestPhase();

@@ -18,7 +18,28 @@ class SparringConfig {
     this.rounds = 5,
     this.workSeconds = 300,
     this.restSeconds = 60,
+    this.roundWork,
+    this.roundRest,
   });
+
+  /// Per ronde een eigen werktijd (index 0 = ronde 1); null = [workSeconds].
+  final List<int>? roundWork;
+
+  /// Rust ná ronde n (index 0 = na ronde 1); null = [restSeconds].
+  final List<int>? roundRest;
+
+  int workFor(int round) {
+    final w = roundWork;
+    return w != null && round >= 1 && round <= w.length ? w[round - 1] : workSeconds;
+  }
+
+  int restAfter(int round) {
+    final r = roundRest;
+    return r != null && round >= 1 && round <= r.length ? r[round - 1] : restSeconds;
+  }
+
+  SparringConfig copyWithRounds(int rounds, int workSeconds, int restSeconds) =>
+      SparringConfig(rounds: rounds, workSeconds: workSeconds, restSeconds: restSeconds);
 
   String get summary =>
       '$rounds × ${_m(workSeconds)} / ${_m(restSeconds)} rust';
@@ -30,12 +51,16 @@ class SparringConfig {
     'rounds': rounds,
     'work': workSeconds,
     'rest': restSeconds,
+    'round_work': ?roundWork,
+    'round_rest': ?roundRest,
   };
 
   factory SparringConfig.fromJson(Map<String, dynamic> j) => SparringConfig(
     rounds: (j['rounds'] as num?)?.toInt() ?? 5,
     workSeconds: (j['work'] as num?)?.toInt() ?? 300,
     restSeconds: (j['rest'] as num?)?.toInt() ?? 60,
+    roundWork: (j['round_work'] as List?)?.map((e) => (e as num).toInt()).toList(),
+    roundRest: (j['round_rest'] as List?)?.map((e) => (e as num).toInt()).toList(),
   );
 }
 
@@ -45,7 +70,7 @@ class SparringTimer {
       round = 1,
       phase = SparringPhase.work,
       phaseStartedAt = now,
-      _endsAt = now.add(Duration(seconds: config.workSeconds));
+      _endsAt = now.add(Duration(seconds: config.workFor(1)));
 
   SparringTimer._restore({
     required this.config,
@@ -58,7 +83,8 @@ class SparringTimer {
     required this.restHeld,
   });
 
-  final SparringConfig config;
+  /// Kan tijdens het sparren worden aangepast, zie [reconfigure].
+  SparringConfig config;
   final DateTime startedAt;
   int round;
   SparringPhase phase;
@@ -83,8 +109,8 @@ class SparringTimer {
   }
 
   int phaseLength() => phase == SparringPhase.work
-      ? config.workSeconds
-      : config.restSeconds;
+      ? config.workFor(round)
+      : config.restAfter(round);
 
   /// Hoeveel van de huidige fase al voorbij is (0..1), voor de voortgangsring.
   double phaseProgress(DateTime now) {
@@ -118,7 +144,7 @@ class SparringTimer {
     }
     phase = SparringPhase.rest;
     phaseStartedAt = now;
-    _endsAt = now.add(Duration(seconds: config.restSeconds));
+    _endsAt = now.add(Duration(seconds: config.restAfter(round)));
   }
 
   void addRest(int seconds, DateTime now) {
@@ -140,7 +166,24 @@ class SparringTimer {
     phaseStartedAt = now;
     restHeld = false;
     _pausedRemaining = null;
-    _endsAt = now.add(Duration(seconds: config.workSeconds));
+    _endsAt = now.add(Duration(seconds: config.workFor(round)));
+  }
+
+  /// Nieuwe rondes/duur tijdens het sparren. De lopende fase schuift mee
+  /// met het verschil in duur (5:00 → 4:00 haalt een minuut van de klok af).
+  void reconfigure(SparringConfig next, DateTime now) {
+    final oldLength = phaseLength();
+    config = next;
+    if (isDone) return;
+    if (round > next.rounds) round = next.rounds;
+    final delta = phaseLength() - oldLength;
+    if (delta == 0) return;
+    final paused = _pausedRemaining;
+    if (paused != null) {
+      _pausedRemaining = math.max(0, paused + delta);
+    } else if (_endsAt != null) {
+      _endsAt = _endsAt!.add(Duration(seconds: delta));
+    }
   }
 
   /// Rondt een sessie vroegtijdig af.

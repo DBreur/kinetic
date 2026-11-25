@@ -47,8 +47,11 @@ class _VaultViewState extends State<VaultView> {
   String _query = '';
   String _filter = _all;
 
-  /// Handmatig open/dicht geklapte groepen (normale weergave).
-  final Map<TechniqueGroup, bool> _expanded = {};
+  /// Normale weergave: maximaal één groep tegelijk open (accordeon).
+  /// Tot je zelf iets aantikt is dat de eerste groep met focus-technieken.
+  TechniqueGroup? _open;
+  bool _openChosen = false;
+  TechniqueGroup? _defaultOpen;
 
   /// Tijdens zoeken/filteren staat alles open, behalve wat je hier dichtklapt.
   final Set<TechniqueGroup> _collapsedWhileFiltering = {};
@@ -86,7 +89,7 @@ class _VaultViewState extends State<VaultView> {
 
   bool _isExpanded(TechniqueGroup g, bool hasFocus) {
     if (_filtering) return !_collapsedWhileFiltering.contains(g);
-    return _expanded[g] ?? hasFocus;
+    return (_openChosen ? _open : _defaultOpen) == g;
   }
 
   void _toggle(TechniqueGroup g, bool hasFocus) {
@@ -94,7 +97,9 @@ class _VaultViewState extends State<VaultView> {
       if (_filtering) {
         if (!_collapsedWhileFiltering.remove(g)) _collapsedWhileFiltering.add(g);
       } else {
-        _expanded[g] = !_isExpanded(g, hasFocus);
+        // Een andere groep openen klapt de vorige dicht.
+        _open = _isExpanded(g, hasFocus) ? null : g;
+        _openChosen = true;
       }
     });
   }
@@ -119,7 +124,12 @@ class _VaultViewState extends State<VaultView> {
     final (name, group) = result;
     final t = await store.createTechnique(name, group);
     if (!mounted) return;
-    if (t != null) setState(() => _expanded[group] = true);
+    if (t != null) {
+      setState(() {
+        _open = group;
+        _openChosen = true;
+      });
+    }
     showToast(context, t == null ? 'Toevoegen mislukt. Controleer je verbinding.' : '$name toegevoegd aan ${group.label}', error: t == null);
   }
 
@@ -139,6 +149,13 @@ class _VaultViewState extends State<VaultView> {
     final byGroup = <TechniqueGroup, List<VaultEntry>>{};
     for (final e in shown) {
       byGroup.putIfAbsent(e.group, () => []).add(e);
+    }
+    _defaultOpen = null;
+    for (final g in TechniqueGroup.values) {
+      if ((byGroup[g] ?? const []).any((e) => e.inFocus)) {
+        _defaultOpen = g;
+        break;
+      }
     }
     final items = <_Item>[];
     for (final g in TechniqueGroup.values) {
@@ -237,7 +254,7 @@ class _VaultViewState extends State<VaultView> {
                 _HeaderItem(:final group, :final count, :final focusCount, :final expanded) => Padding(
                   key: ValueKey('h-${group.name}'),
                   padding: EdgeInsets.only(bottom: expanded ? 10 : 12),
-                  child: _GroupHeader(
+                  child: GroupHeader(
                     group: group,
                     count: count,
                     focusCount: focusCount,
@@ -260,91 +277,6 @@ class _VaultViewState extends State<VaultView> {
 }
 
 /// Accordeonkop per groep: icoon, naam, omschrijving, aantal en chevron.
-class _GroupHeader extends StatelessWidget {
-  const _GroupHeader({
-    required this.group,
-    required this.count,
-    required this.focusCount,
-    required this.expanded,
-    required this.onTap,
-  });
-  final TechniqueGroup group;
-  final int count;
-  final int focusCount;
-  final bool expanded;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    return Semantics(
-      button: true,
-      expanded: expanded,
-      child: KCard(
-        padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-        onTap: onTap,
-        child: Row(
-          children: [
-            IconTile(icon: groupIcon(group), size: 40, color: groupColor(context, group)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(group.label, style: context.t.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(
-                    focusCount > 0 ? '${group.description} • $focusCount in focus' : group.description,
-                    style: context.t.caption,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            _CountBadge(count: count, highlight: focusCount > 0),
-            const SizedBox(width: 4),
-            AnimatedRotation(
-              turns: expanded ? 0.5 : 0,
-              duration: const Duration(milliseconds: 180),
-              child: Icon(Icons.expand_more, color: k.textSecondary, size: 26),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.count, required this.highlight});
-  final int count;
-  final bool highlight;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    return Container(
-      constraints: const BoxConstraints(minWidth: 32),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: highlight ? k.primaryTint : k.well,
-        borderRadius: BorderRadius.circular(KRadius.full),
-      ),
-      child: Text(
-        '$count',
-        style: context.t.caption.copyWith(
-          color: highlight ? k.accent : k.textSecondary,
-          fontWeight: FontWeight.w700,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
-      ),
-    );
-  }
-}
-
 /// Techniekkaart volgens de mockup: tag + reps, naam + ondertitel, uitleg in
 /// een well, voettekst met niveau en "+1 Rep", en de focus-schakelaar.
 class VaultCard extends StatelessWidget {
@@ -357,14 +289,15 @@ class VaultCard extends StatelessWidget {
     final e = entry;
     final mastery = e.masteryPercent;
     final goal = e.own?.learningGoal.trim() ?? '';
-    final (footerIcon, footerText) = goal.isNotEmpty
-        ? (Icons.flag_outlined, 'Doel: $goal')
+    final footerText = goal.isNotEmpty
+        ? 'Doel: $goal'
         : e.difficulty != null
-        ? (Icons.signal_cellular_alt, difficultyLabel(e.difficulty!))
-        : (Icons.person_outline, 'Eigen techniek');
+        ? difficultyLabel(e.difficulty!)
+        : 'Eigen techniek';
+    final eyebrow = [e.group.label, if (e.subtitle.isNotEmpty) e.subtitle].join(' • ');
     return KCard(
-      borderColor: e.inFocus ? k.primary : null,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      borderColor: e.inFocus ? k.accent : null,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       onTap: () => showTechniqueSheet(context, e),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -376,27 +309,22 @@ class VaultCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        GroupTag(e.group),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.repeat, size: 14, color: k.accent),
-                            const SizedBox(width: 4),
-                            Text(repsLabel(e.loggedReps), style: context.t.caption),
-                          ],
-                        ),
-                      ],
+                    Text(
+                      eyebrow.toUpperCase(),
+                      style: context.t.labelSm.copyWith(color: groupColor(context, e.group), letterSpacing: 0.6),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(e.name, style: context.t.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    if (e.subtitle.isNotEmpty) ...[
+                    if (e.description.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(e.subtitle, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(
+                        e.description,
+                        style: context.t.caption,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ],
                 ),
@@ -404,59 +332,117 @@ class VaultCard extends StatelessWidget {
               if (!e.isOwn) ...[
                 const SizedBox(width: 8),
                 const KPill('Bibliotheek', icon: Icons.local_library_outlined, dense: true),
-              ] else if (mastery != null) ...[
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('$mastery%', style: context.t.metricSm.copyWith(color: k.accent)),
-                    const SizedBox(height: 2),
-                    Text('MASTERY', style: context.t.labelSm),
-                  ],
-                ),
               ],
             ],
           ),
-          if (e.description.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            KWell(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Icon(Icons.insights, size: 18, color: k.accent),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      e.description,
-                      style: context.t.body.copyWith(color: k.textSecondary),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 12),
+          // Mastery + volume in een donker vlak, zoals in de mock.
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: k.isDark ? KineticColors.sunken : k.well,
+              borderRadius: BorderRadius.circular(KRadius.sm),
             ),
-          ],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mastery Index', style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            mastery == null ? '—' : '$mastery%',
+                            style: context.t.caption.copyWith(color: k.successInk, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: KProgressBar(value: (mastery ?? 0) / 100, color: k.successInk, height: 5),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Volume', style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(
+                      repsLabel(e.loggedReps).replaceAll(' gelogd', ''),
+                      style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(footerIcon, size: 16, color: k.textSecondary),
-              const SizedBox(width: 6),
               Expanded(
-                child: Text(footerText, style: context.t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  footerText,
+                  style: context.t.caption.copyWith(color: k.text, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _RepButton(onTap: () => addRep(context, e)),
+              const SizedBox(width: 6),
+              _FocusButton(entry: e),
             ],
           ),
-          const SizedBox(height: 6),
-          Divider(color: k.border, height: 1),
-          FocusToggleRow(entry: e),
         ],
+      ),
+    );
+  }
+}
+
+/// "Focus in Sessie" als knop: omlijnd met +, of teal "In Focus" met vinkje.
+class _FocusButton extends StatelessWidget {
+  const _FocusButton({required this.entry});
+  final VaultEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final on = entry.inFocus;
+    final fg = on ? k.onPrimary : k.text;
+    return Semantics(
+      toggled: on,
+      button: true,
+      label: 'Focus in Sessie',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Material(
+          color: on ? k.primary : k.well,
+          borderRadius: BorderRadius.circular(KRadius.sm),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => toggleFocus(context, entry),
+            child: SizedBox(
+              height: 40,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(on ? Icons.check : Icons.add_circle_outline, size: 16, color: fg),
+                    const SizedBox(width: 5),
+                    Text(on ? 'In Focus' : 'Focus', style: context.t.bodyStrong.copyWith(fontSize: 13, color: fg)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
